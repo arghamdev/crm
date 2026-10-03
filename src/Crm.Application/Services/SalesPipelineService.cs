@@ -87,7 +87,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             if (ownerId != currentUserId && !HasPermission(snapshot, organization.CompanyId, "Lead.Assign"))
                 throw new UnauthorizedAccessException("تخصیص سرنخ به کاربر دیگر نیازمند مجوز Lead.Assign است.");
             var owner = RequiredOwner(data, organization.CompanyId, scope.BranchId, ownerId, nowUtc);
-            var lead = new Lead(Guid.NewGuid(), NextLeadCode(data, nowUtc), command.Name, command.Contact,
+            var lead = new Lead(Guid.NewGuid(), NextLeadCode(data, nowUtc), command.Name, command.Contact ?? string.Empty,
                 string.IsNullOrWhiteSpace(command.Source) ? "نامشخص" : command.Source, owner.DisplayName,
                 organization.CompanyId, scope.BranchId, scope.TerritoryId, ownerUserId: owner.UserId,
                 phone: command.Phone, email: command.Email, firstContactDueAtUtc: nowUtc.AddHours(4));

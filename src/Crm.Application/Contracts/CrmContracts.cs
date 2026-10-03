@@ -30,7 +30,7 @@ public sealed record WorkItemDto(Guid Id, string Title, string Priority, DateTim
 public sealed record CreateCustomerCommand(string Name, string City, string Owner, string BranchId, string Segment,
     CustomerKind Kind = CustomerKind.Legal, string? NationalId = null, string? PrimaryPhone = null, string? PrimaryEmail = null,
     bool AllowPotentialDuplicate = false, string? DuplicateReason = null);
-public sealed record CreateLeadCommand(string Name, string Contact, string Source, string Owner, string BranchId,
+public sealed record CreateLeadCommand(string Name, string? Contact, string Source, string? Owner, string BranchId,
     Guid? OwnerUserId = null, string? Phone = null, string? Email = null, string? TerritoryId = null,
     string? NextAction = null, DateTimeOffset? NextActionAtUtc = null);
 public sealed record CreateQuoteCommand(string? Customer, string? Opportunity, decimal Amount, decimal DiscountPercent, decimal MarginPercent, string BranchId,

@@ -23,5 +23,23 @@ public abstract class SelfServiceControllerBase : Controller
             return View("SelfServiceError", e.Message);
         }
     }
-    protected IActionResult Go(string path) { if (!Request.IsHtmx()) return LocalRedirect(path); Response.Headers["HX-Redirect"]=path; return NoContent(); }
+    protected IActionResult Go(string path)
+    {
+        if (!Request.IsHtmx()) return LocalRedirect(path);
+        Response.Headers["HX-Redirect"]=ForceNavigation(path);
+        return NoContent();
+    }
+
+    // Browsers treat a redirect that only differs by #fragment from the current URL as an in-page jump, so the
+    // page would not reload and the submitted change would stay invisible. A unique query value forces a real load.
+    private string ForceNavigation(string path)
+    {
+        var hash=path.IndexOf('#');
+        if (hash<0) return path;
+        var target=path[..hash];
+        var current=Uri.TryCreate(Request.Headers["HX-Current-URL"].ToString(), UriKind.Absolute, out var uri) ? uri.PathAndQuery : null;
+        if (current is null || !string.Equals(current.Split('?')[0], target.Split('?')[0], StringComparison.OrdinalIgnoreCase)) return path;
+        var separator=target.Contains('?') ? '&' : '?';
+        return $"{target}{separator}updated={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{path[hash..]}";
+    }
 }

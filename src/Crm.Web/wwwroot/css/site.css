@@ -611,7 +611,7 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
   .login-visual { display: none; }
   .login-mobile-brand { display: inline-flex; }
   .sidebar { transform: translateX(105%); transition: transform .25s ease; }
-  .sidebar.is-open { transform: translateX(0); }
+  .sidebar.is-open { z-index: 65; transform: translateX(0); }
   .sidebar-close, .menu-button { display: inline-grid !important; }
   .app-main { margin-right: 0; }
   .global-search { width: clamp(180px, 46vw, 380px); }

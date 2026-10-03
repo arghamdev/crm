@@ -13,3 +13,6 @@
 .u-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.u-details{width:min(950px,95vw);max-height:90vh;overflow:auto}
 .u-period{font-size:13px;color:var(--ink-2)}.main-nav a{text-decoration:none}.unified-breadcrumb{margin-bottom:15px;display:flex;gap:12px;color:var(--ink-3);font-size:13px}
 @media(max-width:1000px){.u-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.u-grid{grid-template-columns:1fr}.u-panel{padding:16px}.u-filter label{width:100%}.u-funnel{grid-template-columns:1fr 1fr 35px}.unified-notice{padding-inline:16px}}
+
+/* Mobile: the open sidebar must sit above its overlay (z-index 60) or its links cannot be tapped. */
+@media (max-width: 900px) { .sidebar.is-open { z-index: 65; } }

@@ -138,12 +138,12 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
         return store.Write(data =>
         {
             Ensure(command.Name, nameof(command.Name));
-            Ensure(command.Contact, nameof(command.Contact));
+            Ensure(command.Contact ?? string.Empty, nameof(command.Contact));
             var scope = ResolveWriteScope(data, snapshot, organization, "Lead.Create", command.BranchId);
             var ownerUserId = command.OwnerUserId ?? data.Users
                 .SingleOrDefault(x => x.DisplayName.Equals(command.Owner, StringComparison.OrdinalIgnoreCase))?.Id;
-            var lead = new Lead(Guid.NewGuid(), $"LD-1405-{data.Leads.Count + 118:000}", command.Name, command.Contact,
-                command.Source, command.Owner, organization.CompanyId, scope.Id, command.TerritoryId ?? organization.TerritoryId,
+            var lead = new Lead(Guid.NewGuid(), $"LD-1405-{data.Leads.Count + 118:000}", command.Name, command.Contact ?? string.Empty,
+                command.Source, command.Owner ?? string.Empty, organization.CompanyId, scope.Id, command.TerritoryId ?? organization.TerritoryId,
                 ownerUserId: ownerUserId, phone: command.Phone, email: command.Email);
             data.Leads.Add(lead);
             data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
