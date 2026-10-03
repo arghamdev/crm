@@ -16,12 +16,13 @@ public sealed class OpportunitiesController(
     IOrganizationContextService organization) : Controller
 {
     [HttpGet("/opportunities")]
-    public IActionResult Index(string? q = null, bool includeClosed = false) =>
-        View(pipeline.GetPipeline(current.CrmUserId, current.RequiredOrganization(), q, includeClosed));
+    public async Task<IActionResult> Index(string? q = null, bool includeClosed = false, CancellationToken cancellationToken = default) =>
+        View(await pipeline.GetPipelineAsync(current.CrmUserId, current.RequiredOrganization(), q, includeClosed, cancellationToken: cancellationToken));
 
     [HttpGet("/opportunities/board")]
-    public IActionResult Board(string? q = null, bool includeClosed = false) =>
-        PartialView("_Board", pipeline.GetPipeline(current.CrmUserId, current.RequiredOrganization(), q, includeClosed));
+    public async Task<IActionResult> Board(string? q = null, bool includeClosed = false, CancellationToken cancellationToken = default) =>
+        PartialView("_Board", await pipeline.GetPipelineAsync(current.CrmUserId, current.RequiredOrganization(), q, includeClosed,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/opportunities/{id:guid}")]
     public IActionResult Details(Guid id)

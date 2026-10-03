@@ -27,7 +27,11 @@ public sealed record QuoteDetailsDto(QuoteSummaryDto Quote, IReadOnlyList<QuoteL
     bool CanSend, bool CanRecordOutcome, bool CanRevise);
 
 public sealed record QuoteWorkspaceDto(IReadOnlyList<QuoteSummaryDto> Items, decimal OpenNetAmount,
-    int DraftCount, int PendingApprovalCount, int ExpiringCount);
+    int DraftCount, int PendingApprovalCount, int ExpiringCount, int Page = 1,
+    int PageSize = Crm.Application.Abstractions.PageRequest.DefaultPageSize, int TotalCount = 0)
+{
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize)));
+}
 
 public sealed record CreateQuoteDraftCommand(Guid CustomerId, Guid OpportunityId, string BranchId,
     string CurrencyCode, DateTimeOffset ValidUntilUtc, string PaymentTerms, string ProductCode,

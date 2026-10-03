@@ -1,0 +1,15 @@
+@model SecurityAuditPageDto
+@{ ViewData["Title"] = "گزارش ممیزی امنیتی"; var q = Model.Query; }
+<nav class="breadcrumb"><a href="/identity/users">کاربران و دسترسی</a><svg><use href="#i-chevron"/></svg><span>ممیزی امنیتی</span></nav>
+<header class="page-header"><div><span class="eyebrow">Security Audit</span><h1>گزارش ممیزی امنیتی</h1><p>ورود، اعتبارسنجی نشست، تغییر نقش و مجوز، خروجی گزارش و رد دسترسی؛ جدیدترین رویدادها اول.</p></div></header>
+<section class="panel table-panel">
+    <form id="auditFilters" class="toolbar pipeline-filter" method="get" action="/identity/audit" hx-get="/identity/audit" hx-target="#auditTable" hx-trigger="submit, change delay:300ms">
+        <label class="search-inline"><svg><use href="#i-search"/></svg><input name="eventType" list="auditEventTypes" value="@q.EventType" placeholder="نوع رویداد" /></label>
+        <datalist id="auditEventTypes">@foreach (var type in Model.EventTypes) { <option value="@type"></option> }</datalist>
+        <select name="outcome"><option value="">همه نتایج</option>@foreach (var outcome in new[] { "Success", "Succeeded", "Failure" }) { <option value="@outcome" selected="@(q.Outcome == outcome)">@outcome</option> }</select>
+        <label class="field"><span>از</span><input type="date" name="from" value="@(q.FromUtc?.ToString("yyyy-MM-dd"))" /></label>
+        <label class="field"><span>تا</span><input type="date" name="to" value="@(q.ToUtc?.AddDays(-1).ToString("yyyy-MM-dd"))" /></label>
+        <button class="button button--ghost button--xs" type="submit">اعمال فیلتر</button>
+    </form>
+    <div id="auditTable"><partial name="_AuditTable" model="Model" /></div>
+</section>

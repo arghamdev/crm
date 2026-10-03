@@ -42,6 +42,9 @@ public sealed class InMemoryCrmDataStore : ICrmDataStore, ICrmQuerySource, IDisp
     public Task<double?> AverageAsync(IQueryable<int> query, CancellationToken cancellationToken = default) =>
         Task.FromResult(Read(_ => query.Any() ? (double?)query.Average() : null));
 
+    public Task<decimal> SumAsync(IQueryable<decimal> query, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(_ => query.Sum()));
+
     public void Dispose() => _gate.Dispose();
 }
 

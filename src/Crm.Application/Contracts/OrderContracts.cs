@@ -35,7 +35,11 @@ public sealed record OrderDetailsDto(OrderSummaryDto Order, decimal CreditLimit,
 
 public sealed record OrderWorkspaceDto(IReadOnlyList<OrderSummaryDto> Items,
     IReadOnlyList<OrderIntegrationMessageDto> IntegrationErrors, decimal OpenAmount,
-    int CreditHoldCount, int PendingIntegrationCount, int FailedIntegrationCount);
+    int CreditHoldCount, int PendingIntegrationCount, int FailedIntegrationCount, int Page = 1,
+    int PageSize = Crm.Application.Abstractions.PageRequest.DefaultPageSize, int TotalCount = 0)
+{
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize)));
+}
 
 public sealed record CreateOrderRequestCommand(Guid QuoteId, long ExpectedQuoteVersion);
 public sealed record CheckOrderCreditCommand(long ExpectedVersion);

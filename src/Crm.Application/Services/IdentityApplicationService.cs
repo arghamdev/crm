@@ -57,6 +57,31 @@ public sealed class IdentityApplicationService(
         return details with { AuditEvents = audit.Select(MapAudit).ToList() };
     }
 
+    /// <summary>Filtered, newest-first page of the security audit log, evaluated in the data source.</summary>
+    public async Task<SecurityAuditPageDto> GetAuditAsync(SecurityAuditQuery query, int page = 1, int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var source = querySource ?? store as ICrmQuerySource ??
+            throw new InvalidOperationException("No query source is configured for the audit log.");
+        var events = source.Query<SecurityAuditEvent>();
+        if (!string.IsNullOrWhiteSpace(query.EventType)) { var type = query.EventType.Trim(); events = events.Where(x => x.EventType == type); }
+        if (!string.IsNullOrWhiteSpace(query.Outcome)) { var outcome = query.Outcome.Trim(); events = events.Where(x => x.Outcome == outcome); }
+        if (query.UserId is { } userId) events = events.Where(x => x.ActorUserId == userId || x.TargetUserId == userId);
+        if (query.FromUtc is { } from) events = events.Where(x => x.OccurredAtUtc >= from);
+        if (query.ToUtc is { } to) events = events.Where(x => x.OccurredAtUtc < to);
+        var result = await events.OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.Id)
+            .ToPageAsync(source, PageRequest.Of(page, pageSize), MapAudit, null, cancellationToken);
+        // Suggestions only (the filter is free text): a DISTINCT over the audit table would scan the largest table per page view.
+        return new SecurityAuditPageDto(result, query, KnownAuditEventTypes);
+    }
+
+    private static readonly string[] KnownAuditEventTypes =
+    [
+        "AccessDenied", "ExternalIdentityLinked", "OidcRemoteFailure", "OtherSessionsRevoked", "Reporting.Export", "RoleAssigned",
+        "RolePermissionsChanged", "RoleRevoked", "SessionRevoked", "SessionValidation", "SignIn", "UserContext.CompanyChanged",
+        "UserCreated", "UserStatusChanged"
+    ];
+
     public UserDto CreatePendingUser(CreatePendingUserCommand command, Guid actorUserId, IdentityRequestContext context) => store.Write(data =>
     {
         var normalizedEmail = NormalizeEmail(command.Email);

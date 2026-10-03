@@ -2276,7 +2276,11 @@ namespace Crm.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OccurredAtUtc");
+
                     b.HasIndex("ActorUserId", "OccurredAtUtc");
+
+                    b.HasIndex("EventType", "OccurredAtUtc");
 
                     b.HasIndex("TargetUserId", "OccurredAtUtc");
 

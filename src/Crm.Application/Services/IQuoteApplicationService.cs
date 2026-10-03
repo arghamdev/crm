@@ -5,6 +5,8 @@ namespace Crm.Application.Services;
 public interface IQuoteApplicationService
 {
     QuoteWorkspaceDto GetWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc);
+    Task<QuoteWorkspaceDto> GetWorkspaceAsync(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc,
+        int page = 1, int pageSize = Crm.Application.Abstractions.PageRequest.DefaultPageSize, CancellationToken cancellationToken = default);
     QuoteDetailsDto? Get(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset nowUtc);
     IReadOnlyList<ProductPriceDto> GetProducts(string companyId, string currencyCode = "IRR");
     QuoteDetailsDto CreateDraft(Guid currentUserId, OrganizationSelection organization, CreateQuoteDraftCommand command, DateTimeOffset nowUtc);

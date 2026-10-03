@@ -12,31 +12,39 @@ public sealed class OrderApplicationService(
     ICrmDataStore store,
     IAccessSnapshotService access,
     IAccountingCreditProvider accounting,
-    IErpOrderGateway erp) : IOrderApplicationService
+    IErpOrderGateway erp,
+    ICrmQuerySource? querySource = null) : IOrderApplicationService
 {
-    public OrderWorkspaceDto GetWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc)
+    /// <summary>Synchronous convenience over <see cref="GetWorkspaceAsync"/>; returns the first 200 orders.</summary>
+    public OrderWorkspaceDto GetWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc) =>
+        GetWorkspaceAsync(currentUserId, organization, nowUtc, 1, PageRequest.MaxPageSize).GetAwaiter().GetResult();
+
+    /// <summary>Scope, ownership, ordering, paging, integration errors and KPI tiles run in the data source.</summary>
+    public async Task<OrderWorkspaceDto> GetWorkspaceAsync(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc,
+        int page = 1, int pageSize = PageRequest.DefaultPageSize, CancellationToken cancellationToken = default)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         RequirePermission(snapshot, organization.CompanyId, "Order.Read");
-        return store.Read(data =>
-        {
-            var orders = data.OrderRequests
-                .Where(x => InContext(snapshot, organization, "Order.Read", x) && CanManage(snapshot, currentUserId, x))
-                .OrderByDescending(x => x.SubmittedAtUtc).ThenByDescending(x => x.Code)
-                .ToArray();
-            var ids = orders.Select(x => x.Id).ToHashSet();
-            var errors = data.OrderIntegrationMessages
-                .Where(x => ids.Contains(x.OrderRequestId) && x.Status is OrderIntegrationStatus.RetryScheduled or OrderIntegrationStatus.DeadLetter)
-                .OrderByDescending(x => x.Status == OrderIntegrationStatus.DeadLetter)
-                .ThenBy(x => x.NextAttemptAtUtc)
-                .Select(Map).ToArray();
-            return new OrderWorkspaceDto(orders.Select(Map).ToArray(), errors,
-                orders.Where(x => x.Status is not (OrderRequestStatus.Paid or OrderRequestStatus.Cancelled or OrderRequestStatus.ErpRejected))
-                    .Sum(x => x.NetAmount),
-                orders.Count(x => x.Status == OrderRequestStatus.CreditHold),
-                orders.Count(x => x.Status == OrderRequestStatus.SubmissionPending),
-                orders.Count(x => x.Status == OrderRequestStatus.IntegrationFailed));
-        });
+        var source = querySource ?? store as ICrmQuerySource ??
+            throw new InvalidOperationException("No query source is configured for order lists.");
+        var visible = source.Query<OrderRequest>().InScope(snapshot, organization, "Order.Read");
+        if (!snapshot.ScopeGrants.Any(x => Same(x.CompanyId, organization.CompanyId) && x.RoleKey is "SalesManager" or "SalesSupervisor" or "FinanceManager"))
+            visible = visible.Where(x => x.OwnerUserId == currentUserId);
+        var result = await visible.OrderByDescending(x => x.SubmittedAtUtc).ThenByDescending(x => x.Code).ThenBy(x => x.Id)
+            .ToPageAsync(source, PageRequest.Of(page, pageSize), Map, null, cancellationToken);
+        var visibleIds = visible.Select(x => x.Id);
+        var errors = await source.ToListAsync(source.Query<OrderIntegrationMessage>()
+            .Where(x => visibleIds.Contains(x.OrderRequestId) &&
+                (x.Status == OrderIntegrationStatus.RetryScheduled || x.Status == OrderIntegrationStatus.DeadLetter))
+            .OrderByDescending(x => x.Status == OrderIntegrationStatus.DeadLetter).ThenBy(x => x.NextAttemptAtUtc).Take(50), cancellationToken);
+        var open = visible.Where(x => x.Status != OrderRequestStatus.Paid && x.Status != OrderRequestStatus.Cancelled &&
+            x.Status != OrderRequestStatus.ErpRejected);
+        return new OrderWorkspaceDto(result.Items, errors.Select(Map).ToArray(),
+            await source.SumAsync(open.Select(x => x.NetAmount), cancellationToken),
+            await source.CountAsync(visible.Where(x => x.Status == OrderRequestStatus.CreditHold), cancellationToken),
+            await source.CountAsync(visible.Where(x => x.Status == OrderRequestStatus.SubmissionPending), cancellationToken),
+            await source.CountAsync(visible.Where(x => x.Status == OrderRequestStatus.IntegrationFailed), cancellationToken),
+            result.Page, result.PageSize, result.TotalCount);
     }
 
     public OrderDetailsDto? Get(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset nowUtc)

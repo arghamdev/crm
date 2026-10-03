@@ -1,0 +1,14 @@
+@model SecurityAuditPageDto
+@{ var events = Model.Events; }
+<div class="table-wrap"><table><thead><tr><th>زمان (UTC)</th><th>رویداد</th><th>نتیجه</th><th>عامل</th><th>هدف</th><th>شرح</th><th>Correlation</th></tr></thead><tbody>
+@if (events.Items.Count == 0) { <tr><td colspan="7" class="empty-cell">رویدادی با این فیلتر پیدا نشد.</td></tr> }
+@foreach (var e in events.Items)
+{
+    <tr><td>@e.OccurredAtUtc.ToString("yyyy/MM/dd HH:mm:ss")</td><td><code>@e.EventType</code></td>
+    <td><span class="badge @(e.Outcome == "Failure" ? "badge--danger" : "badge--success")"><span></span>@e.Outcome</span></td>
+    <td>@if (e.ActorUserId is { } actor) { <a class="link-button" href="/identity/users/@actor">@actor.ToString()[..8]</a> } else { <span>سیستم</span> }</td>
+    <td>@if (e.TargetUserId is { } target) { <a class="link-button" href="/identity/users/@target">@target.ToString()[..8]</a> } else { <span>—</span> }</td>
+    <td><bdi dir="ltr">@e.Reason</bdi></td><td><small><bdi dir="ltr">@e.CorrelationId</bdi></small></td></tr>
+}
+</tbody></table></div>
+<div class="table-footer"><span>@events.TotalCount رویداد · صفحه @events.Page از @events.TotalPages</span><nav class="pagination">@if (events.HasPrevious) { <a class="link-button" href="/identity/audit?page=@(events.Page - 1)" hx-get="/identity/audit?page=@(events.Page - 1)" hx-include="#auditFilters" hx-target="#auditTable">قبلی</a> }@if (events.HasNext) { <a class="link-button" href="/identity/audit?page=@(events.Page + 1)" hx-get="/identity/audit?page=@(events.Page + 1)" hx-include="#auditFilters" hx-target="#auditTable">بعدی</a> }</nav></div>

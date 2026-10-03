@@ -6,6 +6,8 @@ namespace Crm.Application.Services;
 public interface IOrderApplicationService
 {
     OrderWorkspaceDto GetWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc);
+    Task<OrderWorkspaceDto> GetWorkspaceAsync(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc,
+        int page = 1, int pageSize = Crm.Application.Abstractions.PageRequest.DefaultPageSize, CancellationToken cancellationToken = default);
     OrderDetailsDto? Get(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset nowUtc);
     IReadOnlyList<EligibleOrderQuoteDto> GetEligibleQuotes(Guid currentUserId, OrganizationSelection organization);
     OrderDetailsDto Create(Guid currentUserId, OrganizationSelection organization, CreateOrderRequestCommand command, DateTimeOffset nowUtc);

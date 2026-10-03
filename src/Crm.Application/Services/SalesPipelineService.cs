@@ -223,31 +223,49 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
         });
     }
 
+    /// <summary>Synchronous convenience over <see cref="GetPipelineAsync"/>.</summary>
     public PipelineBoardDto GetPipeline(Guid currentUserId, OrganizationSelection organization, string? query = null,
-        bool includeClosed = false, DateTimeOffset? nowUtc = null)
+        bool includeClosed = false, DateTimeOffset? nowUtc = null) =>
+        GetPipelineAsync(currentUserId, organization, query, includeClosed, nowUtc).GetAwaiter().GetResult();
+
+    /// <summary>Most recently closed (won/lost) opportunities shown when the board includes closed deals.</summary>
+    public const int ClosedOpportunityLimit = 100;
+
+    /// <summary>
+    /// Scope, ownership and search run in the data source. The board needs every open deal (stage columns and totals),
+    /// which is a bounded working set; closed deals grow without bound, so only the latest ones are included.
+    /// </summary>
+    public async Task<PipelineBoardDto> GetPipelineAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        bool includeClosed = false, DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         var now = nowUtc ?? DateTimeOffset.UtcNow;
-        return store.Read(data =>
+        var source = querySource ?? store as ICrmQuerySource ??
+            throw new InvalidOperationException("No query source is configured for the pipeline board.");
+        var visible = source.Query<Opportunity>().InScope(snapshot, organization, "Opportunity.Read");
+        if (!ManagesAllSalesRecords(snapshot, organization.CompanyId))
         {
-            IEnumerable<Opportunity> source = data.Opportunities.Where(x => CanAccessSalesRecord(data, snapshot,
-                currentUserId, organization, "Opportunity.Read", x, x.OwnerUserId, x.Owner));
-            if (!includeClosed) source = source.Where(x => x.Stage is not (OpportunityStage.Won or OpportunityStage.Lost));
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                var term = query.Trim();
-                source = source.Where(x => x.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    x.Code.Contains(term, StringComparison.OrdinalIgnoreCase) || x.Customer.Contains(term, StringComparison.OrdinalIgnoreCase));
-            }
-            var values = source.OrderBy(x => x.ExpectedCloseAtUtc).Select(Map).ToList();
-            var stageValues = values.GroupBy(x => x.Stage).Select(group => new OpportunityStageSummaryDto(group.Key,
-                group.Count(), group.Sum(x => x.Value), group.Sum(x => x.Value * x.Probability / 100m))).ToList();
-            return new PipelineBoardDto(values, stageValues, query?.Trim(), includeClosed,
-                values.Sum(x => x.Value), values.Sum(x => x.Value * x.Probability / 100m), values.Count,
-                values.Count(x => x.LastActivityAtUtc < now.AddDays(-7)),
-                values.Count(x => x.NextActionAtUtc.HasValue && x.NextActionAtUtc < now),
-                values.Count == 0 ? 0 : Math.Round((decimal)values.Average(x => Math.Max(0, (now - x.LastActivityAtUtc!.Value).TotalDays)), 1));
-        });
+            var users = await source.ToListAsync(source.Query<CrmUser>().Where(x => x.Id == currentUserId), cancellationToken);
+            var myName = users.SingleOrDefault()?.DisplayName ?? "\0";
+            visible = visible.Where(x => x.OwnerUserId == currentUserId || x.OwnerUserId == null && x.Owner == myName);
+        }
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var term = query.Trim();
+            visible = visible.Where(x => x.Title.Contains(term) || x.Code.Contains(term) || x.Customer.Contains(term));
+        }
+        var rows = await source.ToListAsync(visible.Where(x => x.Stage != OpportunityStage.Won && x.Stage != OpportunityStage.Lost), cancellationToken);
+        if (includeClosed)
+            rows.AddRange(await source.ToListAsync(visible.Where(x => x.Stage == OpportunityStage.Won || x.Stage == OpportunityStage.Lost)
+                .OrderByDescending(x => x.ClosedAtUtc).ThenBy(x => x.Id).Take(ClosedOpportunityLimit), cancellationToken));
+        var values = rows.OrderBy(x => x.ExpectedCloseAtUtc).Select(Map).ToList();
+        var stageValues = values.GroupBy(x => x.Stage).Select(group => new OpportunityStageSummaryDto(group.Key,
+            group.Count(), group.Sum(x => x.Value), group.Sum(x => x.Value * x.Probability / 100m))).ToList();
+        return new PipelineBoardDto(values, stageValues, query?.Trim(), includeClosed,
+            values.Sum(x => x.Value), values.Sum(x => x.Value * x.Probability / 100m), values.Count,
+            values.Count(x => x.LastActivityAtUtc < now.AddDays(-7)),
+            values.Count(x => x.NextActionAtUtc.HasValue && x.NextActionAtUtc < now),
+            values.Count == 0 ? 0 : Math.Round((decimal)values.Average(x => Math.Max(0, (now - x.LastActivityAtUtc!.Value).TotalDays)), 1));
     }
 
     public OpportunityDetailsDto? GetOpportunity(Guid currentUserId, OrganizationSelection organization, Guid id)

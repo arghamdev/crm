@@ -10,24 +10,44 @@ namespace Crm.Application.Services;
 public sealed class QuoteApplicationService(
     ICrmDataStore store,
     IAccessSnapshotService access,
-    IProductPriceCatalog priceCatalog) : IQuoteApplicationService
+    IProductPriceCatalog priceCatalog,
+    ICrmQuerySource? querySource = null) : IQuoteApplicationService
 {
-    public QuoteWorkspaceDto GetWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc)
+    /// <summary>Synchronous convenience over <see cref="GetWorkspaceAsync"/>; returns the first 200 quotes.</summary>
+    public QuoteWorkspaceDto GetWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc) =>
+        GetWorkspaceAsync(currentUserId, organization, nowUtc, 1, PageRequest.MaxPageSize).GetAwaiter().GetResult();
+
+    /// <summary>Scope, ownership, ordering, paging and the KPI tiles (SUM/COUNT) run in the data source.</summary>
+    public async Task<QuoteWorkspaceDto> GetWorkspaceAsync(Guid currentUserId, OrganizationSelection organization, DateTimeOffset nowUtc,
+        int page = 1, int pageSize = PageRequest.DefaultPageSize, CancellationToken cancellationToken = default)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         RequirePermission(snapshot, organization.CompanyId, "Quote.Read");
-        return store.Read(data =>
+        var source = querySource ?? store as ICrmQuerySource ??
+            throw new InvalidOperationException("No query source is configured for quote lists.");
+        var visible = source.Query<Quote>().InScope(snapshot, organization, "Quote.Read");
+        if (!ManagesAllQuotes(snapshot, organization.CompanyId))
         {
-            var items = data.Quotes.Where(x => CanAccess(data, snapshot, currentUserId, organization, "Quote.Read", x))
-                .OrderByDescending(x => x.CreatedAtUtc).Select(x => Map(x).Mask(snapshot)).ToArray();
-            return new QuoteWorkspaceDto(items,
-                items.Where(x => x.Status is not (QuoteStatus.Accepted or QuoteStatus.Rejected or QuoteStatus.Expired))
-                    .Sum(x => x.NetAmount),
-                items.Count(x => x.Status == QuoteStatus.Draft),
-                items.Count(x => x.Status == QuoteStatus.PendingApproval),
-                items.Count(x => (x.Status is QuoteStatus.Approved or QuoteStatus.Sent) && x.ValidUntilUtc <= nowUtc.AddDays(3)));
-        });
+            // Same rule as CanManage: own quotes, or legacy quotes without an owner on an opportunity the user owns.
+            var opportunities = source.Query<Opportunity>();
+            visible = visible.Where(x => x.OwnerUserId == currentUserId ||
+                x.OwnerUserId == null && opportunities.Any(o => o.Id == x.OpportunityId && o.OwnerUserId == currentUserId));
+        }
+        var result = await visible.OrderByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id)
+            .ToPageAsync(source, PageRequest.Of(page, pageSize), x => Map(x).Mask(snapshot), null, cancellationToken);
+        var open = visible.Where(x => x.Status != QuoteStatus.Accepted && x.Status != QuoteStatus.Rejected && x.Status != QuoteStatus.Expired);
+        var expiringBefore = nowUtc.AddDays(3);
+        return new QuoteWorkspaceDto(result.Items,
+            await source.SumAsync(open.Select(x => x.NetAmount), cancellationToken),
+            await source.CountAsync(visible.Where(x => x.Status == QuoteStatus.Draft), cancellationToken),
+            await source.CountAsync(visible.Where(x => x.Status == QuoteStatus.PendingApproval), cancellationToken),
+            await source.CountAsync(visible.Where(x => (x.Status == QuoteStatus.Approved || x.Status == QuoteStatus.Sent) &&
+                x.ValidUntilUtc <= expiringBefore), cancellationToken),
+            result.Page, result.PageSize, result.TotalCount);
     }
+
+    private static bool ManagesAllQuotes(AccessSnapshot snapshot, string companyId) =>
+        snapshot.ScopeGrants.Any(x => Same(x.CompanyId, companyId) && x.RoleKey is "SalesManager" or "SalesSupervisor" or "FinanceManager");
 
     public QuoteDetailsDto? Get(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset nowUtc)
     {

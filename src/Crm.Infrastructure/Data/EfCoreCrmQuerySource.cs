@@ -16,4 +16,7 @@ public sealed class EfCoreCrmQuerySource(CrmDbContext db) : ICrmQuerySource
 
     public async Task<double?> AverageAsync(IQueryable<int> query, CancellationToken cancellationToken = default) =>
         await query.Select(x => (double?)x).AverageAsync(cancellationToken);
+
+    public Task<decimal> SumAsync(IQueryable<decimal> query, CancellationToken cancellationToken = default) =>
+        query.SumAsync(cancellationToken);
 }

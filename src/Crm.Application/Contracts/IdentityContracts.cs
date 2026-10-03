@@ -71,6 +71,11 @@ public sealed record UserDetailsDto(
     IReadOnlyList<ExternalIdentityDto> ExternalIdentities,
     IReadOnlyList<SecurityAuditEventDto> AuditEvents);
 
+public sealed record SecurityAuditQuery(string? EventType = null, string? Outcome = null, Guid? UserId = null,
+    DateTimeOffset? FromUtc = null, DateTimeOffset? ToUtc = null);
+
+public sealed record SecurityAuditPageDto(PagedResult<SecurityAuditEventDto> Events, SecurityAuditQuery Query, IReadOnlyList<string> EventTypes);
+
 public sealed record CreatePendingUserCommand(string DisplayName, string UserName, string Email, string? EmployeeNumber);
 public sealed record AssignRoleCommand(string RoleKey, string ScopeType, string ScopeId, string Reason, DateTimeOffset? ValidToUtc, long ExpectedSecurityVersion);
 public sealed record IdentityRequestContext(DateTimeOffset NowUtc, string IpHash, string UserAgentSummary, string CorrelationId);

@@ -48,6 +48,17 @@ public sealed class IdentityController(
         return Request.IsHtmx() ? NoContent() : RedirectToAction(nameof(Index));
     }
 
+    [HttpGet("/identity/audit")]
+    public async Task<IActionResult> Audit(string? eventType = null, string? outcome = null, DateTime? from = null, DateTime? to = null,
+        int page = 1, CancellationToken cancellationToken = default)
+    {
+        var query = new SecurityAuditQuery(eventType, outcome, null,
+            from is { } f ? new DateTimeOffset(DateTime.SpecifyKind(f.Date, DateTimeKind.Utc)) : null,
+            to is { } t ? new DateTimeOffset(DateTime.SpecifyKind(t.Date.AddDays(1), DateTimeKind.Utc)) : null);
+        var model = await identity.GetAuditAsync(query, page, 50, cancellationToken);
+        return Request.IsHtmx() ? PartialView("_AuditTable", model) : View(model);
+    }
+
     [HttpGet("/identity/users/{id:guid}")]
     public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {

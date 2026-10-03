@@ -13,12 +13,14 @@ public sealed class OrdersController(
     ICurrentUserContext current) : Controller
 {
     [HttpGet("/orders")]
-    public IActionResult Index() => View(orders.GetWorkspace(current.CrmUserId,
-        current.RequiredOrganization(), DateTimeOffset.UtcNow));
+    public async Task<IActionResult> Index(int page = 1, CancellationToken cancellationToken = default) =>
+        View(await orders.GetWorkspaceAsync(current.CrmUserId, current.RequiredOrganization(), DateTimeOffset.UtcNow, page,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/orders/table")]
-    public IActionResult Table() => PartialView("_Table", orders.GetWorkspace(current.CrmUserId,
-        current.RequiredOrganization(), DateTimeOffset.UtcNow).Items);
+    public async Task<IActionResult> Table(int page = 1, CancellationToken cancellationToken = default) =>
+        PartialView("_Table", await orders.GetWorkspaceAsync(current.CrmUserId, current.RequiredOrganization(), DateTimeOffset.UtcNow, page,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/orders/{id:guid}")]
     public IActionResult Details(Guid id)

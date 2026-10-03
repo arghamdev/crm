@@ -16,10 +16,14 @@ public sealed class QuotesController(
     IOrganizationContextService organization) : Controller
 {
     [HttpGet("/quotes")]
-    public IActionResult Index() => View(quotes.GetWorkspace(current.CrmUserId, current.RequiredOrganization(), DateTimeOffset.UtcNow));
+    public async Task<IActionResult> Index(int page = 1, CancellationToken cancellationToken = default) =>
+        View(await quotes.GetWorkspaceAsync(current.CrmUserId, current.RequiredOrganization(), DateTimeOffset.UtcNow, page,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/quotes/table")]
-    public IActionResult Table() => PartialView("_Table", quotes.GetWorkspace(current.CrmUserId, current.RequiredOrganization(), DateTimeOffset.UtcNow).Items);
+    public async Task<IActionResult> Table(int page = 1, CancellationToken cancellationToken = default) =>
+        PartialView("_Table", await quotes.GetWorkspaceAsync(current.CrmUserId, current.RequiredOrganization(), DateTimeOffset.UtcNow, page,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/quotes/{id:guid}")]
     public IActionResult Details(Guid id)

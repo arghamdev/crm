@@ -43,5 +43,18 @@ internal static partial class TestRunner
         using (var response = await manager.PostAsync("/identity/roles/ServiceAgent", Form(granted, "stale", version)))
             Check(response.StatusCode == HttpStatusCode.UnprocessableEntity, "ROLES: a stale version is rejected with 422.");
         using (var response = await manager.GetAsync("/identity/roles/DoesNotExist")) Check(response.StatusCode == HttpStatusCode.NotFound, "ROLES: unknown role returns 404.");
+
+        using (var response = await manager.GetAsync("/identity/audit?eventType=RolePermissionsChanged"))
+        {
+            var html = await response.Content.ReadAsStringAsync();
+            CheckHtml(response.StatusCode == HttpStatusCode.OK && html.Contains("RolePermissionsChanged") && html.Contains("Lead.Read") && !html.Contains(">SignIn<"),
+                "AUDIT: the audit log filters by event type and shows the role change diff.", "audit-filtered", html);
+        }
+        using (var response = await manager.GetAsync("/identity/audit"))
+        {
+            var html = await response.Content.ReadAsStringAsync();
+            Check(response.StatusCode == HttpStatusCode.OK && html.Contains("SignIn") && html.Contains("صفحه 1 از"), "AUDIT: the unfiltered log is paged newest-first.");
+        }
+        using (var response = await expert.GetAsync("/identity/audit")) Check(response.StatusCode != HttpStatusCode.OK, "AUDIT: non-administrators cannot read the audit log.");
     }
 }

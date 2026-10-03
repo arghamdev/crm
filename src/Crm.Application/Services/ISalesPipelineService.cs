@@ -19,6 +19,8 @@ public interface ISalesPipelineService
 
     PipelineBoardDto GetPipeline(Guid currentUserId, OrganizationSelection organization, string? query = null,
         bool includeClosed = false, DateTimeOffset? nowUtc = null);
+    Task<PipelineBoardDto> GetPipelineAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        bool includeClosed = false, DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default);
     OpportunityDetailsDto? GetOpportunity(Guid currentUserId, OrganizationSelection organization, Guid id);
     OpportunityDto CreateOpportunity(Guid currentUserId, OrganizationSelection organization, CreateOpportunityCommand command, DateTimeOffset nowUtc);
     OpportunityDto UpdateOpportunity(Guid currentUserId, OrganizationSelection organization, Guid id, UpdateOpportunityCommand command);

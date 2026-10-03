@@ -784,6 +784,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         entity.Property(x => x.UserAgentSummary).HasMaxLength(300);
         entity.HasIndex(x => new { x.TargetUserId, x.OccurredAtUtc });
         entity.HasIndex(x => new { x.ActorUserId, x.OccurredAtUtc });
+        entity.HasIndex(x => x.OccurredAtUtc);
+        entity.HasIndex(x => new { x.EventType, x.OccurredAtUtc });
     }
 
     public DbSet<PortalRequest> PortalRequests => Set<PortalRequest>();

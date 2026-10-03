@@ -12,6 +12,7 @@ public interface ICrmQuerySource
     Task<List<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default);
     Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default);
     Task<double?> AverageAsync(IQueryable<int> query, CancellationToken cancellationToken = default);
+    Task<decimal> SumAsync(IQueryable<decimal> query, CancellationToken cancellationToken = default);
 }
 
 public sealed record PageRequest(int Page, int PageSize)
