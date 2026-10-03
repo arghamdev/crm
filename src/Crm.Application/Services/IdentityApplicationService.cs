@@ -8,7 +8,8 @@ namespace Crm.Application.Services;
 public sealed class IdentityApplicationService(
     ICrmDataStore store,
     IAccessSnapshotService access,
-    IdentityRuntimeOptions options) : IIdentityApplicationService
+    IdentityRuntimeOptions options,
+    ILoginAttemptGuard? loginGuard = null) : IIdentityApplicationService
 {
     private static readonly Dictionary<string, (string Label, IReadOnlySet<string> ScopeTypes)> Roles =
         new(StringComparer.OrdinalIgnoreCase)
@@ -131,15 +132,22 @@ public sealed class IdentityApplicationService(
 
     public SignInResult AuthenticateDemo(string userName, string password, IdentityRequestContext context)
     {
-        if (string.IsNullOrWhiteSpace(userName) || !FixedTimeEquals(password, options.DemoPassword))
-            return Failed(SignInFailureReason.InvalidCredentials, "نام کاربری یا رمز نمونه صحیح نیست.", context, "Invalid demo credentials.");
-        return store.Write(data =>
+        var normalizedUserName = userName?.Trim() ?? string.Empty;
+        // Checked before the password so a locked account cannot be probed, even with the right password.
+        if (normalizedUserName.Length > 0 && loginGuard?.LockedUntil(normalizedUserName, context.NowUtc) is { } lockedUntil)
+            return Failed(SignInFailureReason.LockedOut, LockedOutMessage(lockedUntil, context.NowUtc), context, "Login attempt during lockout.");
+        if (normalizedUserName.Length == 0 || !FixedTimeEquals(password, options.DemoPassword))
+            return FailedAttempt(normalizedUserName, context, "Invalid demo credentials.");
+        var result = store.Write(data =>
         {
-            var user = data.Users.SingleOrDefault(x => x.UserName.Equals(userName.Trim(), StringComparison.OrdinalIgnoreCase));
+            var user = data.Users.SingleOrDefault(x => x.UserName.Equals(normalizedUserName, StringComparison.OrdinalIgnoreCase));
             if (user is null) return FailedInside(data, SignInFailureReason.InvalidCredentials, "نام کاربری یا رمز نمونه صحیح نیست.", context, null, "Unknown demo user.");
             if (!user.IsActiveAt(context.NowUtc)) return FailedInside(data, SignInFailureReason.UserInactive, "حساب کاربری فعال نیست.", context, user.Id, user.Status.ToString());
             return CreateSession(data, user, context, "DemoPassword");
         });
+        if (result.Succeeded) loginGuard?.Reset(normalizedUserName);
+        else if (result.FailureReason == SignInFailureReason.InvalidCredentials) RecordGuardFailure(normalizedUserName, context);
+        return result;
     }
 
     public SignInResult AuthenticateExternal(ExternalIdentityDescriptor identity, IdentityRequestContext context)
@@ -248,6 +256,20 @@ public sealed class IdentityApplicationService(
         return new SignInResult(true, SignInFailureReason.None, "ورود موفق بود.", MapUser(data, user, context.NowUtc),
             session.Id, session.AbsoluteExpiresAtUtc, session.SelectedCompanyId is null, session.SelectedCompanyId);
     }
+
+    private SignInResult FailedAttempt(string userName, IdentityRequestContext context, string detail)
+    {
+        var lockedUntil = RecordGuardFailure(userName, context);
+        return lockedUntil is { } until
+            ? Failed(SignInFailureReason.LockedOut, LockedOutMessage(until, context.NowUtc), context, detail + " Lockout started.")
+            : Failed(SignInFailureReason.InvalidCredentials, "نام کاربری یا رمز نمونه صحیح نیست.", context, detail);
+    }
+
+    private DateTimeOffset? RecordGuardFailure(string userName, IdentityRequestContext context) =>
+        userName.Length == 0 ? null : loginGuard?.RecordFailure(userName, context.NowUtc);
+
+    private static string LockedOutMessage(DateTimeOffset lockedUntil, DateTimeOffset nowUtc) =>
+        $"به‌دلیل تلاش‌های ناموفق مکرر، ورود به این حساب تا {Math.Max(1, (int)Math.Ceiling((lockedUntil - nowUtc).TotalMinutes))} دقیقهٔ دیگر موقتاً مسدود است.";
 
     private SignInResult Failed(SignInFailureReason reason, string message, IdentityRequestContext context, string detail) => store.Write(data =>
         FailedInside(data, reason, message, context, null, detail));

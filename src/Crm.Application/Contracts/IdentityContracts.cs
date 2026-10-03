@@ -90,7 +90,8 @@ public enum SignInFailureReason
     UnknownIdentity,
     EmailNotVerified,
     AmbiguousBinding,
-    InvalidIdentity
+    InvalidIdentity,
+    LockedOut
 }
 
 public sealed record SignInResult(

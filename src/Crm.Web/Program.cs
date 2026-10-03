@@ -167,6 +167,11 @@ else
 }
 
 builder.Services.AddScoped<IAccessSnapshotService, DemoAccessSnapshotService>();
+builder.Services.AddSingleton(new LoginLockoutOptions(
+    builder.Configuration.GetValue("Authentication:Lockout:MaxFailures", 5),
+    TimeSpan.FromMinutes(builder.Configuration.GetValue("Authentication:Lockout:WindowMinutes", 15)),
+    TimeSpan.FromMinutes(builder.Configuration.GetValue("Authentication:Lockout:LockoutMinutes", 15))));
+builder.Services.AddSingleton<ILoginAttemptGuard, DistributedLoginAttemptGuard>();
 builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 builder.Services.AddScoped<IOrganizationContextService, OrganizationContextService>();
 builder.Services.AddScoped<IUserContextSelector>(services => services.GetRequiredService<IOrganizationContextService>());
