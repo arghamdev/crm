@@ -696,6 +696,9 @@ internal static partial class TestRunner
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 rateLimited = true;
+                var body = await response.Content.ReadAsStringAsync();
+                Check(response.Headers.RetryAfter is not null && HtmlContains(body, "بیش از حد مجاز"),
+                    "A rate-limited login must explain the limit and send Retry-After instead of an empty 429.");
                 break;
             }
         }

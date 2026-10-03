@@ -208,6 +208,28 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        // Without a body the browser shows its own bare "HTTP ERROR 429" page; explain what happened and when to retry.
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var wait) ? wait : TimeSpan.FromMinutes(1);
+        var seconds = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds));
+        var response = context.HttpContext.Response;
+        response.Headers.RetryAfter = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        const string message = "تعداد درخواست‌ها بیش از حد مجاز است؛ لطفاً کمی بعد دوباره تلاش کنید.";
+        if (context.HttpContext.Request.IsHtmx())
+        {
+            response.Trigger("rateLimited", message);
+            return;
+        }
+        response.ContentType = "text/html; charset=utf-8";
+        await response.WriteAsync($$"""
+            <!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>درخواست‌های بیش از حد</title><link rel="stylesheet" href="/css/site.css"></head>
+            <body><main class="login-panel"><div class="login-card"><span class="eyebrow">محدودیت امنیتی</span><h2>کمی صبر کنید</h2>
+            <p class="muted">{{message}}</p><p class="muted">زمان تقریبی انتظار: {{seconds}} ثانیه</p>
+            <a class="button button--primary" href="/account/login">بازگشت به صفحهٔ ورود</a></div></main></body></html>
+            """, cancellationToken);
+    };
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         context.Request.Path.StartsWithSegments("/signin-oidc")
             ? RateLimitPartition.GetFixedWindowLimiter(

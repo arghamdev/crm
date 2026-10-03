@@ -115,6 +115,8 @@
     else showToast("در انجام درخواست خطایی رخ داد.", true);
   });
 
+  document.body.addEventListener("rateLimited", event => showToast(event.detail?.message || "تعداد درخواست‌ها بیش از حد مجاز است.", true));
+
   changeEvents.forEach(name => {
     document.body.addEventListener(name, event => {
       closeDrawer();

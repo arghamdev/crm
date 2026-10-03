@@ -30,6 +30,7 @@ public sealed class AccountController(IIdentityApplicationService identity, ICon
         {
             ModelState.AddModelError(string.Empty, result.Message);
             ViewBag.UseOidc = false;
+            ViewBag.UserName = userName;
             return View(model: returnUrl);
         }
         var properties = new AuthenticationProperties
