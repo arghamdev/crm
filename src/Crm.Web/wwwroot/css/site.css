@@ -896,7 +896,7 @@ a { color: inherit; text-decoration: none; }
 .form-section--supplementary { background: var(--surface-2); }
 .form-section--supplementary > h3 { margin: -17px -17px 15px; padding: 12px; color: var(--primary-700); text-align: center; border-radius: 12px 12px 0 0; background: var(--amber-100); font-size: 14px; }
 .contact-row { margin: 0 0 12px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
-.customer-form .consent-row input[type="checkbox"], .drawer-form .consent-row input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; padding: 0; }
+.consent-row input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; padding: 0; }
 .contact-row__actions { display: flex; align-items: center; justify-content: flex-end; }
 .customer-logo { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; }
 .details-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -919,3 +919,8 @@ a { color: inherit; text-decoration: none; }
 .commission-split select, .commission-split input { min-width: 0; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 8px; font: inherit; font-size: 11px; }
 .split-line { display: block; white-space: nowrap; }
 .notification-body { display: block; color: var(--ink-3); }
+.notification-settings form { display: grid; gap: 14px; }
+.notification-settings .consent-row { flex-direction: row; font-size: 13px; }
+/* Checkbox rows inside form grids stay inline (overrides the stacked .form-grid label layout). */
+.form-grid label.consent-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+.form-grid label.consent-row input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; flex: 0 0 auto; }

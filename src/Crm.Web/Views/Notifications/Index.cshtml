@@ -13,7 +13,7 @@
 @if (TempData["NotificationMessage"] is string message) { <div class="identity-form-note" role="status">@message</div> }
 @if (TempData["NotificationError"] is string error) { <div class="validation-summary" role="alert">@error</div> }
 @if (!Model.EmailConfigured || !Model.SmsConfigured) { <div class="identity-form-note">در این محیط @(Model.EmailConfigured ? "" : "ایمیل")@(Model.EmailConfigured || Model.SmsConfigured ? "" : " و ")@(Model.SmsConfigured ? "" : "پیامک") در حالت نمایشی است: پیام‌ها ثبت می‌شوند ولی واقعاً ارسال نمی‌شوند. پیکربندی در <code>Notifications:Email</code> و <code>Notifications:Sms</code>.</div> }
-<section class="panel role-permissions">
+<section class="panel notification-settings">
     <div class="panel-heading"><div><strong>تنظیمات دریافت</strong><small>ایمیل حساب: <bdi dir="ltr">@Model.Email</bdi></small></div></div>
     <form method="post" action="/account/notifications">
         @Html.AntiForgeryToken()
