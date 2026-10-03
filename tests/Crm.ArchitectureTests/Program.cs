@@ -598,6 +598,7 @@ ReportingChecks.Run(Check);
 SelfServiceChecks.Run(Check);
 ServiceDeskChecks.Run(Check);
 SecurityHardeningChecks.Run(Check);
+DataIntegrityChecks.Run(Check);
 
 if (failures.Count > 0)
 {

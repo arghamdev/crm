@@ -1,4 +1,3 @@
-using System.Globalization;
 using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
 using Crm.Domain.Customers;
@@ -264,15 +263,8 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
         return x.Status == ServiceCaseStatus.WaitingOnCustomer ? 3 : 2;
     }
 
-    /// <summary>Uses the highest existing sequence (not the row count) so codes stay unique after deletes or merges.</summary>
-    private static string NextCode(CrmDataSet data, DateTimeOffset nowUtc)
-    {
-        var prefix = $"CS-{nowUtc.Year}-";
-        var max = data.ServiceCases.Where(x => x.Code.StartsWith(prefix, StringComparison.Ordinal))
-            .Select(x => int.TryParse(x.Code[prefix.Length..], NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0)
-            .DefaultIfEmpty(1000).Max();
-        return $"{prefix}{max + 1:0000}";
-    }
+    private static string NextCode(CrmDataSet data, DateTimeOffset nowUtc) =>
+        RecordCodes.Next(data.ServiceCases.Select(x => x.Code), $"CS-{nowUtc.Year}-", 1001, 4);
 
     private static Dictionary<Guid, string> CustomerNames(CrmDataSet data, string companyId) =>
         data.Customers.Where(x => Same(x.CompanyId, companyId)).ToDictionary(x => x.Id, x => x.Name);

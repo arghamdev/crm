@@ -286,7 +286,7 @@ public sealed class QuoteApplicationService(
             string.IsNullOrWhiteSpace(reason) ? "تغییر وضعیت" : reason, userId, nowUtc));
 
     private static string NextCode(CrmDataSet data, DateTimeOffset nowUtc) =>
-        $"Q-{nowUtc.Year}-{data.Quotes.Select(x => x.Code).Distinct(StringComparer.OrdinalIgnoreCase).Count() + 31:000}";
+        RecordCodes.Next(data.Quotes.Select(x => x.Code), $"Q-{nowUtc.Year}-", 31, 3);
     private static QuoteSummaryDto Map(Quote x) => new(x.Id, x.Code, x.Revision, x.Customer, x.Opportunity,
         x.CustomerId, x.OpportunityId, x.OwnerUserId, x.CompanyId, x.BranchId, x.TerritoryId, x.CurrencyCode,
         x.ValidUntilUtc, x.GrossAmount, x.DiscountAmount, x.NetAmount, x.DiscountPercent, x.MarginPercent,

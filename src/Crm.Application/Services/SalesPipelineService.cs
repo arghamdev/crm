@@ -356,7 +356,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
         if (matches.Count > 1) throw new InvalidOperationException("چند مشتری هم‌نام وجود دارد؛ مشتری مقصد را صریح انتخاب کنید.");
         if (matches.Count == 1) return matches[0];
         var branch = data.OrganizationUnits.Single(x => Same(x.CompanyId, lead.CompanyId) && Same(x.UnitId, lead.BranchId));
-        var customer = new Customer(Guid.NewGuid(), $"CUS-{data.Customers.Count + 481:00000}", lead.Name, string.Empty,
+        var customer = new Customer(Guid.NewGuid(), RecordCodes.Next(data.Customers.Select(x => x.Code), "CUS-", 481, 5), lead.Name, string.Empty,
             lead.Owner, lead.CompanyId, lead.BranchId, branch.Name, lead.TerritoryId, "تبدیل سرنخ", 0,
             primaryPhone: lead.Phone, primaryEmail: lead.Email, dataSource: "Lead Conversion");
         data.Customers.Add(customer);
@@ -465,8 +465,8 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
         if (duplicate) throw new InvalidOperationException("سرنخ باز مشابه با تلفن، ایمیل یا نام یکسان وجود دارد.");
     }
 
-    private static string NextLeadCode(CrmDataSet data, DateTimeOffset nowUtc) => $"LD-{nowUtc.Year}-{data.Leads.Count + 118:000}";
-    private static string NextOpportunityCode(CrmDataSet data, DateTimeOffset nowUtc) => $"OP-{nowUtc.Year}-{data.Opportunities.Count + 2041:0000}";
+    private static string NextLeadCode(CrmDataSet data, DateTimeOffset nowUtc) => RecordCodes.Next(data.Leads.Select(x => x.Code), $"LD-{nowUtc.Year}-", 118, 3);
+    private static string NextOpportunityCode(CrmDataSet data, DateTimeOffset nowUtc) => RecordCodes.Next(data.Opportunities.Select(x => x.Code), $"OP-{nowUtc.Year}-", 2041, 4);
     private static LeadSlaState Sla(Lead x, DateTimeOffset nowUtc)
     {
         if (x.FirstContactAtUtc.HasValue) return LeadSlaState.Completed;

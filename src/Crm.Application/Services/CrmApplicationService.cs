@@ -103,7 +103,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 throw new InvalidOperationException("رکورد مشابه پیدا شد؛ بررسی کنید یا ایجاد رکورد مستقل را همراه دلیل تأیید کنید.");
             if (matches.Count > 0 && string.IsNullOrWhiteSpace(command.DuplicateReason))
                 throw new InvalidOperationException("برای ایجاد رکورد مشابه، ثبت دلیل الزامی است.");
-            var customer = new Customer(Guid.NewGuid(), $"CUS-{data.Customers.Count + 481:00000}", command.Name,
+            var customer = new Customer(Guid.NewGuid(), RecordCodes.Next(data.Customers.Select(x => x.Code), "CUS-", 481, 5), command.Name,
                 command.City, command.Owner, organization.CompanyId, scope.Id, scope.Name, organization.TerritoryId,
                 command.Segment, 1_000_000_000m, command.Kind, command.NationalId, command.PrimaryPhone, command.PrimaryEmail);
             data.Customers.Add(customer);
@@ -142,7 +142,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             var scope = ResolveWriteScope(data, snapshot, organization, "Lead.Create", command.BranchId);
             var ownerUserId = command.OwnerUserId ?? data.Users
                 .SingleOrDefault(x => x.DisplayName.Equals(command.Owner, StringComparison.OrdinalIgnoreCase))?.Id;
-            var lead = new Lead(Guid.NewGuid(), $"LD-1405-{data.Leads.Count + 118:000}", command.Name, command.Contact ?? string.Empty,
+            var lead = new Lead(Guid.NewGuid(), RecordCodes.Next(data.Leads.Select(x => x.Code), "LD-1405-", 118, 3), command.Name, command.Contact ?? string.Empty,
                 command.Source, command.Owner ?? string.Empty, organization.CompanyId, scope.Id, command.TerritoryId ?? organization.TerritoryId,
                 ownerUserId: ownerUserId, phone: command.Phone, email: command.Email);
             data.Leads.Add(lead);
@@ -183,7 +183,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             {
                 var branch = data.OrganizationUnits.Single(x => x.CompanyId.Equals(lead.CompanyId, StringComparison.OrdinalIgnoreCase) &&
                     x.UnitId.Equals(lead.BranchId, StringComparison.OrdinalIgnoreCase));
-                customer = new Customer(Guid.NewGuid(), $"CUS-{data.Customers.Count + 481:00000}", lead.Name, string.Empty,
+                customer = new Customer(Guid.NewGuid(), RecordCodes.Next(data.Customers.Select(x => x.Code), "CUS-", 481, 5), lead.Name, string.Empty,
                     lead.Owner, lead.CompanyId, lead.BranchId, branch.Name, lead.TerritoryId, "تبدیل سرنخ", 0,
                     primaryPhone: lead.Phone ?? lead.Contact, primaryEmail: lead.Email, dataSource: "Lead Conversion");
                 data.Customers.Add(customer);
@@ -194,7 +194,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                     CustomerTimelineType.Created, "مشتری از سرنخ ساخته شد", lead.Code, DateTimeOffset.UtcNow,
                     "CRM", lead.Code, currentUserId));
             }
-            var opportunity = new Opportunity(Guid.NewGuid(), $"OP-{2041 + data.Opportunities.Count}",
+            var opportunity = new Opportunity(Guid.NewGuid(), RecordCodes.Next(data.Opportunities.Select(x => x.Code), "OP-", 2041, 4),
                 $"فرصت همکاری با {lead.Name}", customer.Name, customer.Id, 2_500_000_000m, lead.Owner, lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.OwnerUserId, lead.Id, now.AddDays(30), lead.Source);
             opportunity.Update(opportunity.Title, opportunity.Value, opportunity.ExpectedCloseAtUtc, opportunity.Source,
@@ -269,7 +269,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                     x.Title.Equals(command.Opportunity?.Trim(), StringComparison.OrdinalIgnoreCase) && InContext(snapshot, organization, "Opportunity.Read", x) &&
                     CanManageSalesRecord(data, snapshot, currentUserId, organization.CompanyId, x.OwnerUserId, x.Owner));
             if (opportunity is null) throw new InvalidOperationException("فرصت معتبر و مرتبط با مشتری انتخاب نشده است.");
-            var quote = new Quote(Guid.NewGuid(), $"Q-1405-{data.Quotes.Count + 31:000}", customer.Name, customer.Id,
+            var quote = new Quote(Guid.NewGuid(), RecordCodes.Next(data.Quotes.Select(x => x.Code), "Q-1405-", 31, 3), customer.Name, customer.Id,
                 opportunity.Title, opportunity.Id, command.Amount, command.DiscountPercent, command.MarginPercent,
                 organization.CompanyId, scope.Id, organization.TerritoryId);
             data.Quotes.Add(quote);

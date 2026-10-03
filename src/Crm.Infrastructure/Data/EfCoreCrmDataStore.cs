@@ -15,7 +15,27 @@ public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
     public TResult Read<TResult>(Func<CrmDataSet, TResult> query) =>
         query(new CrmDataSet(new LazySource(db, tracking: false)));
 
+    private const int MaxCodeConflictAttempts = 3;
+
     public TResult Write<TResult>(Func<CrmDataSet, TResult> command)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try { return WriteOnce(command); }
+            catch (DbUpdateException exception) when (attempt < MaxCodeConflictAttempts && IsRecordCodeConflict(exception))
+            {
+                // Two writers picked the same "next" record code. The transaction rolled back, so discard the
+                // tracked state and run the command again against fresh data; it will pick the following code.
+                db.ChangeTracker.Clear();
+            }
+            catch (DbUpdateException exception) when (IsRecordCodeConflict(exception))
+            {
+                throw new Crm.Application.Contracts.SelfServiceConflictException("ثبت هم‌زمان رکوردهای متعدد؛ لطفاً دوباره تلاش کنید.");
+            }
+        }
+    }
+
+    private TResult WriteOnce<TResult>(Func<CrmDataSet, TResult> command)
     {
         var source = new LazySource(db, tracking: true);
         var data = new CrmDataSet(source);
@@ -26,6 +46,10 @@ public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
             db.SaveChanges();
             return result;
         }
+        catch (DbUpdateException exception) when (IsRecordCodeConflict(exception))
+        {
+            throw; // handled by the retry loop in Write
+        }
         catch (DbUpdateConcurrencyException exception)
         {
             throw new InvalidOperationException("رکورد توسط درخواست دیگری تغییر کرده است؛ داده‌ها را تازه‌سازی و دوباره تلاش کنید.", exception);
@@ -35,6 +59,12 @@ public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
             throw new Crm.Application.Contracts.SelfServiceConflictException("عملیات هم‌زمان یا شناسهٔ تکراری است؛ وضعیت ذخیره‌شده را تازه‌سازی کنید.");
         }
     }
+
+    /// <summary>Unique-index violation on a human-readable code column (all such indexes end in "_Code" or "_Code_*").</summary>
+    internal static bool IsRecordCodeConflict(DbUpdateException exception) =>
+        exception is not DbUpdateConcurrencyException &&
+        exception.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 } sql &&
+        (sql.Message.Contains("_Code'", StringComparison.Ordinal) || sql.Message.Contains("_Code_", StringComparison.Ordinal));
 
     private sealed class LazySource(CrmDbContext db, bool tracking) : ICrmDataSetSource
     {

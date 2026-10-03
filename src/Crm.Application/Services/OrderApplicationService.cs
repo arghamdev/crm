@@ -288,7 +288,7 @@ public sealed class OrderApplicationService(
     }
 
     private static string NextCode(CrmDataSet data, DateTimeOffset nowUtc) =>
-        $"OR-{nowUtc.Year}-{data.OrderRequests.Count + 1:000}";
+        RecordCodes.Next(data.OrderRequests.Select(x => x.Code), $"OR-{nowUtc.Year}-", 1, 3);
 
     private static OrderSummaryDto Map(OrderRequest x) => new(x.Id, x.Code, x.QuoteCode, x.QuoteId,
         x.Customer, x.CustomerId, x.CompanyId, x.BranchId, x.TerritoryId, x.CurrencyCode, x.NetAmount,
