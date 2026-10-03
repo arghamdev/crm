@@ -40,6 +40,14 @@ if (useOidc)
         string.IsNullOrWhiteSpace(ipHashSalt) || ipHashSalt.StartsWith("demo-", StringComparison.OrdinalIgnoreCase))
         throw new InvalidOperationException("OIDC mode requires real Authority, client credential and IP hash salt from protected configuration.");
 }
+else if (!builder.Environment.IsDevelopment() &&
+         !builder.Configuration.GetValue("Authentication:AllowDemoOutsideDevelopment", false))
+{
+    // Demo mode signs anyone in with one shared password; never let it reach a real environment by accident.
+    throw new InvalidOperationException(
+        "Authentication:Mode=Demo is only allowed in Development. Configure OIDC, or set " +
+        "Authentication:AllowDemoOutsideDevelopment=true explicitly for isolated test environments.");
+}
 var idleMinutes = builder.Configuration.GetValue("Authentication:Session:IdleMinutes", 30);
 var absoluteHours = builder.Configuration.GetValue("Authentication:Session:AbsoluteHours", 8);
 var maxSessions = builder.Configuration.GetValue("Authentication:Session:MaxConcurrent", 3);

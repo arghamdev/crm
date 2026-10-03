@@ -88,6 +88,8 @@ jobs:
         run: dotnet run --project tests/Crm.BrowserTests --configuration Release --no-build -- install --with-deps chromium
 
       - name: Start CRM web application
+        env:
+          Authentication__AllowDemoOutsideDevelopment: "true"
         run: |
           mkdir -p artifacts/browser
           dotnet run --project src/Crm.Web --configuration Release --no-build --no-launch-profile --urls http://localhost:5085 > artifacts/web-app.log 2>&1 &

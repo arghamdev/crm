@@ -8,50 +8,84 @@ using Crm.Domain.Work;
 
 namespace Crm.Application.Abstractions;
 
+/// <summary>
+/// Loads one entity table on first access. Persistent stores implement this so a request only
+/// materializes the tables its use case actually touches instead of the whole database.
+/// </summary>
+public interface ICrmDataSetSource
+{
+    List<T> Load<T>() where T : class;
+}
+
 public sealed class CrmDataSet
 {
-    public List<Crm.Domain.SelfService.PortalRequest> PortalRequests { get; } = [];
-    public List<Crm.Domain.SelfService.MobileVisit> MobileVisits { get; } = [];
-    public List<Crm.Domain.SelfService.MobileOperationReceipt> MobileOperationReceipts { get; } = [];
-    public List<Customer> Customers { get; } = [];
-    public List<CustomerContact> CustomerContacts { get; } = [];
-    public List<CustomerAddress> CustomerAddresses { get; } = [];
-    public List<CustomerTimelineEvent> CustomerTimelineEvents { get; } = [];
-    public List<CustomerOwnershipHistory> CustomerOwnershipHistory { get; } = [];
-    public List<CustomerDuplicateCandidate> CustomerDuplicateCandidates { get; } = [];
-    public List<CustomerMergeOperation> CustomerMergeOperations { get; } = [];
-    public List<Lead> Leads { get; } = [];
-    public List<LeadStatusHistory> LeadStatusHistory { get; } = [];
-    public List<Opportunity> Opportunities { get; } = [];
-    public List<OpportunityStageHistory> OpportunityStageHistory { get; } = [];
-    public List<OpportunityActivity> OpportunityActivities { get; } = [];
-    public List<Quote> Quotes { get; } = [];
-    public List<QuoteLine> QuoteLines { get; } = [];
-    public List<QuoteStatusHistory> QuoteStatusHistory { get; } = [];
-    public List<QuoteApprovalDecision> QuoteApprovalDecisions { get; } = [];
-    public List<OrderRequest> OrderRequests { get; } = [];
-    public List<OrderCreditDecision> OrderCreditDecisions { get; } = [];
-    public List<OrderStatusHistory> OrderStatusHistory { get; } = [];
-    public List<OrderIntegrationMessage> OrderIntegrationMessages { get; } = [];
-    public List<OrderIntegrationAttempt> OrderIntegrationAttempts { get; } = [];
-    public List<Dealer> Dealers { get; } = [];
-    public List<DealerContract> DealerContracts { get; } = [];
-    public List<DealerTerritoryAssignment> DealerTerritoryAssignments { get; } = [];
-    public List<DealerCustomerAssignment> DealerCustomerAssignments { get; } = [];
-    public List<DealerTarget> DealerTargets { get; } = [];
-    public List<DealerFinancialSnapshot> DealerFinancialSnapshots { get; } = [];
-    public List<DealerPerformanceSnapshot> DealerPerformanceSnapshots { get; } = [];
-    public List<DealerStatusHistory> DealerStatusHistory { get; } = [];
-    public List<CrmWorkItem> WorkItems { get; } = [];
-    public List<CrmUser> Users { get; } = [];
-    public List<ExternalIdentity> ExternalIdentities { get; } = [];
-    public List<UserSession> UserSessions { get; } = [];
-    public List<UserRoleAssignment> UserRoleAssignments { get; } = [];
-    public List<SecurityAuditEvent> SecurityAuditEvents { get; } = [];
-    public List<Company> Companies { get; } = [];
-    public List<OrganizationUnit> OrganizationUnits { get; } = [];
-    public List<Territory> Territories { get; } = [];
-    public List<OrganizationChange> OrganizationChanges { get; } = [];
+    private readonly ICrmDataSetSource? _source;
+    private readonly Dictionary<Type, object> _sets = [];
+
+    /// <summary>Creates a fully materialized, empty data set (used by the in-memory store and tests).</summary>
+    public CrmDataSet()
+    {
+        // Materialize every list up front so concurrent readers never mutate the lazy cache.
+        foreach (var property in typeof(CrmDataSet).GetProperties()) property.GetValue(this);
+    }
+
+    /// <summary>Creates a data set whose tables are loaded on demand from <paramref name="source"/>.</summary>
+    public CrmDataSet(ICrmDataSetSource source) => _source = source;
+
+    public IReadOnlyCollection<Type> LoadedTypes => _sets.Keys;
+
+    public bool IsLoaded<T>() => _sets.ContainsKey(typeof(T));
+
+    private List<T> Set<T>() where T : class
+    {
+        if (_sets.TryGetValue(typeof(T), out var existing)) return (List<T>)existing;
+        var loaded = _source?.Load<T>() ?? [];
+        _sets[typeof(T)] = loaded;
+        return loaded;
+    }
+
+    public List<Crm.Domain.SelfService.PortalRequest> PortalRequests => Set<Crm.Domain.SelfService.PortalRequest>();
+    public List<Crm.Domain.SelfService.MobileVisit> MobileVisits => Set<Crm.Domain.SelfService.MobileVisit>();
+    public List<Crm.Domain.SelfService.MobileOperationReceipt> MobileOperationReceipts => Set<Crm.Domain.SelfService.MobileOperationReceipt>();
+    public List<Customer> Customers => Set<Customer>();
+    public List<CustomerContact> CustomerContacts => Set<CustomerContact>();
+    public List<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+    public List<CustomerTimelineEvent> CustomerTimelineEvents => Set<CustomerTimelineEvent>();
+    public List<CustomerOwnershipHistory> CustomerOwnershipHistory => Set<CustomerOwnershipHistory>();
+    public List<CustomerDuplicateCandidate> CustomerDuplicateCandidates => Set<CustomerDuplicateCandidate>();
+    public List<CustomerMergeOperation> CustomerMergeOperations => Set<CustomerMergeOperation>();
+    public List<Lead> Leads => Set<Lead>();
+    public List<LeadStatusHistory> LeadStatusHistory => Set<LeadStatusHistory>();
+    public List<Opportunity> Opportunities => Set<Opportunity>();
+    public List<OpportunityStageHistory> OpportunityStageHistory => Set<OpportunityStageHistory>();
+    public List<OpportunityActivity> OpportunityActivities => Set<OpportunityActivity>();
+    public List<Quote> Quotes => Set<Quote>();
+    public List<QuoteLine> QuoteLines => Set<QuoteLine>();
+    public List<QuoteStatusHistory> QuoteStatusHistory => Set<QuoteStatusHistory>();
+    public List<QuoteApprovalDecision> QuoteApprovalDecisions => Set<QuoteApprovalDecision>();
+    public List<OrderRequest> OrderRequests => Set<OrderRequest>();
+    public List<OrderCreditDecision> OrderCreditDecisions => Set<OrderCreditDecision>();
+    public List<OrderStatusHistory> OrderStatusHistory => Set<OrderStatusHistory>();
+    public List<OrderIntegrationMessage> OrderIntegrationMessages => Set<OrderIntegrationMessage>();
+    public List<OrderIntegrationAttempt> OrderIntegrationAttempts => Set<OrderIntegrationAttempt>();
+    public List<Dealer> Dealers => Set<Dealer>();
+    public List<DealerContract> DealerContracts => Set<DealerContract>();
+    public List<DealerTerritoryAssignment> DealerTerritoryAssignments => Set<DealerTerritoryAssignment>();
+    public List<DealerCustomerAssignment> DealerCustomerAssignments => Set<DealerCustomerAssignment>();
+    public List<DealerTarget> DealerTargets => Set<DealerTarget>();
+    public List<DealerFinancialSnapshot> DealerFinancialSnapshots => Set<DealerFinancialSnapshot>();
+    public List<DealerPerformanceSnapshot> DealerPerformanceSnapshots => Set<DealerPerformanceSnapshot>();
+    public List<DealerStatusHistory> DealerStatusHistory => Set<DealerStatusHistory>();
+    public List<CrmWorkItem> WorkItems => Set<CrmWorkItem>();
+    public List<CrmUser> Users => Set<CrmUser>();
+    public List<ExternalIdentity> ExternalIdentities => Set<ExternalIdentity>();
+    public List<UserSession> UserSessions => Set<UserSession>();
+    public List<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
+    public List<SecurityAuditEvent> SecurityAuditEvents => Set<SecurityAuditEvent>();
+    public List<Company> Companies => Set<Company>();
+    public List<OrganizationUnit> OrganizationUnits => Set<OrganizationUnit>();
+    public List<Territory> Territories => Set<Territory>();
+    public List<OrganizationChange> OrganizationChanges => Set<OrganizationChange>();
 }
 
 public interface ICrmDataStore

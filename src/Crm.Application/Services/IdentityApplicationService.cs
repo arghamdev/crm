@@ -131,7 +131,7 @@ public sealed class IdentityApplicationService(
 
     public SignInResult AuthenticateDemo(string userName, string password, IdentityRequestContext context)
     {
-        if (string.IsNullOrWhiteSpace(userName) || !string.Equals(password, options.DemoPassword, StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(userName) || !FixedTimeEquals(password, options.DemoPassword))
             return Failed(SignInFailureReason.InvalidCredentials, "نام کاربری یا رمز نمونه صحیح نیست.", context, "Invalid demo credentials.");
         return store.Write(data =>
         {
@@ -291,6 +291,9 @@ public sealed class IdentityApplicationService(
         x.ActorUserId, x.TargetUserId, x.SessionId, x.CorrelationId, x.Reason);
     private static string Required(string value, string name) => string.IsNullOrWhiteSpace(value)
         ? throw new ArgumentException("Value is required.", name) : value.Trim();
+    private static bool FixedTimeEquals(string? supplied, string expected) =>
+        System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.UTF8.GetBytes(supplied ?? string.Empty), System.Text.Encoding.UTF8.GetBytes(expected));
     private static string NormalizeEmail(string email) => Required(email, nameof(email)).ToUpperInvariant();
     private static string IdentityFingerprint(ExternalIdentityDescriptor identity)
     {
