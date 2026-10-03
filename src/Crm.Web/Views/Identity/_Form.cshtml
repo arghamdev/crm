@@ -1,0 +1,13 @@
+@model CreatePendingUserCommand
+<form class="drawer-form" method="post" action="/identity/users/create" hx-post="/identity/users/create" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>کاربر در انتظار اتصال</h3><div class="form-grid">
+        <label class="field field--full"><span>نام نمایشی *</span><input asp-for="DisplayName" autocomplete="name"/><span asp-validation-for="DisplayName" class="field-error"></span></label>
+        <label class="field"><span>نام کاربری *</span><input asp-for="UserName" autocomplete="username"/><span asp-validation-for="UserName" class="field-error"></span></label>
+        <label class="field"><span>شماره پرسنلی</span><input asp-for="EmployeeNumber"/></label>
+        <label class="field field--full"><span>ایمیل سازمانی تأییدشونده *</span><input asp-for="Email" type="email" autocomplete="email"/><span asp-validation-for="Email" class="field-error"></span></label>
+    </div></section>
+    <div class="identity-form-note">حساب فعال نمی‌شود؛ در نخستین ورود OIDC فقط اگر ایمیل تأییدشده دقیقاً با همین کاربر Pending منطبق باشد، Issuer+Subject متصل می‌شود.</div>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ایجاد کاربر Pending</button></div>
+</form>

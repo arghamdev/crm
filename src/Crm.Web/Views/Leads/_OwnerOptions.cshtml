@@ -1,0 +1,3 @@
+@model IReadOnlyList<SalesOwnerOptionDto>
+@if (Model.Count == 0) { <option value="">مالک واجد شرایطی یافت نشد</option> }
+@foreach (var owner in Model) { <option value="@owner.UserId" selected="@(ViewBag.SelectedOwnerId is Guid selected && selected == owner.UserId)">@owner.DisplayName — @owner.RoleLabel</option> }

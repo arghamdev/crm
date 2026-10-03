@@ -1,0 +1,24 @@
+@model DealerWorkspaceDto
+@inject IAccessSnapshotService Access
+@inject ICurrentUserContext Current
+@{
+    ViewData["Title"] = "مدیریت نمایندگان";
+    var companyId = Current.SelectedCompanyId;
+    var canCreate = companyId is not null && Access.Get(User.CrmUserId())?.PermissionsFor(companyId).Contains("Dealer.Manage") == true;
+}
+<header class="page-header">
+    <div><span class="eyebrow">اولویت ۸ · Channel Governance</span><h1>مدیریت نمایندگان</h1><p>پرونده، قرارداد، Territory، هدف، عملکرد و مانده مالی نمایندگان با Scope مستقل</p></div>
+    @if (canCreate) { <button class="button button--primary" type="button" hx-get="/dealers/create" hx-target="#drawerBody" hx-swap="innerHTML" data-open-drawer="true">نماینده جدید</button> }
+</header>
+<section class="metric-grid dealer-metrics">
+    <article class="metric-card"><span>نماینده فعال</span><strong>@Model.ActiveCount</strong><small>دارای قرارداد و Territory معتبر</small></article>
+    <article class="metric-card"><span>در انتظار تأیید</span><strong>@Model.PendingApprovalCount</strong><small>نیازمند تصمیم مدیر کانال</small></article>
+    <article class="metric-card"><span>قرارداد رو به انقضا</span><strong>@Model.ExpiringContractCount</strong><small>۳۰ روز آینده</small></article>
+    <article class="metric-card"><span>Projection قدیمی</span><strong>@Model.StaleFinancialCount</strong><small>بیش از ۱۵ دقیقه</small></article>
+    <article class="metric-card"><span>مطالبات سررسیدشده</span><strong>@(Model.TotalOverdueAmount.HasValue ? $"{Model.TotalOverdueAmount:N0}" : "محرمانه")</strong><small>ریال · Accounting-owned</small></article>
+    <article class="metric-card"><span>تحقق هدف شبکه</span><strong>@(Model.TotalTarget > 0 ? $"{Model.TotalNetSales / Model.TotalTarget:P0}" : "—")</strong><small>@($"{Model.TotalNetSales:N0}") از @($"{Model.TotalTarget:N0}")</small></article>
+</section>
+<section class="panel">
+    <div class="panel-heading"><div><strong>شبکه نمایندگان</strong><small>فقط رکوردهای مجاز در Company/Branch/Territory/Dealer Scope</small></div><button class="button button--ghost" hx-get="/dealers/table" hx-target="#dealerTable" hx-swap="outerHTML">تازه‌سازی</button></div>
+    <partial name="_Table" model="Model.Items" />
+</section>

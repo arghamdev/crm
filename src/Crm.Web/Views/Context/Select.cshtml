@@ -1,0 +1,7 @@
+@model OrganizationContextDto
+@{ ViewData["Title"] = "انتخاب محیط کاری"; }
+<header class="page-header"><div><span class="eyebrow">Organization Context</span><h1>انتخاب محیط کاری</h1><p>شرکت مرز اصلی داده است؛ شعبه و قلمرو فقط دامنه همین نشست را محدودتر می‌کنند.</p></div></header>
+<section class="context-page-grid">
+    <article class="panel context-guide"><div class="mini-icon"><svg><use href="#i-building"/></svg></div><h2>محیط امن هر نشست</h2><p>انتخاب شما سمت سرور در نشست ذخیره می‌شود و هیچ داده‌ای از شرکت دیگر با تغییر URL قابل مشاهده نیست.</p><ul><li>کاربر تک‌شرکتی به‌صورت خودکار وارد محیط مجاز می‌شود.</li><li>کاربر چندشرکتی باید Company را انتخاب کند.</li><li>انتخاب Branch یا Territory اختیاری و محدودکننده است.</li></ul></article>
+    <article class="panel context-selector-card">@await Html.PartialAsync("_Selector", Model)</article>
+</section>

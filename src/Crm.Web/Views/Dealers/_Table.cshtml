@@ -1,0 +1,14 @@
+@model IReadOnlyList<DealerSummaryDto>
+@{
+    string StatusLabel(DealerStatus value) => value switch { DealerStatus.Draft => "پیش‌نویس", DealerStatus.PendingApproval => "در انتظار تأیید", DealerStatus.Active => "فعال", DealerStatus.Suspended => "تعلیق", DealerStatus.Terminated => "خاتمه‌یافته", _ => value.ToString() };
+}
+<div class="table-wrap" id="dealerTable">
+    @if (Model.Count == 0) { <div class="empty-state"><strong>نماینده‌ای در این دامنه وجود ندارد.</strong><small>Scope جاری یا فیلتر سازمانی را بررسی کنید.</small></div> }
+    else {
+    <table class="data-table"><thead><tr><th>نماینده</th><th>وضعیت</th><th>Territory</th><th>قرارداد/مشتری</th><th>هدف و عملکرد</th><th>مانده</th><th></th></tr></thead><tbody>
+    @foreach (var item in Model) {
+        var statusClass = item.Status switch { DealerStatus.Active => "status--success", DealerStatus.PendingApproval => "status--warning", DealerStatus.Suspended => "status--danger", DealerStatus.Terminated => "status--muted", _ => "status--info" };
+        <tr><td><strong>@item.TradeName</strong><small>@item.Code · @item.LegalName</small></td><td><span class="status-pill @statusClass">@StatusLabel(item.Status)</span></td><td><strong>@item.TerritoryName</strong><small>@item.BranchId · @item.City</small></td><td><strong>@item.ActiveContracts قرارداد · @item.CustomerCount مشتری</strong><small>@item.ActiveTerritories Territory فعال</small></td><td><strong>@($"{item.AchievementPercent:N1}")٪</strong><small>@($"{item.NetSales:N0}") / @($"{item.TargetAmount:N0}")</small></td><td><strong>@(item.Balance.HasValue ? $"{item.Balance:N0}" : "محرمانه")</strong><small>@(item.OverdueAmount.HasValue ? $"سررسیدشده {item.OverdueAmount:N0}" : "براساس مجوز")</small></td><td><a class="link-button" href="/dealers/@item.Id">مشاهده</a></td></tr>
+    }
+    </tbody></table> }
+</div>

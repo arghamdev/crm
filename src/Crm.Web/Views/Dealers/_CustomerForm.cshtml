@@ -1,0 +1,7 @@
+@model DealerCustomerFormDto
+<form class="form-stack" method="post" action="/dealers/@Model.DealerId/customers/assign" hx-post="/dealers/@Model.DealerId/customers/assign" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation-summary"></div>
+    <label>مشتری<select name="CustomerId"><option value="">انتخاب کنید</option>@foreach(var item in Model.Options){<option value="@item.Id" selected="@(item.Id == Model.Command.CustomerId)">@item.Name · @item.Code · @item.BranchId</option>}</select></label>
+    <label>دلیل تخصیص<textarea name="Reason">@Model.Command.Reason</textarea></label>
+    <div class="form-actions"><button class="button button--primary" type="submit">افزودن به سبد نماینده</button><button class="button button--ghost" type="button" data-drawer-close>انصراف</button></div>
+</form>

@@ -1,0 +1,5 @@
+@model IReadOnlyList<EligibleOrderQuoteDto>
+<div class="drawer-form"><div class="validation-summary"><strong>فقط پیشنهاد پذیرفته‌شده و بدون درخواست قبلی قابل تبدیل است.</strong></div>
+@if(Model.Count == 0){<section class="empty-state"><h3>پیشنهاد واجد شرایطی وجود ندارد</h3><p>ابتدا نتیجه یک پیشنهاد ارسال‌شده را «پذیرفته شد» ثبت کنید.</p></section>}
+else{<section class="form-section"><h3>انتخاب پیشنهاد پذیرفته‌شده</h3><div class="record-list">@foreach(var quote in Model){<div><span><strong>@quote.Code / R@quote.Revision — @quote.Customer</strong><small>@quote.Opportunity · @($"{quote.NetAmount:N0} {quote.CurrencyCode}")</small></span><form method="post" action="/orders/create" hx-post="/orders/create" hx-target="#drawerBody" hx-swap="innerHTML">@Html.AntiForgeryToken()<input type="hidden" name="QuoteId" value="@quote.Id"/><input type="hidden" name="ExpectedQuoteVersion" value="@quote.Version"/><button class="button button--primary" type="submit">ساخت درخواست</button></form></div>}</div></section>}
+<div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>بستن</button></div></div>

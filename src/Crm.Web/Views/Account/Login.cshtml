@@ -1,0 +1,13 @@
+@model string
+@{
+    Layout = null;
+}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>ورود | ارقام CRM</title><link rel="stylesheet" href="~/css/site.css"/></head>
+<body>
+<section class="login-screen">
+    <div class="login-visual"><div class="login-visual__inner"><div class="brand brand--light"><span class="brand__mark">آ</span><span><strong>ارقام CRM</strong><small>راهکار ارتباط با مشتریان</small></span></div><div class="login-copy"><span class="eyebrow eyebrow--light">نسخه یکپارچه آزمایشی تا اولویت ۱۰</span><h1>هر ارتباط، یک فرصت<br/>برای رشد پایدار</h1><p>مشتریان، چرخه فروش، پرتال نماینده، بازدید موبایل و گزارش‌ها در یک محیط مشترک با داده نمونه در دسترس‌اند.</p></div><div class="login-features"><div><span>۳۶۰°</span><p>نمای مشتری</p></div><div><span>MVC</span><p>Razor و HTMX</p></div><div><span>RTL</span><p>رابط فارسی</p></div></div></div></div>
+    <div class="login-panel"><div class="login-card"><span class="eyebrow">ورود امن</span><h2>خوش آمدید</h2>@if ((bool?)ViewBag.UseOidc == true){<p class="muted">ورود سازمانی با Authorization Code + PKCE انجام می‌شود و رمز محلی نگهداری نمی‌شود.</p><form action="/account/login/oidc" method="post" class="form-stack">@Html.AntiForgeryToken()<input type="hidden" name="returnUrl" value="@Model"/><button class="button button--primary button--wide" type="submit">ورود با حساب سازمانی</button></form>}else{<p class="muted">حالت Demo برای ارزیابی نمونه فعال است؛ همین مسیر در Production غیرفعال می‌شود.</p><div asp-validation-summary="ModelOnly" class="validation-summary"></div><form asp-action="Login" method="post" class="form-stack"><input type="hidden" name="returnUrl" value="@Model"/><label class="field"><span>نام کاربری</span><input name="userName" value="sales.manager" autocomplete="username" required/></label><label class="field"><span>رمز نمونه</span><input name="password" type="password" value="Demo@1405" autocomplete="current-password" required/></label><button class="button button--primary button--wide" type="submit">ورود به سامانه</button></form>}<div class="login-note"><span class="status-dot status-dot--success"></span> نشست: ۳۰ دقیقه بیکاری، ۸ ساعت مطلق، حداکثر ۳ دستگاه.</div></div></div>
+</section>
+<script src="~/js/site.js" asp-append-version="true"></script></body></html>

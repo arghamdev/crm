@@ -1,0 +1,4 @@
+@model ReportDrilldown
+@{ ViewData["Title"] = Model.Kpi.Definition.Name; }
+<header class="page-header"><div><a href="/reports" class="back-link">گزارش‌ها و تحلیل</a><h1>@Model.Kpi.Definition.Name</h1><p>ریزدادهٔ مجاز، فرمول و خروجی قابل تطبیق</p></div></header>
+<partial name="_Drilldown" model="Model" />

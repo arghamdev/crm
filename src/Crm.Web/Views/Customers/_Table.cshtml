@@ -1,0 +1,18 @@
+@model PagedResult<CustomerDto>
+@functions {
+    private static string StatusText(CustomerStatus value) => value switch { CustomerStatus.Active => "فعال", CustomerStatus.Inactive => "غیرفعال", _ => "در حال بررسی" };
+    private static string StatusClass(CustomerStatus value) => value switch { CustomerStatus.Active => "badge--success", CustomerStatus.Inactive => "badge--neutral", _ => "badge--warning" };
+}
+@if (Model.Items.Count == 0)
+{
+    <div class="empty-state"><svg><use href="#i-search"/></svg><strong>موردی پیدا نشد</strong><p>عبارت جست‌وجو را تغییر دهید.</p></div>
+}
+else
+{
+    <div class="table-wrap"><table><thead><tr><th>مشتری</th><th>کد</th><th>شعبه</th><th>مالک</th><th>بخش</th><th>کیفیت</th><th>مانده</th><th>وضعیت</th><th></th></tr></thead><tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr><td><a class="entity-cell" href="/customers/@item.Id"><span class="entity-avatar">@item.Name[..1]</span><span><strong>@item.Name</strong><small>@item.City</small></span></a></td><td><code class="code-strong">@item.Code</code></td><td>@item.Branch</td><td>@item.Owner</td><td><span class="tag @(item.Segment == "کلیدی" ? "tag--key" : "")">@item.Segment</span></td><td><span class="quality-score @(item.DataQualityScore < 70 ? "is-low" : item.DataQualityScore < 90 ? "is-medium" : "is-high")">@item.DataQualityScore٪</span></td><td>@($"{item.Balance:N0} ریال")</td><td><span class="badge @StatusClass(item.Status)"><span></span>@StatusText(item.Status)</span></td><td><a class="link-button" href="/customers/@item.Id">نمای ۳۶۰</a></td></tr>
+    }
+    </tbody></table></div><div class="table-footer"><span>@Model.TotalCount رکورد</span><span>صفحه @Model.Page از @Model.TotalPages</span><nav class="pagination">@if(Model.HasPrevious){<a class="link-button" hx-get="/customers/table?q=@Model.Query&page=@(Model.Page-1)&pageSize=@Model.PageSize" hx-target="#customerTable" hx-push-url="/customers?q=@Model.Query&page=@(Model.Page-1)&pageSize=@Model.PageSize">قبلی</a>}@if(Model.HasNext){<a class="link-button" hx-get="/customers/table?q=@Model.Query&page=@(Model.Page+1)&pageSize=@Model.PageSize" hx-target="#customerTable" hx-push-url="/customers?q=@Model.Query&page=@(Model.Page+1)&pageSize=@Model.PageSize">بعدی</a>}</nav></div>
+}

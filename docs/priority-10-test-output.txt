@@ -1,0 +1,53 @@
+Priority 10 — actual local validation, 2026-09-28
+SDK 10.0.112; Microsoft.NETCore.App / ASP.NET Core / EF 10.0.12
+SQL Server 2025 Developer 17.0.5005.3, disposable EnterpriseCrmPriority10Test database
+
+Release build
+  Crm.Domain -> enterprise-crm-sample/src/Crm.Domain/bin/Release/net10.0/Crm.Domain.dll
+  Crm.Application -> enterprise-crm-sample/src/Crm.Application/bin/Release/net10.0/Crm.Application.dll
+  Crm.Infrastructure -> enterprise-crm-sample/src/Crm.Infrastructure/bin/Release/net10.0/Crm.Infrastructure.dll
+  Crm.Web -> enterprise-crm-sample/src/Crm.Web/bin/Release/net10.0/Crm.Web.dll
+  Crm.ArchitectureTests -> enterprise-crm-sample/tests/Crm.ArchitectureTests/bin/Release/net10.0/Crm.ArchitectureTests.dll
+  Crm.WebTests -> enterprise-crm-sample/tests/Crm.WebTests/bin/Release/net10.0/Crm.WebTests.dll
+  Crm.PersistenceTests -> enterprise-crm-sample/tests/Crm.PersistenceTests/bin/Release/net10.0/Crm.PersistenceTests.dll
+  Crm.BrowserTests -> enterprise-crm-sample/tests/Crm.BrowserTests/bin/Release/net10.0/Crm.BrowserTests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:16.98
+
+Architecture/service tests
+All priority-10 portal/mobile, reporting, scope, export, architecture and cumulative behavior checks passed.
+
+MVC/HTMX/security tests
+All priority-10 portal/mobile, reporting, dealer, order, quote, pipeline and web/security checks passed.
+
+SQL migrations, persistence, rollback and standalone scripts
+P10 EF model, operation uniqueness, concurrency, relationships and upgrade/rollback SQL checks passed.
+Immutable seeded values round-tripped through SQL Server.
+P10 SQL round-trip, stale-version rejection and duplicate-operation rejection passed.
+EF rollback and roll-forward P10/P8 passed; preceding dealer/order data was preserved.
+Standalone SQL repeated successfully: priority4-relationships-merge-idempotent.sql
+Standalone SQL repeated successfully: priority5-sales-pipeline-idempotent.sql
+Standalone SQL repeated successfully: priority6-quote-pricing-idempotent.sql
+Standalone SQL repeated successfully: priority7-order-integration-idempotent.sql
+Standalone SQL repeated successfully: priority8-dealer-channel-idempotent.sql
+Standalone SQL repeated successfully: priority10-portal-mobile-idempotent.sql
+Immutable seeded values round-tripped through SQL Server.
+Standalone SQL upgrades P4/P5/P6/P7/P8/P10 and repeated P10 rollback/upgrade passed.
+SQL Server migrations, dealer/channel seed and EF Core persistence checks passed.
+
+Kestrel HTTPS: sales.manager /mobile and dealer.user /portal login succeeded.
+Health, mobile.js, site.js and site.css returned HTTP 200.
+Node: unified preview logic, MobileOutbox, structure and credential scans passed.
+index.html and preview/crm-unified.html have identical SHA256:
+2e7a91d9f304a5ef2d40a6e3b49c09a3a2319ea369221d135fd29bfdda2f89e6
+
+Browser gate: NOT PASSED (environment blocked before opening a page).
+Playwright 1.62.0; Google Chrome 154.0.8037.57.
+FATAL: chrome/browser/process_singleton_posix.cc: socket() failed: Operation not permitted (1).
+The Playwright-managed browser download also returned Site Unavailable rather than a ZIP.
+No layout screenshot or browser offline scenario was verified.
+GitHub CI / SQL Server 2022 CI / online deployment: no result obtained.

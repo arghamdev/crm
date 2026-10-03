@@ -1,0 +1,12 @@
+@model LeadListDto
+@functions {
+    private static string StatusText(LeadStatus value) => value switch { LeadStatus.New => "جدید", LeadStatus.Assigned => "تخصیص‌یافته", LeadStatus.Contacted => "تماس‌شده", LeadStatus.Qualified => "واجد شرایط", LeadStatus.Nurture => "پرورش", LeadStatus.Disqualified => "ردشده", LeadStatus.Duplicate => "تکراری", LeadStatus.Invalid => "نامعتبر", _ => "تبدیل‌شده" };
+    private static string SlaText(LeadSlaState value) => value switch { LeadSlaState.Overdue => "گذشته", LeadSlaState.DueSoon => "نزدیک", LeadSlaState.OnTrack => "در مهلت", LeadSlaState.Completed => "انجام‌شده", _ => "—" };
+}
+<div class="table-wrap"><table><thead><tr><th>سرنخ</th><th>منبع/مالک</th><th>امتیاز</th><th>وضعیت</th><th>SLA تماس</th><th>اقدام بعدی</th><th></th></tr></thead><tbody>
+@if (Model.Items.Count == 0) { <tr><td colspan="7" class="empty-cell">سرنخی با این فیلتر پیدا نشد.</td></tr> }
+@foreach (var item in Model.Items)
+{
+    <tr><td><a class="entity-cell entity-link" href="/leads/@item.Id"><span class="entity-avatar entity-avatar--blue">@item.Name[..1]</span><span><strong>@item.Name</strong><small>@item.Code · @(item.Phone ?? item.Contact)</small></span></a></td><td><strong>@item.Source</strong><small class="table-subline">@item.Owner · @item.BranchId</small></td><td><span class="score @(item.Score >= 75 ? "score--high" : item.Score >= 50 ? "score--mid" : "score--low")">@item.Score</span></td><td><span class="badge @(item.Status == LeadStatus.Qualified ? "badge--success" : item.Status is LeadStatus.Disqualified or LeadStatus.Invalid ? "badge--danger" : "badge--info")"><span></span>@StatusText(item.Status)</span></td><td><span class="badge @(item.SlaState == LeadSlaState.Overdue ? "badge--danger" : item.SlaState == LeadSlaState.DueSoon ? "badge--warning" : "badge--neutral")"><span></span>@SlaText(item.SlaState)</span><small class="table-subline">@(item.FirstContactDueAtUtc?.ToLocalTime().ToString("MM/dd HH:mm") ?? "—")</small></td><td>@(item.NextAction ?? "—")<small class="table-subline">@(item.NextActionAtUtc?.ToLocalTime().ToString("MM/dd HH:mm") ?? "")</small></td><td><a class="link-button" href="/leads/@item.Id">جزئیات</a></td></tr>
+}
+</tbody></table></div><div class="table-footer"><span>@Model.Items.Count رکورد قابل مشاهده</span><span>دامنه و مالکیت سمت سرور اعمال شده است</span></div>

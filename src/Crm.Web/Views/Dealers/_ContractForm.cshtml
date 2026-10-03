@@ -1,0 +1,8 @@
+@model DealerContractFormDto
+<form class="form-stack" method="post" action="/dealers/@Model.DealerId/contracts/save" hx-post="/dealers/@Model.DealerId/contracts/save" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation-summary"></div><input type="hidden" name="ExpectedVersion" value="@Model.Command.ExpectedVersion" />
+    <label>شماره قرارداد<input name="ContractNumber" value="@Model.Command.ContractNumber" /></label>
+    <div class="form-grid"><label>شروع اعتبار<input name="ValidFromUtc" type="datetime-local" value="@Model.Command.ValidFromUtc.ToString("yyyy-MM-ddTHH:mm")" /></label><label>پایان اعتبار<input name="ValidToUtc" type="datetime-local" value="@Model.Command.ValidToUtc.ToString("yyyy-MM-ddTHH:mm")" /></label></div>
+    <label>هدف سالانه (ریال)<input name="AnnualTarget" type="number" min="1" value="@Model.Command.AnnualTarget" /></label><label>شرایط پرداخت<textarea name="PaymentTerms">@Model.Command.PaymentTerms</textarea></label>
+    <div class="form-actions"><button class="button button--primary" type="submit">ثبت پیش‌نویس قرارداد</button><button class="button button--ghost" type="button" data-drawer-close>انصراف</button></div>
+</form>

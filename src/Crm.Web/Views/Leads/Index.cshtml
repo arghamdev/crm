@@ -1,0 +1,13 @@
+@model LeadListDto
+@{ ViewData["Title"] = "سرنخ‌ها"; }
+<header class="page-header"><div><span class="eyebrow">Lead Management · اولویت ۵</span><h1>سرنخ‌ها</h1><p>مالکیت، SLA تماس، امتیازدهی، تاریخچه و تبدیل کنترل‌شده</p></div><div class="page-actions"><a class="button button--primary" href="/leads/create" hx-get="/leads/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg> سرنخ جدید</a></div></header>
+<section class="mini-stats"><div><span class="mini-icon"><svg><use href="#i-lead"/></svg></span><p><small>سرنخ باز</small><strong>@Model.OpenCount</strong></p></div><div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>واجد شرایط</small><strong>@Model.QualifiedCount</strong></p></div><div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>SLA گذشته</small><strong>@Model.OverdueCount</strong></p></div><div><span class="mini-icon"><svg><use href="#i-target"/></svg></span><p><small>میانگین امتیاز</small><strong>@Model.AverageScore</strong></p></div></section>
+<section class="panel table-panel">
+    <form id="leadFilters" class="toolbar pipeline-filter" method="get" action="/leads" hx-get="/leads/table" hx-target="#leadTable" hx-trigger="submit, change delay:200ms">
+        <label class="search-inline"><svg><use href="#i-search"/></svg><input name="q" value="@Model.Query" placeholder="نام، کد، تماس یا تلفن" /></label>
+        <select name="status"><option value="">همه وضعیت‌ها</option>@foreach (var status in Enum.GetValues<LeadStatus>()) { <option value="@status" selected="@(Model.Status == status)">@status</option> }</select>
+        <label class="consent-row"><input name="includeClosed" type="checkbox" value="true" checked="@Model.IncludeClosed"/><span>نمایش بسته‌ها</span></label>
+        <button class="button button--ghost button--xs" type="submit">اعمال فیلتر</button>
+    </form>
+    <div id="leadTable" hx-get="/leads/table" hx-include="#leadFilters" hx-trigger="leadChanged from:body"><partial name="_Table" model="Model" /></div>
+</section>

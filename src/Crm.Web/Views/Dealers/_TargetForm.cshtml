@@ -1,0 +1,7 @@
+@model DealerTargetFormDto
+<form class="form-stack" method="post" action="/dealers/@Model.DealerId/target" hx-post="/dealers/@Model.DealerId/target" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation-summary"></div><input type="hidden" name="ExpectedVersion" value="@Model.Command.ExpectedVersion" />
+    <div class="form-grid"><label>شروع دوره<input name="PeriodFromUtc" type="datetime-local" value="@Model.Command.PeriodFromUtc.ToString("yyyy-MM-ddTHH:mm")" /></label><label>پایان دوره<input name="PeriodToUtc" type="datetime-local" value="@Model.Command.PeriodToUtc.ToString("yyyy-MM-ddTHH:mm")" /></label></div>
+    <label>هدف فروش (ریال)<input name="Amount" type="number" min="1" value="@Model.Command.Amount" /></label><label>منبع مصوبه<input name="Source" value="@Model.Command.Source" /></label>
+    <div class="form-actions"><button class="button button--primary" type="submit">ثبت هدف</button><button class="button button--ghost" type="button" data-drawer-close>انصراف</button></div>
+</form>

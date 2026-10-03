@@ -1,0 +1,9 @@
+@model OrderWorkspaceDto
+@{ ViewData["Title"] = "درخواست‌های سفارش"; }
+<header class="page-header"><div><span class="eyebrow">Order & ERP Visibility</span><h1>درخواست‌های سفارش</h1><p>کنترل اعتبار، ارسال Idempotent به ERP و نمایش تخصیص، تحویل، فاکتور و پرداخت</p></div><div class="page-actions"><a class="button button--primary" href="/orders/create" hx-get="/orders/create" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-plus"/></svg> درخواست جدید</a></div></header>
+<section class="quote-stats"><div><span class="mini-icon"><svg><use href="#i-file"/></svg></span><p><small>ارزش باز</small><strong>@($"{Model.OpenAmount:N0}")</strong></p></div><div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>Hold / در انتظار ERP</small><strong>@Model.CreditHoldCount / @Model.PendingIntegrationCount</strong></p></div><div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>خطای قابل پیگیری</small><strong>@Model.FailedIntegrationCount</strong></p></div></section>
+@if (Model.IntegrationErrors.Count > 0)
+{
+    <section class="panel order-error-queue"><div class="panel-heading"><div><strong>صف خطای یکپارچه‌سازی</strong><small>Retry زمان‌بندی‌شده و Dead Letter</small></div></div><div class="record-list">@foreach(var error in Model.IntegrationErrors){<div><span><strong>@error.Status — تلاش @error.AttemptCount</strong><small>@(error.LastError ?? "در انتظار تلاش بعدی") · @(error.NextAttemptAtUtc?.ToString("yyyy/MM/dd HH:mm:ss") ?? "نیازمند رسیدگی")</small></span><a class="link-button" href="/orders/@error.OrderRequestId">مشاهده</a></div>}</div></section>
+}
+<section class="panel table-panel"><div class="toolbar"><strong>فهرست درخواست‌ها</strong><span class="muted">Order/Invoice/Payment در CRM فقط Projection دادهٔ ERP هستند</span></div><div id="orderTable" hx-get="/orders/table" hx-trigger="orderChanged from:body"><partial name="_Table" model="Model.Items" /></div></section>

@@ -1,0 +1,25 @@
+@model ReportDrilldown
+@{
+    string PageLink(int page) => "/reports/drilldown" + Microsoft.AspNetCore.Http.QueryString.Create(new Dictionary<string,string?> {
+        ["From"] = Model.Dashboard.Filter.From.ToString("yyyy-MM-dd"), ["To"] = Model.Dashboard.Filter.To.ToString("yyyy-MM-dd"),
+        ["RegionId"] = Model.Dashboard.Filter.RegionId, ["BranchId"] = Model.Dashboard.Filter.BranchId,
+        ["TerritoryId"] = Model.Dashboard.Filter.TerritoryId, ["Profile"] = Model.Dashboard.Filter.Profile,
+        ["Metric"] = Model.Kpi.Definition.Key, ["Page"] = page.ToString(), ["PageSize"] = Model.PageSize.ToString() });
+}
+<section class="panel" id="reportDrilldown">
+    <div class="panel-heading"><div><strong>@(Model.Kpi.Value?.ToString("N1") ?? "—") @Model.Kpi.Definition.Unit</strong><small>@Model.Kpi.Definition.Formula · @Model.TotalCount رکورد</small></div>
+    @if(Model.Dashboard.CanExport) { <form method="post" action="/reports/export">@Html.AntiForgeryToken()<partial name="_Filters" model="Model.Dashboard.Filter" /><input type="hidden" name="Metric" value="@Model.Kpi.Definition.Key" /><button class="button button--primary" type="submit">دریافت CSV امن</button></form> }
+    </div>
+    <p class="source-note">@Model.Kpi.Definition.PeriodRule · صورت: @Model.Kpi.Numerator.ToString("N1") · مخرج: @Model.Kpi.Denominator.ToString("N1")</p>
+    <div id="reportErrors" role="alert"></div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>کد / عنوان</th><th>شعبه</th><th>وضعیت / دوره</th><th>صورت</th><th>مخرج</th><th>منبع / زمان UTC</th></tr></thead><tbody>
+    @foreach(var row in Model.Rows) { <tr><td><a href="@row.Url"><strong>@row.Code</strong>@row.Name</a></td><td>@row.BranchId</td><td>@row.State</td><td>@row.Numerator.ToString("N1")</td><td>@row.Denominator.ToString("N1")</td><td>@row.Source<small>@(row.SourceAtUtc?.ToString("yyyy/MM/dd HH:mm") ?? "نامشخص")</small></td></tr> }
+    @if(Model.Rows.Count == 0) { <tr><td colspan="6">ردیفی برای نمایش در این صفحه وجود ندارد.</td></tr> }
+    </tbody></table></div>
+    <nav class="form-actions" aria-label="صفحه‌بندی گزارش">
+        @if(Model.Page > 1) { <a class="button button--ghost" href="@PageLink(Model.Page - 1)" hx-get="@PageLink(Model.Page - 1)" hx-target="#reportDrilldown" hx-swap="outerHTML" hx-push-url="true">قبلی</a> }
+        <span>صفحه @Model.Page</span>
+        @if(Model.Page * Model.PageSize < Model.TotalCount) { <a class="button button--ghost" href="@PageLink(Model.Page + 1)" hx-get="@PageLink(Model.Page + 1)" hx-target="#reportDrilldown" hx-swap="outerHTML" hx-push-url="true">بعدی</a> }
+    </nav>
+    <p class="source-note">CSV تمام ردیف‌های مجاز شاخص را صادر می‌کند، نه فقط صفحهٔ فعلی؛ سقف ۵۰۰۰ ردیف. نتیجه هنگام درخواست دوباره محاسبه و خروجی ممیزی می‌شود.</p>
+</section>

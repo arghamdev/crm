@@ -1,0 +1,38 @@
+@model IReadOnlyList<CustomerMergeOperationDto>
+<section class="panel table-panel">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>رکورد اصلی</th><th>رکورد ادغام‌شده</th><th>زمان</th><th>دلیل</th><th>وضعیت/عملیات</th></tr></thead>
+            <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="5" class="empty-cell">هنوز ادغامی ثبت نشده است.</td></tr>
+            }
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td><a href="/customers/@item.SurvivorCustomerId">@item.SurvivorName <code>@item.SurvivorCode</code></a></td>
+                    <td><a href="/customers/@item.MergedCustomerId">@item.MergedName <code>@item.MergedCode</code></a></td>
+                    <td>@item.MergedAtUtc.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                    <td>@item.Reason</td>
+                    <td>
+                    @if (item.Status == CustomerMergeStatus.Merged)
+                    {
+                        <form method="post" action="/customers/merges/@item.Id/unmerge" hx-post="/customers/merges/@item.Id/unmerge" hx-target="closest td" hx-swap="innerHTML">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ExpectedVersion" value="@item.Version" />
+                            <input name="Reason" required placeholder="دلیل بازگردانی" />
+                            <button class="link-button link-button--danger" type="submit">بازگردانی</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="badge badge--neutral"><span></span>بازگردانی‌شده</span>
+                    }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

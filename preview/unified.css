@@ -1,0 +1,15 @@
+.unified-notice{padding:10px 28px;background:var(--primary-50);color:var(--primary-800);font-size:13px;border-bottom:1px solid var(--line)}
+#startupMessage{font-size:13px;padding:10px 0;color:var(--ink-2)}
+.view-host{font-size:14px}.view-host small,.view-host th,.view-host .cell-sub{font-size:12px}
+.view-host td,.view-host input,.view-host select,.view-host label,.view-host button{font-size:14px}
+.u-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
+.u-card{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.u-card strong{font-size:25px}.u-card>span{color:var(--ink-2)}.u-card a{color:var(--primary-700)}
+.u-panel{padding:24px;margin-bottom:20px}.u-panel h2{font-size:19px;margin:0 0 16px}
+.u-filter{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin-bottom:20px}.u-filter label{display:grid;gap:5px;min-width:145px}
+.u-filter input,.u-filter select,.u-form input,.u-form select{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-height:44px;max-width:100%}
+.u-form{display:grid;gap:18px}.u-form label{display:grid;gap:7px}.u-error{color:var(--red-700);background:var(--red-100);padding:12px;border-radius:8px}
+.u-funnel{display:grid;grid-template-columns:minmax(140px,1fr) 2fr 50px;gap:14px;align-items:center;margin-block:16px}.u-funnel progress{width:100%;accent-color:var(--primary-700)}
+.u-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.u-details{width:min(950px,95vw);max-height:90vh;overflow:auto}
+.u-period{font-size:13px;color:var(--ink-2)}.main-nav a{text-decoration:none}.unified-breadcrumb{margin-bottom:15px;display:flex;gap:12px;color:var(--ink-3);font-size:13px}
+@media(max-width:1000px){.u-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.u-grid{grid-template-columns:1fr}.u-panel{padding:16px}.u-filter label{width:100%}.u-funnel{grid-template-columns:1fr 1fr 35px}.unified-notice{padding-inline:16px}}

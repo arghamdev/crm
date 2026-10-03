@@ -1,0 +1,858 @@
+using Crm.Domain.Commercial;
+using Crm.Domain.SelfService;
+using Crm.Domain.Channel;
+using Crm.Domain.Common;
+using Crm.Domain.Customers;
+using Crm.Domain.Identity;
+using Crm.Domain.Organization;
+using Crm.Domain.Sales;
+using Crm.Domain.Work;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Crm.Infrastructure.Data;
+
+public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbContext(options)
+{
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsIdGenerator, CompatibleMigrationsIdGenerator>();
+    }
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
+    public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+    public DbSet<CustomerTimelineEvent> CustomerTimelineEvents => Set<CustomerTimelineEvent>();
+    public DbSet<CustomerOwnershipHistory> CustomerOwnershipHistory => Set<CustomerOwnershipHistory>();
+    public DbSet<CustomerDuplicateCandidate> CustomerDuplicateCandidates => Set<CustomerDuplicateCandidate>();
+    public DbSet<CustomerMergeOperation> CustomerMergeOperations => Set<CustomerMergeOperation>();
+    public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<LeadStatusHistory> LeadStatusHistory => Set<LeadStatusHistory>();
+    public DbSet<Opportunity> Opportunities => Set<Opportunity>();
+    public DbSet<OpportunityStageHistory> OpportunityStageHistory => Set<OpportunityStageHistory>();
+    public DbSet<OpportunityActivity> OpportunityActivities => Set<OpportunityActivity>();
+    public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<QuoteLine> QuoteLines => Set<QuoteLine>();
+    public DbSet<QuoteStatusHistory> QuoteStatusHistory => Set<QuoteStatusHistory>();
+    public DbSet<QuoteApprovalDecision> QuoteApprovalDecisions => Set<QuoteApprovalDecision>();
+    public DbSet<OrderRequest> OrderRequests => Set<OrderRequest>();
+    public DbSet<OrderCreditDecision> OrderCreditDecisions => Set<OrderCreditDecision>();
+    public DbSet<OrderStatusHistory> OrderStatusHistory => Set<OrderStatusHistory>();
+    public DbSet<OrderIntegrationMessage> OrderIntegrationMessages => Set<OrderIntegrationMessage>();
+    public DbSet<OrderIntegrationAttempt> OrderIntegrationAttempts => Set<OrderIntegrationAttempt>();
+    public DbSet<Dealer> Dealers => Set<Dealer>();
+    public DbSet<DealerContract> DealerContracts => Set<DealerContract>();
+    public DbSet<DealerTerritoryAssignment> DealerTerritoryAssignments => Set<DealerTerritoryAssignment>();
+    public DbSet<DealerCustomerAssignment> DealerCustomerAssignments => Set<DealerCustomerAssignment>();
+    public DbSet<DealerTarget> DealerTargets => Set<DealerTarget>();
+    public DbSet<DealerFinancialSnapshot> DealerFinancialSnapshots => Set<DealerFinancialSnapshot>();
+    public DbSet<DealerPerformanceSnapshot> DealerPerformanceSnapshots => Set<DealerPerformanceSnapshot>();
+    public DbSet<DealerStatusHistory> DealerStatusHistory => Set<DealerStatusHistory>();
+    public DbSet<CrmWorkItem> WorkItems => Set<CrmWorkItem>();
+    public DbSet<CrmUser> Users => Set<CrmUser>();
+    public DbSet<ExternalIdentity> ExternalIdentities => Set<ExternalIdentity>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
+    public DbSet<SecurityAuditEvent> SecurityAuditEvents => Set<SecurityAuditEvent>();
+    public DbSet<Company> Companies => Set<Company>();
+    public DbSet<OrganizationUnit> OrganizationUnits => Set<OrganizationUnit>();
+    public DbSet<Territory> Territories => Set<Territory>();
+    public DbSet<OrganizationChange> OrganizationChanges => Set<OrganizationChange>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        ConfigureSelfService(modelBuilder);
+        ConfigureCompany(modelBuilder.Entity<Company>());
+        ConfigureOrganizationUnit(modelBuilder.Entity<OrganizationUnit>());
+        ConfigureTerritory(modelBuilder.Entity<Territory>());
+        ConfigureOrganizationChange(modelBuilder.Entity<OrganizationChange>());
+        ConfigureCustomer(modelBuilder.Entity<Customer>());
+        ConfigureCustomerContact(modelBuilder.Entity<CustomerContact>());
+        ConfigureCustomerAddress(modelBuilder.Entity<CustomerAddress>());
+        ConfigureCustomerTimeline(modelBuilder.Entity<CustomerTimelineEvent>());
+        ConfigureCustomerOwnership(modelBuilder.Entity<CustomerOwnershipHistory>());
+        ConfigureCustomerDuplicate(modelBuilder.Entity<CustomerDuplicateCandidate>());
+        ConfigureCustomerMerge(modelBuilder.Entity<CustomerMergeOperation>());
+        ConfigureLead(modelBuilder.Entity<Lead>());
+        ConfigureLeadStatusHistory(modelBuilder.Entity<LeadStatusHistory>());
+        ConfigureOpportunity(modelBuilder.Entity<Opportunity>());
+        ConfigureOpportunityStageHistory(modelBuilder.Entity<OpportunityStageHistory>());
+        ConfigureOpportunityActivity(modelBuilder.Entity<OpportunityActivity>());
+        ConfigureQuote(modelBuilder.Entity<Quote>());
+        ConfigureQuoteLine(modelBuilder.Entity<QuoteLine>());
+        ConfigureQuoteStatusHistory(modelBuilder.Entity<QuoteStatusHistory>());
+        ConfigureQuoteApprovalDecision(modelBuilder.Entity<QuoteApprovalDecision>());
+        ConfigureOrderRequest(modelBuilder.Entity<OrderRequest>());
+        ConfigureOrderCreditDecision(modelBuilder.Entity<OrderCreditDecision>());
+        ConfigureOrderStatusHistory(modelBuilder.Entity<OrderStatusHistory>());
+        ConfigureOrderIntegrationMessage(modelBuilder.Entity<OrderIntegrationMessage>());
+        ConfigureOrderIntegrationAttempt(modelBuilder.Entity<OrderIntegrationAttempt>());
+        ConfigureDealer(modelBuilder.Entity<Dealer>());
+        ConfigureDealerContract(modelBuilder.Entity<DealerContract>());
+        ConfigureDealerTerritory(modelBuilder.Entity<DealerTerritoryAssignment>());
+        ConfigureDealerCustomer(modelBuilder.Entity<DealerCustomerAssignment>());
+        ConfigureDealerTarget(modelBuilder.Entity<DealerTarget>());
+        ConfigureDealerFinancial(modelBuilder.Entity<DealerFinancialSnapshot>());
+        ConfigureDealerPerformance(modelBuilder.Entity<DealerPerformanceSnapshot>());
+        ConfigureDealerStatusHistory(modelBuilder.Entity<DealerStatusHistory>());
+        ConfigureWorkItem(modelBuilder.Entity<CrmWorkItem>());
+        ConfigureUser(modelBuilder.Entity<CrmUser>());
+        ConfigureExternalIdentity(modelBuilder.Entity<ExternalIdentity>());
+        ConfigureSession(modelBuilder.Entity<UserSession>());
+        ConfigureRoleAssignment(modelBuilder.Entity<UserRoleAssignment>());
+        ConfigureAudit(modelBuilder.Entity<SecurityAuditEvent>());
+    }
+
+    private static void ConfigureCompany(EntityTypeBuilder<Company> entity)
+    {
+        ConfigureEntity(entity, "Companies", "org");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.TimeZoneId).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.HasIndex(x => x.CompanyId).IsUnique();
+        entity.HasIndex(x => x.Code).IsUnique();
+    }
+
+    private static void ConfigureOrganizationUnit(EntityTypeBuilder<OrganizationUnit> entity)
+    {
+        ConfigureEntity(entity, "OrganizationUnits", "org");
+        entity.Property(x => x.UnitId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ParentUnitId).HasMaxLength(32);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.HasIndex(x => new { x.CompanyId, x.UnitId }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.ParentUnitId });
+    }
+
+    private static void ConfigureTerritory(EntityTypeBuilder<Territory> entity)
+    {
+        ConfigureEntity(entity, "Territories", "org");
+        entity.Property(x => x.TerritoryId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.Dimension).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.ValidToUtc).HasPrecision(3);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.HasIndex(x => new { x.CompanyId, x.TerritoryId }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.Status, x.ValidFromUtc });
+    }
+
+    private static void ConfigureOrganizationChange(EntityTypeBuilder<OrganizationChange> entity)
+    {
+        entity.Property(x => x.ActorUserId);
+        ConfigureEntity(entity, "OrganizationChanges", "org");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.EntityType).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.EntityBusinessId).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.Action).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.Summary).HasMaxLength(500).IsRequired();
+        entity.Property(x => x.OccurredAtUtc).HasPrecision(3);
+        entity.Property(x => x.CorrelationId).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.BeforeValue).HasColumnType("nvarchar(max)");
+        entity.Property(x => x.AfterValue).HasColumnType("nvarchar(max)");
+        entity.HasIndex(x => new { x.CompanyId, x.OccurredAtUtc });
+    }
+
+    private static void ConfigureCustomer(EntityTypeBuilder<Customer> entity)
+    {
+        ConfigureEntity(entity, "Customers", "crm");
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.City).HasMaxLength(100);
+        entity.Property(x => x.Owner).HasMaxLength(150);
+        Scope(entity);
+        entity.Property(x => x.Branch).HasMaxLength(150);
+        entity.Property(x => x.Segment).HasMaxLength(80);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
+        entity.Property(x => x.Balance).HasPrecision(18, 2);
+        entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.NationalId).HasMaxLength(32);
+        entity.Property(x => x.PrimaryPhone).HasMaxLength(40);
+        entity.Property(x => x.PrimaryEmail).HasMaxLength(256);
+        entity.Property(x => x.DataSource).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.LastSynchronizedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.NationalId }).IsUnique().HasFilter("[NationalId] IS NOT NULL");
+        entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId });
+    }
+
+    private static void ConfigureCustomerContact(EntityTypeBuilder<CustomerContact> entity)
+    {
+        ConfigureEntity(entity, "CustomerContacts", "crm");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.Role).HasMaxLength(100);
+        entity.Property(x => x.Phone).HasMaxLength(40);
+        entity.Property(x => x.Email).HasMaxLength(256);
+        entity.Property(x => x.ConsentStatus).HasConversion<string>().HasMaxLength(24);
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.IsActive });
+        entity.HasIndex(x => new { x.CompanyId, x.Phone });
+        entity.HasIndex(x => new { x.CompanyId, x.Email });
+    }
+
+    private static void ConfigureCustomerAddress(EntityTypeBuilder<CustomerAddress> entity)
+    {
+        ConfigureEntity(entity, "CustomerAddresses", "crm");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.Title).HasMaxLength(120).IsRequired();
+        entity.Property(x => x.Province).HasMaxLength(100);
+        entity.Property(x => x.City).HasMaxLength(100);
+        entity.Property(x => x.AddressLine).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.PostalCode).HasMaxLength(20);
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.IsActive });
+    }
+
+    private static void ConfigureCustomerTimeline(EntityTypeBuilder<CustomerTimelineEvent> entity)
+    {
+        entity.Property(x => x.ActorUserId);
+        ConfigureEntity(entity, "CustomerTimelineEvents", "crm");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.Description).HasMaxLength(2000);
+        entity.Property(x => x.OccurredAtUtc).HasPrecision(3);
+        entity.Property(x => x.Source).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.SourceReference).HasMaxLength(120);
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.OccurredAtUtc });
+    }
+
+    private static void ConfigureCustomerOwnership(EntityTypeBuilder<CustomerOwnershipHistory> entity)
+    {
+        entity.Property(x => x.ChangedByUserId);
+        ConfigureEntity(entity, "CustomerOwnershipHistory", "crm");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.BranchId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.TerritoryId).HasMaxLength(32);
+        entity.Property(x => x.Owner).HasMaxLength(150).IsRequired();
+        entity.Property(x => x.ValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.ValidToUtc).HasPrecision(3);
+        entity.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.ValidToUtc });
+    }
+
+    private static void ConfigureCustomerDuplicate(EntityTypeBuilder<CustomerDuplicateCandidate> entity)
+    {
+        entity.Property(x => x.Score);
+        ConfigureEntity(entity, "CustomerDuplicateCandidates", "crm");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Reasons).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.DetectedAtUtc).HasPrecision(3);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ReviewedAtUtc).HasPrecision(3);
+        entity.Property(x => x.ReviewNote).HasMaxLength(1000);
+        entity.HasIndex(x => new { x.CompanyId, x.Status, x.DetectedAtUtc });
+        entity.HasIndex(x => new { x.CustomerId, x.PossibleDuplicateCustomerId });
+    }
+
+    private static void ConfigureLead(EntityTypeBuilder<Lead> entity)
+    {
+        ConfigureEntity(entity, "Leads", "sales");
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.Contact).HasMaxLength(200);
+        entity.Property(x => x.Source).HasMaxLength(80);
+        entity.Property(x => x.Owner).HasMaxLength(150);
+        entity.Property(x => x.Phone).HasMaxLength(40);
+        entity.Property(x => x.Email).HasMaxLength(256);
+        entity.Property(x => x.AssignedAtUtc).HasPrecision(3);
+        entity.Property(x => x.FirstContactDueAtUtc).HasPrecision(3);
+        entity.Property(x => x.FirstContactAtUtc).HasPrecision(3);
+        entity.Property(x => x.LastActivityAtUtc).HasPrecision(3);
+        entity.Property(x => x.NextAction).HasMaxLength(300);
+        entity.Property(x => x.NextActionAtUtc).HasPrecision(3);
+        entity.Property(x => x.StatusReason).HasMaxLength(1000);
+        Scope(entity);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId });
+        entity.HasIndex(x => new { x.CompanyId, x.OwnerUserId, x.Status, x.FirstContactDueAtUtc });
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId });
+        entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Opportunity>().WithMany().HasForeignKey(x => x.ConvertedOpportunityId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureLeadStatusHistory(EntityTypeBuilder<LeadStatusHistory> entity)
+    {
+        ConfigureEntity(entity, "LeadStatusHistory", "sales");
+        Scope(entity);
+        entity.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.ChangedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.LeadId, x.ChangedAtUtc });
+        entity.HasOne<Lead>().WithMany().HasForeignKey(x => x.LeadId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOpportunity(EntityTypeBuilder<Opportunity> entity)
+    {
+        ConfigureEntity(entity, "Opportunities", "sales");
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Title).HasMaxLength(250).IsRequired();
+        entity.Property(x => x.Customer).HasMaxLength(200);
+        entity.Property(x => x.Value).HasPrecision(18, 2);
+        entity.Property(x => x.Owner).HasMaxLength(150);
+        entity.Property(x => x.ExpectedCloseAtUtc).HasPrecision(3);
+        entity.Property(x => x.Source).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.NextAction).HasMaxLength(300);
+        entity.Property(x => x.NextActionAtUtc).HasPrecision(3);
+        entity.Property(x => x.LastActivityAtUtc).HasPrecision(3);
+        entity.Property(x => x.Competitor).HasMaxLength(200);
+        entity.Property(x => x.RiskLevel).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.OutcomeReason).HasMaxLength(1000);
+        entity.Property(x => x.ClosedAtUtc).HasPrecision(3);
+        Scope(entity);
+        entity.Property(x => x.Stage).HasConversion<string>().HasMaxLength(24);
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId });
+        entity.HasIndex(x => new { x.CompanyId, x.OwnerUserId, x.Stage, x.ExpectedCloseAtUtc });
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId });
+        entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Lead>().WithMany().HasForeignKey(x => x.OriginLeadId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOpportunityStageHistory(EntityTypeBuilder<OpportunityStageHistory> entity)
+    {
+        entity.Property(x => x.Probability);
+        ConfigureEntity(entity, "OpportunityStageHistory", "sales");
+        Scope(entity);
+        entity.Property(x => x.FromStage).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ToStage).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.ChangedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.OpportunityId, x.ChangedAtUtc });
+        entity.HasOne<Opportunity>().WithMany().HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOpportunityActivity(EntityTypeBuilder<OpportunityActivity> entity)
+    {
+        ConfigureEntity(entity, "OpportunityActivities", "sales");
+        Scope(entity);
+        entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.Subject).HasMaxLength(250).IsRequired();
+        entity.Property(x => x.Outcome).HasMaxLength(2000).IsRequired();
+        entity.Property(x => x.OccurredAtUtc).HasPrecision(3);
+        entity.Property(x => x.NextAction).HasMaxLength(300);
+        entity.Property(x => x.NextActionAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.OpportunityId, x.OccurredAtUtc });
+        entity.HasOne<Opportunity>().WithMany().HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureQuote(EntityTypeBuilder<Quote> entity)
+    {
+        ConfigureEntity(entity, "Quotes", "commercial");
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Customer).HasMaxLength(200);
+        entity.Property(x => x.Opportunity).HasMaxLength(250);
+        entity.Property(x => x.CurrencyCode).HasMaxLength(8).IsRequired();
+        entity.Property(x => x.PaymentTerms).HasMaxLength(500).IsRequired();
+        entity.Property(x => x.ValidUntilUtc).HasPrecision(3);
+        entity.Property(x => x.SubmittedAtUtc).HasPrecision(3);
+        entity.Property(x => x.ApprovedAtUtc).HasPrecision(3);
+        entity.Property(x => x.SentAtUtc).HasPrecision(3);
+        entity.Property(x => x.AcceptedAtUtc).HasPrecision(3);
+        entity.Property(x => x.Amount).HasPrecision(18, 2);
+        entity.Property(x => x.GrossAmount).HasPrecision(18, 2);
+        entity.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+        entity.Property(x => x.DiscountPercent).HasPrecision(5, 2);
+        entity.Property(x => x.CostAmount).HasPrecision(18, 2);
+        entity.Property(x => x.NetAmount).HasPrecision(18, 2);
+        entity.Property(x => x.MarginPercent).HasPrecision(5, 2);
+        Scope(entity);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ApprovalLevel).HasConversion<string>().HasMaxLength(32);
+        entity.Ignore(x => x.IsEditable);
+        entity.HasIndex(x => new { x.CompanyId, x.Code, x.Revision }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId });
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId });
+        entity.HasIndex(x => x.OpportunityId);
+        entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Opportunity>().WithMany().HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Quote>().WithMany().HasForeignKey(x => x.ParentQuoteId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureQuoteLine(EntityTypeBuilder<QuoteLine> entity)
+    {
+        ConfigureEntity(entity, "QuoteLines", "commercial");
+        Scope(entity);
+        entity.Property(x => x.ProductCode).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.ProductName).HasMaxLength(250).IsRequired();
+        entity.Property(x => x.Unit).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.Quantity).HasPrecision(18, 3);
+        entity.Property(x => x.ListUnitPrice).HasPrecision(18, 2);
+        entity.Property(x => x.StandardUnitCost).HasPrecision(18, 2);
+        entity.Property(x => x.DiscountPercent).HasPrecision(5, 2);
+        entity.Property(x => x.PriceSource).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.PriceEffectiveAtUtc).HasPrecision(3);
+        entity.Ignore(x => x.GrossAmount);
+        entity.Ignore(x => x.DiscountAmount);
+        entity.Ignore(x => x.NetAmount);
+        entity.Ignore(x => x.CostAmount);
+        entity.Ignore(x => x.MarginPercent);
+        entity.HasIndex(x => new { x.QuoteId, x.ProductCode }).IsUnique();
+        entity.HasOne<Quote>().WithMany().HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureQuoteStatusHistory(EntityTypeBuilder<QuoteStatusHistory> entity)
+    {
+        ConfigureEntity(entity, "QuoteStatusHistory", "commercial");
+        Scope(entity);
+        entity.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.ChangedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.QuoteId, x.ChangedAtUtc });
+        entity.HasOne<Quote>().WithMany().HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureQuoteApprovalDecision(EntityTypeBuilder<QuoteApprovalDecision> entity)
+    {
+        ConfigureEntity(entity, "QuoteApprovalDecisions", "commercial");
+        Scope(entity);
+        entity.Property(x => x.Role).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.Decision).HasConversion<string>().HasMaxLength(16);
+        entity.Property(x => x.Comment).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.QuoteId, x.Role }).IsUnique();
+        entity.HasOne<Quote>().WithMany().HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.DecidedByUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOrderRequest(EntityTypeBuilder<OrderRequest> entity)
+    {
+        ConfigureEntity(entity, "OrderRequests", "commercial");
+        Scope(entity);
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.QuoteCode).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.Customer).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.CurrencyCode).HasMaxLength(8).IsRequired();
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.SubmissionIdempotencyKey).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.CorrelationId).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.NetAmount).HasPrecision(18, 2);
+        entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
+        entity.Property(x => x.CreditUsed).HasPrecision(18, 2);
+        entity.Property(x => x.OverdueAmount).HasPrecision(18, 2);
+        entity.Property(x => x.AvailableCredit).HasPrecision(18, 2);
+        entity.Property(x => x.CreditReason).HasMaxLength(1000);
+        entity.Property(x => x.CreditSource).HasMaxLength(200);
+        entity.Property(x => x.CreditSnapshotAtUtc).HasPrecision(3);
+        entity.Property(x => x.CreditOverrideExpiresAtUtc).HasPrecision(3);
+        entity.Property(x => x.ErpOrderNumber).HasMaxLength(100);
+        entity.Property(x => x.DeliveryReference).HasMaxLength(100);
+        entity.Property(x => x.InvoiceNumber).HasMaxLength(100);
+        entity.Property(x => x.PaymentReference).HasMaxLength(100);
+        entity.Property(x => x.LastIntegrationError).HasMaxLength(2000);
+        entity.Property(x => x.SubmittedAtUtc).HasPrecision(3);
+        entity.Property(x => x.LastSynchronizedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => x.QuoteId).IsUnique();
+        entity.HasIndex(x => x.SubmissionIdempotencyKey).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId, x.Status });
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId });
+        entity.HasOne<Quote>().WithMany().HasForeignKey(x => x.QuoteId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Opportunity>().WithMany().HasForeignKey(x => x.OpportunityId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOrderCreditDecision(EntityTypeBuilder<OrderCreditDecision> entity)
+    {
+        ConfigureEntity(entity, "OrderCreditDecisions", "commercial");
+        Scope(entity);
+        entity.Property(x => x.Decision).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
+        entity.Property(x => x.CreditUsed).HasPrecision(18, 2);
+        entity.Property(x => x.OverdueAmount).HasPrecision(18, 2);
+        entity.Property(x => x.AvailableCredit).HasPrecision(18, 2);
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.Source).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
+        entity.Property(x => x.ExpiresAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.OrderRequestId, x.DecidedAtUtc });
+        entity.HasOne<OrderRequest>().WithMany().HasForeignKey(x => x.OrderRequestId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.DecidedByUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOrderStatusHistory(EntityTypeBuilder<OrderStatusHistory> entity)
+    {
+        ConfigureEntity(entity, "OrderStatusHistory", "commercial");
+        Scope(entity);
+        entity.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.Reason).HasMaxLength(2000).IsRequired();
+        entity.Property(x => x.Source).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.ChangedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.OrderRequestId, x.ChangedAtUtc });
+        entity.HasOne<OrderRequest>().WithMany().HasForeignKey(x => x.OrderRequestId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureOrderIntegrationMessage(EntityTypeBuilder<OrderIntegrationMessage> entity)
+    {
+        ConfigureEntity(entity, "OrderIntegrationMessages", "integration");
+        Scope(entity);
+        entity.Property(x => x.MessageType).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.CorrelationId).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.PayloadFingerprint).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.NextAttemptAtUtc).HasPrecision(3);
+        entity.Property(x => x.LastError).HasMaxLength(2000);
+        entity.Property(x => x.ExternalReference).HasMaxLength(100);
+        entity.Property(x => x.CompletedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => x.OrderRequestId).IsUnique();
+        entity.HasIndex(x => x.IdempotencyKey).IsUnique();
+        entity.HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
+        entity.HasOne<OrderRequest>().WithMany().HasForeignKey(x => x.OrderRequestId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureOrderIntegrationAttempt(EntityTypeBuilder<OrderIntegrationAttempt> entity)
+    {
+        ConfigureEntity(entity, "OrderIntegrationAttempts", "integration");
+        Scope(entity);
+        entity.Property(x => x.Outcome).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.Detail).HasMaxLength(2000).IsRequired();
+        entity.Property(x => x.ExternalReference).HasMaxLength(100);
+        entity.Property(x => x.AttemptedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.MessageId, x.AttemptNumber }).IsUnique();
+        entity.HasIndex(x => new { x.OrderRequestId, x.AttemptedAtUtc });
+        entity.HasOne<OrderIntegrationMessage>().WithMany().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<OrderRequest>().WithMany().HasForeignKey(x => x.OrderRequestId).OnDelete(DeleteBehavior.NoAction);
+    }
+
+    private static void ConfigureDealer(EntityTypeBuilder<Dealer> entity)
+    {
+        ConfigureEntity(entity, "Dealers", "channel");
+        Scope(entity);
+        entity.Property(x => x.DealerId).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.LegalName).HasMaxLength(250).IsRequired();
+        entity.Property(x => x.TradeName).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.City).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.NationalId).HasMaxLength(32);
+        entity.Property(x => x.Phone).HasMaxLength(40);
+        entity.Property(x => x.Email).HasMaxLength(256);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.StatusReason).HasMaxLength(1000);
+        entity.Property(x => x.ActivatedAtUtc).HasPrecision(3);
+        entity.Property(x => x.TerminatedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CompanyId, x.DealerId }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        entity.HasIndex(x => new { x.CompanyId, x.NationalId }).IsUnique().HasFilter("[NationalId] IS NOT NULL");
+        entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId, x.Status });
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ChannelManagerUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureDealerContract(EntityTypeBuilder<DealerContract> entity)
+    {
+        ConfigureEntity(entity, "DealerContracts", "channel");
+        Scope(entity);
+        entity.Property(x => x.ContractNumber).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.ValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.ValidToUtc).HasPrecision(3);
+        entity.Property(x => x.AnnualTarget).HasPrecision(18, 2);
+        entity.Property(x => x.PaymentTerms).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.ApprovedAtUtc).HasPrecision(3);
+        entity.Property(x => x.DecisionReason).HasMaxLength(1000);
+        entity.HasIndex(x => new { x.CompanyId, x.ContractNumber }).IsUnique();
+        entity.HasIndex(x => new { x.DealerId, x.Status, x.ValidToUtc });
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+
+    private static void ConfigureDealerTerritory(EntityTypeBuilder<DealerTerritoryAssignment> entity)
+    {
+        entity.Property(x => x.IsExclusive);
+        ConfigureEntity(entity, "DealerTerritoryAssignments", "channel");
+        Scope(entity);
+        entity.Property(x => x.TerritoryId).IsRequired();
+        entity.Property(x => x.ValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.ValidToUtc).HasPrecision(3);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.ApprovedAtUtc).HasPrecision(3);
+        entity.Property(x => x.Reason).HasMaxLength(1000);
+        entity.HasIndex(x => new { x.CompanyId, x.TerritoryId, x.Status, x.ValidFromUtc });
+        entity.HasIndex(x => new { x.DealerId, x.TerritoryId, x.Status });
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+
+    private static void ConfigureDealerCustomer(EntityTypeBuilder<DealerCustomerAssignment> entity)
+    {
+        ConfigureEntity(entity, "DealerCustomerAssignments", "channel");
+        Scope(entity);
+        entity.Property(x => x.ValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.ValidToUtc).HasPrecision(3);
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.EndReason).HasMaxLength(1000);
+        entity.Ignore(x => x.IsActive);
+        entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.ValidToUtc });
+        entity.HasIndex(x => new { x.DealerId, x.ValidToUtc });
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.AssignedByUserId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.EndedByUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+
+    private static void ConfigureDealerTarget(EntityTypeBuilder<DealerTarget> entity)
+    {
+        ConfigureEntity(entity, "DealerTargets", "channel");
+        Scope(entity);
+        entity.Property(x => x.PeriodFromUtc).HasPrecision(3);
+        entity.Property(x => x.PeriodToUtc).HasPrecision(3);
+        entity.Property(x => x.Amount).HasPrecision(18, 2);
+        entity.Property(x => x.Source).HasMaxLength(200).IsRequired();
+        entity.HasIndex(x => new { x.DealerId, x.PeriodFromUtc, x.PeriodToUtc }).IsUnique();
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.SetByUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+
+    private static void ConfigureDealerFinancial(EntityTypeBuilder<DealerFinancialSnapshot> entity)
+    {
+        ConfigureEntity(entity, "DealerFinancialSnapshots", "channel");
+        Scope(entity);
+        entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
+        entity.Property(x => x.CreditUsed).HasPrecision(18, 2);
+        entity.Property(x => x.Balance).HasPrecision(18, 2);
+        entity.Property(x => x.OverdueAmount).HasPrecision(18, 2);
+        entity.Ignore(x => x.AvailableCredit);
+        entity.Property(x => x.Source).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.SynchronizedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.DealerId, x.SynchronizedAtUtc }).IsUnique();
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureDealerPerformance(EntityTypeBuilder<DealerPerformanceSnapshot> entity)
+    {
+        entity.Property(x => x.OrderCount);
+        ConfigureEntity(entity, "DealerPerformanceSnapshots", "channel");
+        Scope(entity);
+        entity.Property(x => x.PeriodFromUtc).HasPrecision(3);
+        entity.Property(x => x.PeriodToUtc).HasPrecision(3);
+        entity.Property(x => x.NetSales).HasPrecision(18, 2);
+        entity.Property(x => x.Source).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.SynchronizedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.DealerId, x.PeriodFromUtc, x.PeriodToUtc, x.SynchronizedAtUtc }).IsUnique();
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureDealerStatusHistory(EntityTypeBuilder<DealerStatusHistory> entity)
+    {
+        ConfigureEntity(entity, "DealerStatusHistory", "channel");
+        Scope(entity);
+        entity.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(32);
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.ChangedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.DealerId, x.ChangedAtUtc });
+        entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+
+    private static void ConfigureCustomerMerge(EntityTypeBuilder<CustomerMergeOperation> entity)
+    {
+        entity.Property(x => x.SurvivorCustomerId);
+        entity.Property(x => x.MergedByUserId);
+        ConfigureEntity(entity, "CustomerMergeOperations", "crm");
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.MergedCustomerPreviousStatus).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.TransferManifestJson).HasColumnType("nvarchar(max)").IsRequired();
+        entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        entity.Property(x => x.MergedAtUtc).HasPrecision(3);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.RevertedAtUtc).HasPrecision(3);
+        entity.Property(x => x.RevertReason).HasMaxLength(1000);
+        entity.HasIndex(x => new { x.CompanyId, x.MergedAtUtc });
+        entity.HasIndex(x => new { x.MergedCustomerId, x.Status });
+        entity.HasIndex(x => x.DuplicateCandidateId).IsUnique()
+            .HasDatabaseName("UX_CustomerMergeOperations_DuplicateCandidateId_Active").HasFilter("[Status] = N'Merged'");
+        entity.HasIndex(x => x.MergedCustomerId).IsUnique()
+            .HasDatabaseName("UX_CustomerMergeOperations_MergedCustomerId_Active").HasFilter("[Status] = N'Merged'");
+    }
+
+    private static void ConfigureWorkItem(EntityTypeBuilder<CrmWorkItem> entity)
+    {
+        ConfigureEntity(entity, "WorkItems", "crm");
+        entity.Property(x => x.Title).HasMaxLength(250).IsRequired();
+        entity.Property(x => x.Priority).HasMaxLength(24).IsRequired();
+        entity.Property(x => x.DueAtUtc).HasPrecision(3);
+        Scope(entity);
+        entity.HasIndex(x => new { x.CompanyId, x.AssignedToUserId, x.IsDone });
+    }
+
+    private static void ConfigureUser(EntityTypeBuilder<CrmUser> entity)
+    {
+        ConfigureEntity(entity, "Users", "iam");
+        entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.UserName).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.NormalizedEmail).HasMaxLength(256).IsRequired();
+        entity.Property(x => x.EmployeeNumber).HasMaxLength(64);
+        entity.Property(x => x.Culture).HasMaxLength(20);
+        entity.Property(x => x.TimeZoneId).HasMaxLength(80);
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.AccessValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.AccessValidToUtc).HasPrecision(3);
+        entity.Property(x => x.LastLoginAtUtc).HasPrecision(3);
+        entity.HasIndex(x => x.UserName).IsUnique();
+        entity.HasIndex(x => x.NormalizedEmail).IsUnique();
+    }
+
+    private static void ConfigureExternalIdentity(EntityTypeBuilder<ExternalIdentity> entity)
+    {
+        ConfigureEntity(entity, "ExternalIdentities", "iam");
+        entity.Property(x => x.ProviderKey).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.Issuer).HasMaxLength(300).IsRequired();
+        entity.Property(x => x.Subject).HasMaxLength(300).IsRequired();
+        entity.Property(x => x.EmailAtLink).HasMaxLength(256);
+        entity.Property(x => x.LinkedAtUtc).HasPrecision(3);
+        entity.Property(x => x.LastSeenAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.Issuer, x.Subject }).IsUnique();
+        entity.HasIndex(x => x.CrmUserId);
+    }
+
+    private static void ConfigureSession(EntityTypeBuilder<UserSession> entity)
+    {
+        entity.Property(x => x.SecurityVersionAtIssue);
+        ConfigureEntity(entity, "UserSessions", "iam");
+        entity.Property(x => x.IssuedAtUtc).HasPrecision(3);
+        entity.Property(x => x.LastSeenAtUtc).HasPrecision(3);
+        entity.Property(x => x.IdleExpiresAtUtc).HasPrecision(3);
+        entity.Property(x => x.AbsoluteExpiresAtUtc).HasPrecision(3);
+        entity.Property(x => x.RevokedAtUtc).HasPrecision(3);
+        entity.Property(x => x.RevokeReason).HasMaxLength(300);
+        entity.Property(x => x.IpHash).HasMaxLength(128);
+        entity.Property(x => x.UserAgentSummary).HasMaxLength(300);
+        entity.Property(x => x.SelectedCompanyId).HasMaxLength(32);
+        entity.Property(x => x.SelectedBranchId).HasMaxLength(32);
+        entity.Property(x => x.SelectedTerritoryId).HasMaxLength(32);
+        entity.HasIndex(x => new { x.CrmUserId, x.RevokedAtUtc, x.AbsoluteExpiresAtUtc });
+    }
+
+    private static void ConfigureRoleAssignment(EntityTypeBuilder<UserRoleAssignment> entity)
+    {
+        entity.Property(x => x.AssignedByUserId);
+        ConfigureEntity(entity, "UserRoleAssignments", "iam");
+        entity.Property(x => x.RoleKey).HasMaxLength(80).IsRequired();
+        entity.Property(x => x.RoleLabel).HasMaxLength(150).IsRequired();
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.ScopeType).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.ScopeId).HasMaxLength(64).IsRequired();
+        entity.Property(x => x.ScopeLabel).HasMaxLength(200).IsRequired();
+        entity.Property(x => x.ValidFromUtc).HasPrecision(3);
+        entity.Property(x => x.ValidToUtc).HasPrecision(3);
+        entity.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+        entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.RevokedAtUtc).HasPrecision(3);
+        entity.HasIndex(x => new { x.CrmUserId, x.CompanyId, x.Status });
+        entity.HasIndex(x => new { x.CompanyId, x.ScopeType, x.ScopeId });
+    }
+
+    private static void ConfigureAudit(EntityTypeBuilder<SecurityAuditEvent> entity)
+    {
+        entity.Property(x => x.SessionId);
+        ConfigureEntity(entity, "SecurityAuditEvents", "iam");
+        entity.Property(x => x.OccurredAtUtc).HasPrecision(3);
+        entity.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.Outcome).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.CorrelationId).HasMaxLength(100).IsRequired();
+        entity.Property(x => x.Reason).HasMaxLength(1000);
+        entity.Property(x => x.IpHash).HasMaxLength(128);
+        entity.Property(x => x.UserAgentSummary).HasMaxLength(300);
+        entity.HasIndex(x => new { x.TargetUserId, x.OccurredAtUtc });
+        entity.HasIndex(x => new { x.ActorUserId, x.OccurredAtUtc });
+    }
+
+    public DbSet<PortalRequest> PortalRequests => Set<PortalRequest>();
+    public DbSet<MobileVisit> MobileVisits => Set<MobileVisit>();
+    public DbSet<MobileOperationReceipt> MobileOperationReceipts => Set<MobileOperationReceipt>();
+
+    private static void ConfigureSelfService(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PortalRequest>(entity => {
+            ConfigureEntity(entity, "PortalRequests", "portal"); Scope(entity);
+            entity.Property(x => x.Fingerprint).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Subject).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.PublicReply).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.ProductCode).HasMaxLength(64);
+            entity.Property(x => x.Quantity).HasPrecision(18, 3);
+            entity.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            entity.Property(x => x.Source).HasMaxLength(200);
+            entity.Property(x => x.PriceAtUtc).HasPrecision(3);
+            entity.Property(x => x.Email).HasMaxLength(256);
+            entity.Property(x => x.ProtectedUntilUtc).HasPrecision(3);
+            entity.Property(x => x.ProtectionKey).HasMaxLength(64);
+            entity.HasIndex(x => new { x.CompanyId, x.ProtectionKey }).IsUnique().HasFilter("[ProtectionKey] IS NOT NULL");
+            entity.HasIndex(x => new { x.CompanyId, x.LinkedRecordId }).IsUnique().HasFilter("[Kind] = N'Order' AND [LinkedRecordId] IS NOT NULL");
+            entity.HasIndex(x => new { x.CompanyId, x.CreatedByUserId, x.OperationId }).IsUnique();
+            entity.HasIndex(x => new { x.CompanyId, x.DealerId, x.Status });
+            entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<MobileVisit>(entity => {
+            ConfigureEntity(entity, "MobileVisits", "mobile"); Scope(entity);
+            entity.Property(x => x.PlannedAtUtc).HasPrecision(3);
+            entity.Property(x => x.Purpose).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.Outcome).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.CheckedInAtUtc).HasPrecision(3);
+            entity.Property(x => x.CompletedAtUtc).HasPrecision(3);
+            entity.Property(x => x.LastReceivedAtUtc).HasPrecision(3);
+            entity.Property(x => x.Latitude).HasPrecision(9, 6);
+            entity.Property(x => x.Longitude).HasPrecision(9, 6);
+            entity.HasIndex(x => new { x.CompanyId, x.OwnerUserId, x.PlannedAtUtc });
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<MobileOperationReceipt>(entity => {
+            ConfigureEntity(entity, "OperationReceipts", "mobile");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Fingerprint).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ReceivedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.CompanyId, x.ActorUserId, x.OperationId }).IsUnique();
+            entity.HasOne<MobileVisit>().WithMany().HasForeignKey(x => x.VisitId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+    }
+
+    private static void Scope<T>(EntityTypeBuilder<T> entity) where T : Entity, IOrganizationScoped
+    {
+        entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.BranchId).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.TerritoryId).HasMaxLength(32);
+    }
+
+    private static void ConfigureEntity<T>(EntityTypeBuilder<T> entity, string table, string schema) where T : Entity
+    {
+        entity.ToTable(table, schema);
+        entity.HasKey(x => x.Id);
+        entity.Property(x => x.Id).ValueGeneratedNever();
+        entity.Property(x => x.CreatedAtUtc).HasPrecision(3);
+        entity.Property(x => x.UpdatedAtUtc).HasPrecision(3);
+        entity.Property(x => x.Version).IsConcurrencyToken();
+    }
+}

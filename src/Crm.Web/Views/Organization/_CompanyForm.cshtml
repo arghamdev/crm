@@ -1,0 +1,7 @@
+@model UpdateCompanyCommand
+<form class="drawer-form" method="post" action="/organization/company/edit" hx-post="/organization/company/edit" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<input type="hidden" asp-for="ExpectedVersion"/><div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>ویرایش شرکت</h3><div class="form-grid"><label class="field"><span>کد *</span><input asp-for="Code"/><span asp-validation-for="Code" class="field-error"></span></label><label class="field field--full"><span>نام شرکت *</span><input asp-for="Name"/><span asp-validation-for="Name" class="field-error"></span></label><label class="field field--full"><span>منطقه زمانی IANA *</span><input asp-for="TimeZoneId" placeholder="Asia/Tehran"/><span asp-validation-for="TimeZoneId" class="field-error"></span></label></div></section>
+    <div class="identity-form-note">شناسه پایدار شرکت و مرز داده از این فرم قابل تغییر نیست.</div><div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیره تغییرات</button></div>
+</form>
+

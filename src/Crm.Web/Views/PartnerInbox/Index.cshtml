@@ -1,0 +1,5 @@
+@model IReadOnlyList<PortalRequestDto>
+@{ ViewData["Title"]="درخواست‌های نمایندگان"; }
+<header class="page-header"><div><span class="eyebrow">اولویت ۱۰ · بررسی داخلی</span><h1>درخواست‌های نمایندگان</h1><p>پاسخ‌های این کارتابل برای نماینده قابل مشاهده است.</p></div></header>
+<section class="panel self-panel">@if(Model.Count==0) { <p>درخواستی در دامنهٔ شما نیست.</p> }
+@foreach(var r in Model) { <article class="self-card self-row"><div><h2>@r.Subject</h2><p>@r.DealerName · @r.Kind.Label() · @r.Status.Label()</p><small>@r.Code</small></div><a class="button button--primary" href="/partner-requests/@r.Id">بررسی درخواست</a></article> }</section>

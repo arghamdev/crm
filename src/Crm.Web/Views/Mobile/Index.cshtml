@@ -1,0 +1,21 @@
+@model MobileWorkspaceDto
+@inject ICurrentUserContext Current
+@{ ViewData["Title"]="بازدیدهای من"; var scope=Current.RequiredOrganization(); }
+<header class="page-header"><div><span class="eyebrow">اولویت ۱۰ · MOBILE CRM</span><h1>بازدیدهای من</h1><p>برنامهٔ روز، شروع بازدید و ثبت نتیجه</p></div><span class="status-pill status--info">نسخهٔ آزمایشی</span></header>
+<div id="mobileWorkspace" data-context="@User.CrmUserId():@User.CrmSessionId():@scope.CompanyId:@scope.BranchId:@scope.TerritoryId" data-day="@Model.Day.ToString("yyyy-MM-dd")">
+<section class="panel self-panel"><div class="self-row"><strong id="mobileSyncStatus" role="status" aria-live="polite">صف ارسال: ۰</strong><button class="button button--primary" type="button" id="mobileSync">ارسال صف</button><button class="button" type="button" id="mobileDiscard">حذف صف و تازه‌سازی</button></div><p>صف آفلاین فقط در حافظهٔ همین صفحه، حداکثر ۵۰ عملیات و ۸ ساعت نگهداری می‌شود. با بستن یا بارگذاری مجدد صفحه از بین می‌رود. برنامه‌ریزی بازدید به اتصال نیاز دارد.</p><p id="mobileSyncDetail" aria-live="polite">آخرین ارسال این صفحه: هنوز انجام نشده</p></section>
+<div id="selfServiceErrors" aria-live="polite"></div>
+<section class="panel self-panel"><form method="get" action="/mobile" class="self-form"><label>روز برنامه (میلادی UTC)<input type="date" name="day" value="@Model.Day.ToString("yyyy-MM-dd")" required/></label><button class="button" type="submit">نمایش روز</button></form></section>
+<section class="panel self-panel"><h2>برنامه‌ریزی بازدید</h2><form method="post" action="/mobile/visits" hx-post="/mobile/visits" hx-target="#selfServiceErrors" class="self-form">@Html.AntiForgeryToken()<input type="hidden" name="OperationId" value="@Guid.NewGuid()"/>
+<label>مشتری<select name="CustomerId" required>@foreach(var c in Model.Customers) { <option value="@c.Id">@c.Name · @c.BranchId</option> }</select></label><label>زمان (UTC)<input name="PlannedAtUtc" type="datetime-local" required value="@(Model.Day.ToString("yyyy-MM-dd"))T08:00"/></label>
+<label class="self-wide">هدف بازدید<input name="Purpose" maxlength="1000" required/></label><button class="button button--primary" type="submit">ثبت برنامه</button></form></section>
+<section class="self-grid" id="mobileVisits">@if(Model.Visits.Count==0) { <p>برای این روز بازدیدی ثبت نشده است.</p> }
+@foreach(var v in Model.Visits) { <article class="panel self-panel" data-visit="@v.Id" data-version="@v.Version" data-status="@v.Status"><div class="self-row"><h2>@v.CustomerName</h2><span class="status-pill status--info" data-visit-status>@v.Status.Label()</span></div><p>@v.PlannedAtUtc.ToString("u") · @v.Purpose</p><p data-outcome>@v.Outcome</p><small>آخرین دریافت سرور: @(v.LastReceivedAtUtc?.ToString("u") ?? "هنوز ارسال نشده") · موقعیت: @(v.HasLocation ? "با رضایت ثبت شده" : "ثبت نشده")</small>
+@if(v.Status is VisitStatus.Planned or VisitStatus.CheckedIn) {
+<form method="post" action="/mobile/visits/@v.Id" data-mobile-action class="self-form">@Html.AntiForgeryToken()<input type="hidden" name="OperationId" value="@Guid.NewGuid()"/><input type="hidden" name="ExpectedVersion" value="@v.Version"/><input type="hidden" name="OccurredAtUtc"/>
+<label>اقدام<select name="Status"><option value="CheckedIn">شروع بازدید</option><option value="Completed">پایان بازدید</option><option value="Cancelled">لغو برنامه</option></select></label>
+<label class="self-wide">نتیجه / دلیل (برای پایان یا لغو الزامی)<textarea name="Outcome" maxlength="2000" rows="3"></textarea></label>
+<label><input type="checkbox" name="LocationConsent" value="true"/> رضایت به ثبت موقعیت هنگام شروع</label><button type="button" class="button" data-location>دریافت موقعیت اختیاری</button><input type="hidden" name="Latitude"/><input type="hidden" name="Longitude"/><small data-location-status>موقعیت دریافت نشده</small>
+<button class="button button--primary" type="submit">ثبت اقدام</button></form> }
+</article> }</section></div>
+@section Scripts { <script src="~/js/mobile.js" asp-append-version="true"></script> }

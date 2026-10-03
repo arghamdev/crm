@@ -1,0 +1,99 @@
+@using Microsoft.AspNetCore.Antiforgery
+@using Crm.Application.Abstractions
+@using Crm.Application.Services
+@inject IAntiforgery Antiforgery
+@inject IAccessSnapshotService Access
+@inject IOrganizationContextService Organization
+@{
+    var tokens = Antiforgery.GetAndStoreTokens(Context);
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    string Active(string name) => string.Equals(controller, name, StringComparison.OrdinalIgnoreCase) ? "is-active" : "";
+    var access = Access.Get(User.CrmUserId());
+    var organizationContext = Organization.GetCurrent(User.CrmUserId(), User.CrmSessionId());
+    var selectedCompanyId = organizationContext?.SelectedCompanyId;
+    var roleLabels = access is null || selectedCompanyId is null ? "بدون نقش" : string.Join("، ", access.RoleLabelsFor(selectedCompanyId));
+    var currentReturnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    bool Can(string permission) => selectedCompanyId is not null && access?.PermissionsFor(selectedCompanyId).Contains(permission) == true;
+}
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="@tokens.RequestToken" />
+    <title>@ViewData["Title"] | ارقام CRM</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <svg class="svg-sprite" aria-hidden="true">
+        <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+        <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+        <symbol id="i-lead" viewBox="0 0 24 24"><path d="M12 2 3 7l9 5 9-5-9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"/></symbol>
+        <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8M8 9h2"/></symbol>
+        <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 14h5l2 3h2l2-3h5"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10ZM9 12l2 2 4-4"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+        <symbol id="i-building" viewBox="0 0 24 24"><path d="M3 21h18M6 21V5l6-3 6 3v16M9 9h1M14 9h1M9 13h1M14 13h1M9 17h1M14 17h1"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    </svg>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar__header"><a asp-controller="Dashboard" asp-action="Index" class="brand brand--light"><span class="brand__mark">آ</span><span><strong>ارقام CRM</strong><small>نسخه آزمایشی</small></span></a><button class="icon-button icon-button--sidebar sidebar-close" id="sidebarClose" type="button"><svg><use href="#i-close"/></svg></button></div>
+            <nav class="main-nav">
+                <span class="nav-label">فضای کاری</span>
+                @if (Can("Portal.Read")) { <a class="nav-item @Active("Portal")" href="/portal"><svg><use href="#i-building"/></svg><span>پرتال نماینده</span></a> }
+                @if (Can("Portal.Review")) { <a class="nav-item @Active("PartnerInbox")" href="/partner-requests"><svg><use href="#i-inbox"/></svg><span>درخواست‌های نمایندگان</span></a> }
+                @if (Can("Mobile.Visit.Read")) { <a class="nav-item @Active("Mobile")" href="/mobile"><svg><use href="#i-target"/></svg><span>بازدیدهای من</span></a> }
+                @if (Can("Dashboard.Read")) { <a class="nav-item @Active("Dashboard")" asp-controller="Dashboard" asp-action="Index"><svg><use href="#i-grid"/></svg><span>مرکز عملیات</span></a> }
+                @if (Can("Customer.Read")) { <a class="nav-item @Active("Customers")" asp-controller="Customers" asp-action="Index"><svg><use href="#i-users"/></svg><span>مشتریان</span></a> }
+                @if (Can("Lead.Read")) { <a class="nav-item @Active("Leads")" asp-controller="Leads" asp-action="Index"><svg><use href="#i-lead"/></svg><span>سرنخ‌ها</span></a> }
+                @if (Can("Opportunity.Read")) { <a class="nav-item @Active("Opportunities")" asp-controller="Opportunities" asp-action="Index"><svg><use href="#i-target"/></svg><span>فرصت‌های فروش</span></a> }
+                @if (Can("Quote.Read")) { <a class="nav-item @Active("Quotes")" asp-controller="Quotes" asp-action="Index"><svg><use href="#i-file"/></svg><span>پیشنهادهای قیمت</span></a> }
+                @if (selectedCompanyId is not null && access?.PermissionsFor(selectedCompanyId).Contains("Order.Read") == true)
+                {
+                    <a class="nav-item @Active("Orders")" asp-controller="Orders" asp-action="Index"><svg><use href="#i-inbox"/></svg><span>درخواست‌های سفارش</span></a>
+                }
+                @if (selectedCompanyId is not null && access?.PermissionsFor(selectedCompanyId).Contains("Dealer.Read") == true)
+                {
+                    <a class="nav-item @Active("Dealers")" asp-controller="Dealers" asp-action="Index"><svg><use href="#i-building"/></svg><span>نمایندگان فروش</span></a>
+                }
+                @if (Can("WorkQueue.Read")) { <a class="nav-item @Active("WorkQueue")" asp-controller="WorkQueue" asp-action="Index"><svg><use href="#i-inbox"/></svg><span>کارتابل اقدامات</span></a> }
+                @if (selectedCompanyId is not null && access?.PermissionsFor(selectedCompanyId).Contains("Reporting.Read") == true)
+                {
+                    <a class="nav-item @Active("Reports")" href="/reports"><svg><use href="#i-grid"/></svg><span>گزارش‌ها و تحلیل</span></a>
+                }
+                @if (selectedCompanyId is not null && access?.PermissionsFor(selectedCompanyId).Contains("Administration.Manage") == true)
+                {
+                    <span class="nav-label">مدیریت</span>
+                    <a class="nav-item @Active("Identity")" asp-controller="Identity" asp-action="Index"><svg><use href="#i-shield"/></svg><span>کاربران و دسترسی</span></a>
+                    <a class="nav-item @Active("Organization")" asp-controller="Organization" asp-action="Index"><svg><use href="#i-building"/></svg><span>ساختار سازمانی</span></a>
+                }
+            </nav>
+            <div class="sidebar__user"><a class="avatar" href="/account/security" title="امنیت حساب">ک</a><span><strong>@User.Identity?.Name</strong><small>@roleLabels</small></span><form asp-controller="Account" asp-action="Logout" method="post"><button class="icon-button icon-button--sidebar" title="خروج" type="submit"><svg><use href="#i-chevron"/></svg></button></form></div>
+        </aside>
+        <div class="app-main">
+            <header class="topbar">
+                <div class="topbar__right"><button class="icon-button menu-button" id="menuButton" type="button"><svg><use href="#i-menu"/></svg></button><form class="global-search" asp-controller="Customers" asp-action="Index" method="get"><svg><use href="#i-search"/></svg><input name="q" placeholder="جست‌وجوی مشتری یا کد..." /></form></div>
+                <div class="topbar__left"><button class="company-select" type="button" hx-get="/context/selector?returnUrl=@Uri.EscapeDataString(currentReturnUrl)" hx-target="#drawerBody" hx-swap="innerHTML" title="تغییر محیط کاری"><svg><use href="#i-building"/></svg><span><b>@(organizationContext?.SelectedCompanyName ?? "انتخاب شرکت")</b><small>@(organizationContext?.SelectedBranchName ?? "همه شعب") · @(organizationContext?.SelectedCompanyCode ?? "—")</small></span><svg class="company-select__chevron"><use href="#i-chevron"/></svg></button><button class="icon-button" id="themeToggle" type="button"><svg class="theme-icon"><use href="#i-moon"/></svg></button><button class="icon-button has-indicator" type="button"><svg><use href="#i-bell"/></svg><span></span></button><span class="topbar-avatar">م‌ن</span></div>
+            </header>
+            <main class="view-host">@RenderBody()</main>
+        </div>
+    </div>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true"><div class="drawer__header"><div><span class="eyebrow">فرم آزمایشی</span><h2 id="drawerTitle">ثبت اطلاعات</h2></div><button class="icon-button" id="drawerClose" type="button"><svg><use href="#i-close"/></svg></button></div><div class="drawer__body" id="drawerBody"></div></aside>
+    <div class="toast-region" id="toastRegion" aria-live="assertive"></div>
+    <script src="~/lib/htmx/htmx.min.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

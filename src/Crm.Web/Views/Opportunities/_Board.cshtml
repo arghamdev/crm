@@ -1,0 +1,19 @@
+@model PipelineBoardDto
+@functions {
+    private static string StageText(OpportunityStage value) => value switch { OpportunityStage.Identified => "شناسایی", OpportunityStage.Discovery => "کشف", OpportunityStage.Qualified => "تأیید", OpportunityStage.SolutionOffer => "ارائه راهکار", OpportunityStage.Negotiation => "مذاکره", OpportunityStage.Commit => "تعهد", OpportunityStage.Won => "برنده", _ => "باخته" };
+}
+@{ var stages = Model.IncludeClosed ? Enum.GetValues<OpportunityStage>() : new[] { OpportunityStage.Identified, OpportunityStage.Discovery, OpportunityStage.Qualified, OpportunityStage.SolutionOffer, OpportunityStage.Negotiation, OpportunityStage.Commit }; }
+<section class="kanban kanban--pipeline">
+@foreach (var stage in stages)
+{
+    var items = Model.Items.Where(x => x.Stage == stage).ToList();
+    var summary = Model.Stages.FirstOrDefault(x => x.Stage == stage);
+    <article class="kanban-col"><header class="kanban-head"><span class="stage-color stage-color--@stage.ToString().ToLowerInvariant()"></span><div><strong>@StageText(stage)</strong><small>@items.Count فرصت · @($"{(summary?.Value ?? 0) / 1_000_000_000m:N1} میلیارد")</small></div></header><div class="kanban-cards">
+    @if (items.Count == 0) { <div class="kanban-empty">فرصتی در این مرحله نیست</div> }
+    @foreach (var item in items)
+    {
+        <div class="opportunity-card"><div class="opp-top"><code>@item.Code</code><span class="probability">@item.Probability٪</span></div><a class="opportunity-title" href="/opportunities/@item.Id">@item.Title</a><p>@item.Customer · @item.Owner</p><strong>@($"{item.Value / 1_000_000_000m:N1} میلیارد ریال")</strong><div class="opportunity-meta"><span>بستن: @item.ExpectedCloseAtUtc?.ToLocalTime().ToString("MM/dd")</span><span class="badge @(item.RiskLevel == OpportunityRiskLevel.High ? "badge--danger" : item.RiskLevel == OpportunityRiskLevel.Low ? "badge--success" : "badge--warning")"><span></span>@item.RiskLevel</span></div>@if(stage is not (OpportunityStage.Commit or OpportunityStage.Won or OpportunityStage.Lost)){<form method="post" action="/opportunities/@item.Id/advance" hx-post="/opportunities/@item.Id/advance">@Html.AntiForgeryToken()<input type="hidden" name="expectedVersion" value="@item.Version"/><button class="next-stage" type="submit"><span>انتقال سریع</span><svg><use href="#i-chevron"/></svg></button></form>}else{<a class="next-stage" href="/opportunities/@item.Id"><span>مشاهده جزئیات</span><svg><use href="#i-chevron"/></svg></a>}</div>
+    }
+    </div></article>
+}
+</section>

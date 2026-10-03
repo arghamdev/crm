@@ -1,0 +1,27 @@
+SET XACT_ABORT ON;
+DECLARE @ConfirmDestructiveRollback bit = 0;
+IF @ConfirmDestructiveRollback <> 1 THROW 51010, 'Rollback is destructive. Set @ConfirmDestructiveRollback=1 after backup and impact review.', 1;
+BEGIN TRANSACTION;
+IF EXISTS(SELECT 1 FROM [commercial].[Quotes] WHERE [Status] IN(N'Sent',N'Accepted'))
+    THROW 51011, 'Sent or accepted quotes exist; use roll-forward or restore instead.', 1;
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [FK_Quotes_Quotes_ParentQuoteId];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [FK_Quotes_Users_OwnerUserId];
+DROP TABLE IF EXISTS [commercial].[QuoteApprovalDecisions];
+DROP TABLE IF EXISTS [commercial].[QuoteStatusHistory];
+DROP TABLE IF EXISTS [commercial].[QuoteLines];
+DROP INDEX IF EXISTS [IX_Quotes_ParentQuoteId] ON [commercial].[Quotes];
+DROP INDEX IF EXISTS [IX_Quotes_OwnerUserId] ON [commercial].[Quotes];
+DROP INDEX IF EXISTS [IX_Quotes_CompanyId_Code_Revision] ON [commercial].[Quotes];
+CREATE UNIQUE INDEX [IX_Quotes_CompanyId_Code] ON [commercial].[Quotes]([CompanyId],[Code]);
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_CurrencyCode];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_ValidUntilUtc];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_PaymentTerms];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_Revision];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_GrossAmount];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_DiscountAmount];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_CostAmount];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_NetAmount];
+ALTER TABLE [commercial].[Quotes] DROP CONSTRAINT IF EXISTS [DF_Quotes_ApprovalLevel];
+ALTER TABLE [commercial].[Quotes] DROP COLUMN [OwnerUserId],[CurrencyCode],[ValidUntilUtc],[PaymentTerms],[Revision],[ParentQuoteId],[GrossAmount],[DiscountAmount],[CostAmount],[NetAmount],[ApprovalLevel],[SubmittedAtUtc],[ApprovedAtUtc],[SentAtUtc],[AcceptedAtUtc];
+DELETE FROM [dbo].[__EFMigrationsHistory] WHERE [MigrationId]=N'202609260005_QuotePricingGovernance';
+COMMIT;

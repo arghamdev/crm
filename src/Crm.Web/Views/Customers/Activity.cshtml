@@ -1,0 +1,4 @@
+@model Customer360Dto
+@{ ViewData["Title"] = "Timeline مشتری"; }
+<header class="page-header"><div><span class="eyebrow">Customer 360</span><h1>Timeline و ارتباطات @Model.Customer.Name</h1><p>نمای مستقل برای fallback استاندارد MVC و دسترس‌پذیری بدون JavaScript</p></div><a class="button button--ghost" href="/customers/@Model.Customer.Id">بازگشت به مشتری</a></header>
+<partial name="_Activity" model="Model" />

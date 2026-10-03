@@ -1,0 +1,54 @@
+@model ReportingDashboard
+@using System.Globalization
+@{
+    string Link(string metric, string? branch = null) => "/reports/drilldown" + Microsoft.AspNetCore.Http.QueryString.Create(new Dictionary<string,string?> {
+        ["From"] = Model.Filter.From.ToString("yyyy-MM-dd"), ["To"] = Model.Filter.To.ToString("yyyy-MM-dd"),
+        ["RegionId"] = Model.Filter.RegionId, ["BranchId"] = branch ?? Model.Filter.BranchId, ["TerritoryId"] = Model.Filter.TerritoryId,
+        ["Profile"] = Model.Filter.Profile, ["Metric"] = metric });
+    string Number(decimal? value) => value.HasValue ? value.Value.ToString("N1") : "—";
+    var profiles = new[] { ("executive", "مدیرعامل"), ("sales", "مدیر فروش"), ("region", "منطقه"), ("branch", "شعبه"), ("finance", "مالی و وصول"), ("channel", "شبکه نمایندگان") };
+    var firstMetrics = Model.Filter.Profile switch {
+        "finance" => new[] { "collection", "overdue" }, "channel" => new[] { "dealerAchievement", "dealerSales" },
+        "executive" => new[] { "forecast", "collection", "dealerAchievement", "quality" }, _ => new[] { "pipeline", "forecast", "won", "conversion" } };
+    var ordered = Model.Kpis.OrderBy(x => { var index = Array.IndexOf(firstMetrics, x.Definition.Key); return index < 0 ? 100 : index; }).ToArray();
+}
+<div id="reportDashboard" class="reports-workspace">
+    <section class="panel report-filters">
+        <form method="get" action="/reports" hx-get="/reports" hx-target="#reportDashboard" hx-swap="outerHTML" hx-push-url="true" hx-sync="this:replace" aria-label="فیلتر گزارش">
+            <div class="form-grid">
+                <label>نمای گزارش<select name="Profile">@foreach (var profile in profiles) { <option value="@profile.Item1" selected="@(profile.Item1 == Model.Filter.Profile)">@profile.Item2</option> }</select></label>
+                <label>از تاریخ میلادی (UTC)<input type="date" name="From" value="@Model.Filter.From.ToString("yyyy-MM-dd")" required /></label>
+                <label>تا تاریخ میلادی، شامل روز پایانی<input type="date" name="To" value="@Model.Filter.To.ToString("yyyy-MM-dd")" required /></label>
+                <label>منطقه<select name="RegionId"><option value="">همه مناطق مجاز</option>@foreach(var item in Model.Regions) { <option value="@item.Id" selected="@(item.Id == Model.Filter.RegionId)">@item.Name</option> }</select></label>
+                <label>شعبه<select name="BranchId"><option value="">همه شعب مجاز</option>@foreach(var item in Model.Branches) { <option value="@item.Id" selected="@(item.Id == Model.Filter.BranchId)">@item.Name</option> }</select></label>
+                <label>قلمرو<select name="TerritoryId"><option value="">همه قلمروهای مجاز</option>@foreach(var item in Model.Territories) { <option value="@item.Id" selected="@(item.Id == Model.Filter.TerritoryId)">@item.Name</option> }</select></label>
+            </div>
+            <div class="form-actions"><button class="button button--primary" type="submit">اعمال فیلتر</button><a class="button button--ghost" href="/reports">بازنشانی</a><span class="htmx-indicator" role="status">در حال محاسبه…</span></div>
+        </form>
+        <div id="reportErrors" role="alert" aria-live="polite"></div>
+        <p class="source-note">شرکت @Model.CompanyId · محاسبه @Model.GeneratedAtUtc.ToString("yyyy/MM/dd HH:mm:ss") UTC · @Model.SchemaVersion</p>
+    </section>
+    <section class="report-kpis" aria-label="شاخص‌های مجاز">
+    @foreach (var item in ordered)
+    {
+        <article class="metric-card" data-report-metric="@item.Definition.Key"><span>@item.Definition.Name</span><strong>@Number(item.Value) <small>@item.Definition.Unit</small></strong><small>@item.RecordCount رکورد · @item.StaleCount قدیمی · @item.MissingCount مفقود</small><p>@item.Definition.PeriodRule</p><a class="link-button" href="@Link(item.Definition.Key)">مشاهده ریزداده</a></article>
+    }
+    </section>
+    @if (Model.Kpis.Count == 0) { <section class="panel empty-state"><strong>شاخص مجازی در این دامنه وجود ندارد.</strong><small>نقش و مجوز منبع را بررسی کنید.</small></section> }
+    <section class="customer-360-grid">
+        <article class="panel"><div class="panel-heading"><strong>قیف سرنخ‌های دوره</strong><small>یک cohort؛ وضعیت فعلی، نه روند تاریخی</small></div>
+        @if(Model.Funnel.Count == 0) { <p class="empty-inline">مجوز سرنخ وجود ندارد.</p> }
+        @foreach(var stage in Model.Funnel) { <div class="report-funnel-row"><span>@stage.Name</span><strong>@stage.Count</strong><progress max="100" value="@(stage.Percent?.ToString(CultureInfo.InvariantCulture) ?? "0")" aria-label="@stage.Name"></progress><small>@Number(stage.Percent)٪ از سرنخ‌های دوره</small></div> }
+        </article>
+        <article class="panel"><div class="panel-heading"><strong>تعریف و محدودیت داده</strong><small>داده قدیمی: بیش از ۱۵ دقیقه</small></div><ul class="report-notes">@foreach(var warning in Model.Warnings) { <li>@warning</li> }</ul>
+            @if(Model.CanBiExport) { <form method="post" action="/reports/bi/v1">@Html.AntiForgeryToken()<partial name="_Filters" model="Model.Filter" /><button class="button button--ghost" type="submit">دریافت بسته BI نسخه ۱</button></form> }
+        </article>
+    </section>
+    <section class="panel"><div class="panel-heading"><strong>تفکیک شعب مجاز</strong><small>درصدها از جمع صورت و مخرج محاسبه می‌شوند؛ میانگین درصد نیست</small></div><div class="table-wrap"><table class="data-table"><thead><tr><th>شعبه</th><th>شاخص</th><th>مقدار</th><th>رکورد</th></tr></thead><tbody>
+    @foreach(var row in Model.Breakdown) { var definition = Model.Kpis.Single(x => x.Definition.Key == row.Metric).Definition; <tr><td>@row.BranchName</td><td><a href="@Link(row.Metric, row.BranchId)">@definition.Name</a></td><td>@Number(row.Value) @definition.Unit</td><td>@row.Count</td></tr> }
+    @if(Model.Breakdown.Count == 0) { <tr><td colspan="4">در بازه و دامنه انتخاب‌شده داده‌ای نیست.</td></tr> }
+    </tbody></table></div></section>
+    <section class="panel"><div class="panel-heading"><strong>فرهنگ شاخص‌ها · KPI Catalog</strong><small>فرمول، منبع، مالک و استثنا</small></div>
+    @foreach(var item in Model.Kpis) { <details class="report-definition"><summary>@item.Definition.Name · @item.Definition.Unit</summary><p>@item.Definition.Formula</p><p>منبع: @item.Definition.Source · مالک: @item.Definition.Owner</p><p>@item.Definition.Limitation</p></details> }
+    </section>
+</div>

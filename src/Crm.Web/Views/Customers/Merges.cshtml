@@ -1,0 +1,9 @@
+@model IReadOnlyList<CustomerMergeOperationDto>
+@{ ViewData["Title"] = "تاریخچه ادغام مشتری"; }
+<header class="page-header">
+    <div><span class="eyebrow">Customer Merge Audit</span><h1>تاریخچه ادغام مشتری</h1><p>هر انتقال قابل ردیابی است و تا پیش از تغییر روابط، امکان بازگردانی کنترل‌شده دارد.</p></div>
+    <div class="page-actions"><a class="button button--ghost" href="/customers/duplicates">رکوردهای مشابه</a><a class="button button--primary" href="/customers">مشتریان</a></div>
+</header>
+<div id="mergeTable" hx-get="/customers/merges/table" hx-trigger="mergeChanged from:body" hx-swap="innerHTML">
+    <partial name="_MergeTable" model="Model" />
+</div>

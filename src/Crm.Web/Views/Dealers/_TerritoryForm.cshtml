@@ -1,0 +1,8 @@
+@model DealerTerritoryFormDto
+<form class="form-stack" method="post" action="/dealers/@Model.DealerId/territories/create" hx-post="/dealers/@Model.DealerId/territories/create" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation-summary"></div>
+    <label>Territory<select name="TerritoryId"><option value="">انتخاب کنید</option>@foreach(var item in Model.Options){<option value="@item.Id" selected="@(item.Id == Model.Command.TerritoryId)">@item.Name · @item.Dimension</option>}</select></label>
+    <label class="check-row"><input name="IsExclusive" type="checkbox" value="true" checked="@Model.Command.IsExclusive" /><span>تخصیص انحصاری؛ هم‌پوشانی با نماینده دیگر ممنوع باشد</span></label>
+    <div class="form-grid"><label>شروع<input name="ValidFromUtc" type="datetime-local" value="@Model.Command.ValidFromUtc.ToString("yyyy-MM-ddTHH:mm")" /></label><label>پایان<input name="ValidToUtc" type="datetime-local" value="@Model.Command.ValidToUtc?.ToString("yyyy-MM-ddTHH:mm")" /></label></div>
+    <div class="form-actions"><button class="button button--primary" type="submit">ثبت درخواست Territory</button><button class="button button--ghost" type="button" data-drawer-close>انصراف</button></div>
+</form>

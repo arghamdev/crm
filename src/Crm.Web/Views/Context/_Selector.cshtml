@@ -1,0 +1,32 @@
+@model OrganizationContextDto
+@{
+    var returnUrl = ViewBag.ReturnUrl as string ?? "/";
+}
+<div id="context-selector">
+    <div class="panel-heading"><div><strong>دامنه فعال</strong><small>فقط گزینه‌های مجاز در Access Snapshot نمایش داده می‌شوند</small></div></div>
+    <form class="context-form" method="post" action="/context/select" hx-post="/context/select" hx-target="#context-selector" hx-swap="outerHTML">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReturnUrl" value="@returnUrl" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <label class="field"><span>شرکت *</span><select name="CompanyId" required hx-get="/context/selector" hx-trigger="change" hx-target="#context-selector" hx-swap="outerHTML" hx-include="[name='ReturnUrl']">
+            @foreach (var company in Model.Companies)
+            {
+                <option value="@company.Id" selected="@company.IsSelected">@company.Name — @company.Code</option>
+            }
+        </select></label>
+        <label class="field"><span>شعبه</span><select name="BranchId"><option value="">همه شعب مجاز</option>
+            @foreach (var branch in Model.Branches)
+            {
+                <option value="@branch.Id" selected="@branch.IsSelected">@branch.Name — @branch.Code</option>
+            }
+        </select></label>
+        <label class="field"><span>قلمرو فروش</span><select name="TerritoryId"><option value="">همه قلمروهای مجاز</option>
+            @foreach (var territory in Model.Territories)
+            {
+                <option value="@territory.Id" selected="@territory.IsSelected">@territory.Name — @territory.Code</option>
+            }
+        </select></label>
+        <div class="context-summary"><span>شرکت</span><strong>@(Model.SelectedCompanyName ?? "انتخاب نشده")</strong><small>@(Model.SelectedBranchName ?? "همه شعب") · @(Model.SelectedTerritoryName ?? "همه قلمروها")</small></div>
+        <button class="button button--primary button--wide" type="submit">ورود به محیط کاری</button>
+    </form>
+</div>

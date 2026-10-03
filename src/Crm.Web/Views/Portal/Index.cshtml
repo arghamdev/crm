@@ -1,0 +1,39 @@
+@model PortalDashboardDto
+@{ ViewData["Title"]="پرتال نماینده"; }
+<header class="page-header"><div><span class="eyebrow">اولویت ۱۰ · PARTNER PORTAL</span><h1>@Model.DealerName</h1><p>سفارش، پیگیری و حساب نمایندگی در یک محیط مشترک</p></div><span class="status-pill status--info">دادهٔ نمونه · مبالغ ریال</span></header>
+<div id="selfServiceErrors" aria-live="polite"></div>
+<div class="self-grid">
+ <section class="panel self-panel"><h2>وضعیت حساب</h2><p>مانده: <strong>@(Model.Balance?.ToString("N0") ?? "غیرقابل نمایش")</strong></p><p>سررسید گذشته: @(Model.Overdue?.ToString("N0") ?? "—")</p><small>@Model.FinanceSource · @Model.FinanceAtUtc?.ToString("u")</small></section>
+ <section class="panel self-panel"><h2>هدف و عملکرد</h2><p>هدف دوره: @(Model.Target?.ToString("N0") ?? "تعریف نشده")</p><p>فروش خالص همان دوره: @(Model.Actual?.ToString("N0") ?? "دادهٔ هم‌دوره موجود نیست")</p><small>فروش قطعی فقط از دادهٔ همگام‌شده محاسبه می‌شود.</small></section>
+</div>
+<section class="panel self-panel"><h2>کالا، قیمت و موجودی مجاز</h2><p>قیمت نمونه و موجودی اطلاع‌رسانی است؛ رزرو و تأیید اعتبار در گردش داخلی سفارش انجام می‌شود.</p>
+<div class="self-grid">@foreach(var p in Model.Products) { <article class="self-card"><h3>@p.Name</h3><p>@p.Code · @p.UnitPrice.ToString("N0") ریال / @p.Unit</p><p>موجودی: @(p.Available?.ToString() ?? "نامشخص")</p><small>@p.Source<br/>آخرین دریافت: @p.SynchronizedAtUtc.ToString("u")</small></article> }</div>
+@if(Model.Products.Count==0) { <p>قیمت یا موجودی برای این حساب متصل نشده است.</p> }</section>
+<section class="panel self-panel"><h2>ثبت درخواست</h2>
+@if(!Model.CanSubmit) { <p role="status">ثبت درخواست تا فعال بودن نماینده، قرارداد و قلمرو متوقف است.</p> }
+else {
+<form method="post" action="/portal/requests" hx-post="/portal/requests" hx-target="#selfServiceErrors" class="self-form">
+ @Html.AntiForgeryToken()<input type="hidden" name="OperationId" value="@Guid.NewGuid()"/>
+ <label>نوع درخواست<select name="Kind">@foreach(var kind in Enum.GetValues<PortalRequestKind>()) { <option value="@kind">@kind.Label()</option> }</select></label>
+ <label>عنوان / نام کاربر جدید<input name="Subject" required maxlength="160"/></label>
+ <label class="self-wide">شرح و اطلاعات تماس برای پیگیری<textarea name="Description" required maxlength="2000" rows="3"></textarea></label>
+ <label>مشتری (برای سفارش)<select name="CustomerId"><option value="">انتخاب مشتری</option>@foreach(var c in Model.Customers) { <option value="@c.Id">@c.Code · @c.Name</option> }</select></label>
+ <label>کالا (برای سفارش)<select name="ProductCode"><option value="">انتخاب کالا</option>@foreach(var p in Model.Products) { <option value="@p.Code">@p.Name</option> }</select></label>
+ <label>تعداد (برای سفارش)<input name="Quantity" type="number" value="1" min="0.001" max="10000" step="0.001"/></label>
+ <label>ایمیل (برای کاربر جدید)<input name="Email" type="email" maxlength="256" dir="ltr"/></label>
+ <label>حساب (برای لغو دسترسی)<select name="TargetUserId"><option value="">انتخاب حساب</option>@foreach(var u in Model.Accounts.Where(x=>x.Id!=User.CrmUserId())) { <option value="@u.Id">@u.Name · @u.UserName</option> }</select></label>
+ <p class="self-wide">کاربر جدید پس از بررسی مدیر، در حالت «در انتظار فعال‌سازی» ساخته می‌شود. این فرم ایمیل دعوت واقعی ارسال نمی‌کند.</p>
+ <button type="submit" class="button button--primary">ارسال برای بررسی</button>
+</form> }</section>
+<section class="panel self-panel" id="requests"><h2>پیگیری درخواست‌ها</h2>
+@if(Model.Requests.Count==0) { <p>هنوز درخواستی ثبت نشده است.</p> }
+@foreach(var r in Model.Requests) { <article class="self-card"><div class="self-row"><h3>@r.Subject</h3><span class="status-pill status--info">@r.Status.Label()</span></div><small>@r.Code · @r.Kind.Label() · @r.CreatedAtUtc.ToString("u")</small><p>@r.Description</p>
+ @if(r.ProductCode is not null) { <p>@r.ProductCode × @r.Quantity · قیمت ثبت‌شده: @r.UnitPrice.ToString("N0") ریال</p> }
+ @if(!string.IsNullOrEmpty(r.PublicReply)) { <p class="self-reply">پاسخ: @r.PublicReply</p> }
+ @if(r.OrderStatus is not null) { <p>وضعیت سفارش متصل: @r.OrderStatus</p> }
+ @if(r.ProtectedUntilUtc is not null) { <p>حفاظت ثبت سرنخ تا @r.ProtectedUntilUtc?.ToString("u")</p> }
+ @if(r.CreatedByUserId==User.CrmUserId() && r.Status is PortalRequestStatus.Submitted or PortalRequestStatus.InReview) {
+ <form method="post" action="/portal/requests/@r.Id/cancel" hx-post="/portal/requests/@r.Id/cancel" hx-target="#selfServiceErrors">@Html.AntiForgeryToken()<input name="expectedVersion" type="hidden" value="@r.Version"/><button type="submit" class="button">لغو درخواست</button></form> }
+ </article> }</section>
+<div class="self-grid"><section class="panel self-panel"><h2>صورتحساب‌های قابل دریافت</h2><p>دادهٔ نمایشی صورتحساب؛ سند مالی رسمی نیست.</p>@foreach(var i in Model.Invoices) { <article class="self-card"><strong>@i.Number</strong><p>@i.Total.ToString("N0") ریال · وصول‌شده: @i.Collected.ToString("N0")</p><small>@i.Source · @i.SynchronizedAtUtc.ToString("u")</small><form method="post" action="/portal/invoices/@i.Id/export">@Html.AntiForgeryToken()<button type="submit" class="button">دریافت CSV</button></form></article> }</section>
+<section class="panel self-panel"><h2>کاربران نمایندگی</h2>@foreach(var a in Model.Accounts) { <p>@a.Name · <bdi>@a.UserName</bdi> · @a.Status</p> }</section></div>

@@ -1,0 +1,15 @@
+@model DealerFormDto
+@{ var saveUrl = Model.Id.HasValue ? $"/dealers/save?id={Model.Id}" : "/dealers/save"; }
+<form class="form-stack" method="post" action="@saveUrl" hx-post="@saveUrl" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <input type="hidden" name="ExpectedVersion" value="@Model.ExpectedVersion" />
+    <div class="form-grid"><label>شناسه پایدار<input name="DealerId" value="@Model.DealerId" @(Model.Id.HasValue ? "readonly" : null) /></label><label>کد نماینده<input name="Code" value="@Model.Code" /></label></div>
+    <label>نام حقوقی<input name="LegalName" value="@Model.LegalName" /></label>
+    <label>نام تجاری<input name="TradeName" value="@Model.TradeName" /></label>
+    <div class="form-grid"><label>شعبه<select name="BranchId">@foreach(var item in Model.Branches){<option value="@item.Id" selected="@(item.Id == Model.BranchId)">@item.Name · @item.Code</option>}</select></label><label>Territory<select name="TerritoryId"><option value="">بدون Territory اولیه</option>@foreach(var item in Model.Territories){<option value="@item.Id" selected="@(item.Id == Model.TerritoryId)">@item.Name · @item.Code</option>}</select></label></div>
+    <div class="form-grid"><label>شهر<input name="City" value="@Model.City" /></label><label>شناسه ملی<input name="NationalId" value="@Model.NationalId" /></label></div>
+    <div class="form-grid"><label>تلفن<input name="Phone" value="@Model.Phone" /></label><label>ایمیل<input name="Email" type="email" value="@Model.Email" /></label></div>
+    <label>مدیر کانال<select name="ChannelManagerUserId">@foreach(var item in Model.Managers){<option value="@item.Id" selected="@(item.Id == Model.ChannelManagerUserId)">@item.Name</option>}</select></label>
+    <div class="form-actions"><button class="button button--primary" type="submit">ذخیره پرونده</button><button class="button button--ghost" type="button" data-drawer-close>انصراف</button></div>
+</form>

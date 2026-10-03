@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Crm.Application\Crm.Application.csproj" />
+    <ProjectReference Include="..\..\src\Crm.Infrastructure\Crm.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Crm.Web\Crm.Web.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+  </ItemGroup>
+</Project>

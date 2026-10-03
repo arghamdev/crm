@@ -1,0 +1,16 @@
+@model CustomerMergePreviewDto
+<form class="drawer-form" method="post" action="/customers/duplicates/@Model.CandidateId/merge" hx-post="/customers/duplicates/@Model.CandidateId/merge" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="SurvivorCustomerId" value="@Model.Survivor.Id" />
+    <input type="hidden" name="ExpectedCandidateVersion" value="@Model.CandidateVersion" />
+    <input type="hidden" name="ExpectedSurvivorVersion" value="@Model.SurvivorVersion" />
+    <input type="hidden" name="ExpectedMergedVersion" value="@Model.MergedVersion" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>پیش‌نمایش ادغام</h3>
+        <div class="merge-summary"><p><small>رکورد اصلی</small><strong>@Model.Survivor.Name</strong><code>@Model.Survivor.Code</code></p><p><small>رکورد غیرفعال‌شونده</small><strong>@Model.Merged.Name</strong><code>@Model.Merged.Code</code></p></div>
+        <div class="relation-stats"><span><b>@Model.Contacts</b> تماس</span><span><b>@Model.Addresses</b> آدرس</span><span><b>@Model.Leads</b> سرنخ</span><span><b>@Model.Opportunities</b> فرصت</span><span><b>@Model.Quotes</b> پیشنهاد</span><span><b>@Model.Orders</b> سفارش</span><span><b>@Model.DealerAssignments</b> ارتباط نماینده</span></div>
+        <ul>@foreach(var warning in Model.Warnings){<li>@warning</li>}</ul>
+        <label class="field field--full"><span>دلیل ادغام *</span><textarea name="Reason" rows="3" required></textarea></label>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">تأیید و اجرای ادغام</button></div>
+</form>

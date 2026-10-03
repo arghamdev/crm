@@ -1,0 +1,13 @@
+bin/
+obj/
+artifacts/
+node_modules/
+*.user
+*.suo
+.vs/
+src/Crm.Web/wwwroot/css/site.generated.css
+src/Crm.Web/appsettings.Test.json
+.env
+.env.*
+**/keyring/
+**/data-protection-keys/

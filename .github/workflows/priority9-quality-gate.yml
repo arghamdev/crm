@@ -1,0 +1,112 @@
+name: Priority 9 cumulative quality gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: priority9-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-and-smoke:
+    name: .NET 10, SQL Server and Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: Priority8_CI_only_1405!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Priority8_CI_only_1405!' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 30s
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      CRM_TEST_SQLSERVER: Server=localhost,1433;Database=EnterpriseCrmPriority8Ci;User Id=sa;Password=Priority8_CI_only_1405!;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60
+      CRM_REQUIRE_SQLSERVER: true
+      CRM_TEST_ROLLBACK: true
+      CRM_WEB_TEST_ARTIFACTS: ${{ github.workspace }}/artifacts/web-tests
+      CRM_E2E_BASE_URL: http://localhost:5085
+      CRM_E2E_ARTIFACTS: ${{ github.workspace }}/artifacts/browser
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Static repository checks
+        run: |
+          node scripts/verify-structure.mjs
+          node scripts/scan-repository-secrets.mjs
+          node --check src/Crm.Web/wwwroot/js/site.js
+          node scripts/build-unified-preview.mjs
+          node scripts/test-unified-preview.mjs
+
+      - name: Restore
+        run: dotnet restore EnterpriseCrm.sln
+
+      - name: Build Release
+        run: dotnet build EnterpriseCrm.sln --configuration Release --no-restore
+
+      - name: Architecture, analytics, scope and export tests
+        run: dotnet run --project tests/Crm.ArchitectureTests --configuration Release --no-build
+
+      - name: MVC, HTMX and security integration tests
+        run: dotnet run --project tests/Crm.WebTests --configuration Release --no-build
+
+      - name: SQL migration, rollback and persistence tests
+        run: dotnet run --project tests/Crm.PersistenceTests --configuration Release --no-build
+
+      - name: Install Chromium for Playwright
+        run: dotnet run --project tests/Crm.BrowserTests --configuration Release --no-build -- install --with-deps chromium
+
+      - name: Start CRM web application
+        run: |
+          mkdir -p artifacts/browser
+          dotnet run --project src/Crm.Web --configuration Release --no-build --no-launch-profile --urls http://localhost:5085 > artifacts/web-app.log 2>&1 &
+          echo "CRM_WEB_PID=$!" >> "$GITHUB_ENV"
+          node scripts/ci/wait-for-http.mjs http://localhost:5085/health 120
+
+      - name: Chromium cumulative HTMX form smoke tests
+        run: dotnet run --project tests/Crm.BrowserTests --configuration Release --no-build
+
+      - name: Stop CRM web application
+        if: always()
+        run: |
+          if [ -n "${CRM_WEB_PID:-}" ]; then kill "$CRM_WEB_PID" || true; fi
+
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: priority9-quality-gate-${{ github.run_number }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,6 @@
+@model OrganizationAdminDto
+@{ ViewData["Title"] = "ساختار سازمانی"; }
+<header class="page-header"><div><span class="eyebrow">Organization Administration</span><h1>ساختار سازمانی و قلمروها</h1><p>مدیریت شرکت، سلسله‌مراتب واحدها، بازه اعتبار قلمرو و تاریخچه تغییرات</p></div><div class="page-actions"><a class="button button--ghost" href="/organization/territories/create" hx-get="/organization/territories/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg> قلمرو</a><a class="button button--primary" href="/organization/units/create?type=Branch" hx-get="/organization/units/create?type=Branch" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg> واحد سازمانی</a></div></header>
+<section class="identity-banner"><span><svg><use href="#i-building"/></svg></span><div><strong>مرز داده: @Model.Company.Name</strong><p>همه عملیات با CompanyId سمت سرور، کنترل نسخه و ثبت تاریخچه انجام می‌شوند.</p></div><b>@Model.Company.Code</b></section>
+<div id="organizationWorkspace" hx-get="/organization/workspace" hx-trigger="organizationChanged from:body" hx-swap="innerHTML"><partial name="_Workspace" model="Model" /></div>
+

@@ -1,0 +1,3 @@
+@model CustomerDuplicateCheckDto
+<div class="duplicate-check__result @(Model.HasBlockingExactMatch ? "is-blocking" : Model.Candidates.Count > 0 ? "has-warning" : "is-clear")"><strong>@Model.Message</strong>@if(Model.Candidates.Count > 0){<ul>@foreach(var item in Model.Candidates.Take(3)){<li><span>@item.PossibleDuplicateName</span><code>@item.PossibleDuplicateCode</code><b>@item.Score٪</b><small>@item.Reasons</small></li>}</ul>}</div>
+

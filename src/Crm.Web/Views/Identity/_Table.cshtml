@@ -1,0 +1,10 @@
+@model IReadOnlyList<UserDto>
+@functions {
+    private static string StatusText(UserStatus value) => value switch { UserStatus.Active => "فعال", UserStatus.PendingActivation => "در انتظار اتصال", UserStatus.Suspended => "تعلیق", UserStatus.Disabled => "غیرفعال", _ => "بایگانی" };
+}
+<div class="table-wrap"><table><thead><tr><th>کاربر</th><th>اتصال</th><th>نقش</th><th>دامنه</th><th>نشست</th><th>نسخه امنیتی</th><th>وضعیت</th><th></th></tr></thead><tbody>
+@foreach (var item in Model)
+{
+    <tr><td><span class="entity-cell"><span class="entity-avatar entity-avatar--violet">@item.DisplayName[..1]</span><span><strong>@item.DisplayName</strong><small>@item.UserName · @item.Email.ToLowerInvariant()</small></span></span></td><td><span class="badge @(item.HasExternalIdentity ? "badge--success" : "badge--warning")"><span></span>@(item.HasExternalIdentity ? "متصل" : "بدون اتصال")</span></td><td>@(item.Roles.Count == 0 ? "—" : string.Join("، ", item.Roles))</td><td>@(item.Scopes.Count == 0 ? "—" : string.Join("، ", item.Scopes))</td><td>@item.ActiveSessionCount</td><td>@item.SecurityVersion</td><td><span class="badge @(item.Status == UserStatus.Active ? "badge--success" : item.Status == UserStatus.PendingActivation ? "badge--warning" : "badge--danger")"><span></span>@StatusText(item.Status)</span></td><td><a class="link-button" href="/identity/users/@item.Id">مدیریت</a></td></tr>
+}
+</tbody></table></div><div class="table-footer"><span>@Model.Count کاربر نمونه</span><span>دامنه‌ها: Company / Branch</span></div>

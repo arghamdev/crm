@@ -1,0 +1,6 @@
+@model IReadOnlyList<WorkItemDto>
+<div class="panel-heading"><div><strong>اقدامات من</strong><small>@Model.Count(x => !x.IsDone) مورد باز</small></div></div>
+@foreach (var item in Model)
+{
+    <article class="work-card @(item.IsDone ? "is-done" : "")"><span class="task-check">@if(item.IsDone){<svg><use href="#i-check"/></svg>}</span><span class="task-type"><svg><use href="#i-clock"/></svg></span><div class="work-card__main"><div><strong>@item.Title</strong><span class="badge @(item.Priority == "فوری" ? "badge--danger" : "badge--warning")">@item.Priority</span></div><p>سررسید: @item.DueAtUtc.ToLocalTime().ToString("yyyy/MM/dd - HH:mm", CultureInfo.GetCultureInfo("fa-IR"))</p><small>داده نمونه · کارتابل مدیر فروش</small></div><div class="work-card__actions">@if(!item.IsDone){<form method="post" action="/work-queue/@item.Id/complete" hx-post="/work-queue/@item.Id/complete">@Html.AntiForgeryToken()<button class="button button--soft-green button--xs" type="submit">انجام شد</button></form>}</div></article>
+}

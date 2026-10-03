@@ -1,0 +1,22 @@
+@model CreateCustomerCommand
+@{ var branches = ViewBag.Branches as IReadOnlyList<OrganizationUnitOptionDto> ?? Array.Empty<OrganizationUnitOptionDto>(); }
+<form class="drawer-form" method="post" action="/customers/create" hx-post="/customers/create" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>مشخصات مشتری</h3><div class="form-grid">
+        <label class="field"><span>نوع مشتری *</span><select asp-for="Kind"><option value="Legal">حقوقی</option><option value="Individual">حقیقی</option></select></label>
+        <label class="field"><span>شناسه ملی/ثبت</span><input asp-for="NationalId" inputmode="numeric" hx-get="/customers/duplicate-check" hx-trigger="blur changed" hx-target="#duplicateCheck" hx-include="closest form"/></label>
+        <label class="field field--full"><span>نام مشتری *</span><input asp-for="Name" autocomplete="organization" /><span asp-validation-for="Name" class="field-error"></span></label>
+        <label class="field"><span>شهر</span><input asp-for="City" /></label>
+        <label class="field"><span>مالک حساب</span><select asp-for="Owner"><option>سارا احمدی</option><option>مهدی نادری</option><option>محمد رضایی</option><option>نرگس یوسفی</option></select></label>
+        <label class="field"><span>شعبه *</span><select asp-for="BranchId">@foreach (var branch in branches) { <option value="@branch.Id">@branch.Name — @branch.Code</option> }</select><span asp-validation-for="BranchId" class="field-error"></span></label>
+        <label class="field"><span>بخش‌بندی</span><select asp-for="Segment"><option>استاندارد</option><option>رشد</option><option>کلیدی</option></select></label>
+        <label class="field"><span>تلفن اصلی</span><input asp-for="PrimaryPhone" inputmode="tel"/></label>
+        <label class="field"><span>ایمیل اصلی</span><input asp-for="PrimaryEmail" type="email"/></label>
+    </div></section>
+    <div id="duplicateCheck" class="duplicate-check" hx-get="/customers/duplicate-check" hx-trigger="change delay:500ms from:[name='Name'], change delay:500ms from:[name='City']" hx-include="closest form"></div>
+    <label class="consent-row"><input asp-for="AllowPotentialDuplicate"/><span>در صورت وجود شباهت غیرقطعی، ایجاد رکورد مستقل مجاز است.</span></label>
+    <label class="field field--full"><span>دلیل ایجاد رکورد مشابه</span><textarea asp-for="DuplicateReason" rows="2"></textarea></label>
+    <div class="identity-form-note">این فرم نمونه است. مشتری جدید با وضعیت «در حال بررسی» و سقف اعتبار آزمایشی ساخته می‌شود.</div>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت مشتری</button></div>
+</form>

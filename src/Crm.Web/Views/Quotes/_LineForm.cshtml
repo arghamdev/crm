@@ -1,0 +1,8 @@
+@model AddQuoteLineCommand
+@{ var products = ViewBag.Products as IReadOnlyList<ProductPriceDto> ?? Array.Empty<ProductPriceDto>(); var quoteId = (Guid)ViewBag.QuoteId; }
+<form class="drawer-form" method="post" action="/quotes/@quoteId/lines/create" hx-post="/quotes/@quoteId/lines/create" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<input asp-for="ExpectedVersion" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>افزودن ردیف قیمت</h3><div class="form-grid"><label class="field field--full"><span>کالا / خدمت *</span><select asp-for="ProductCode">@foreach(var product in products){<option value="@product.Code">@product.Code — @product.Name — @($"{product.ListUnitPrice:N0} {product.CurrencyCode}")</option>}</select></label><label class="field"><span>مقدار</span><input asp-for="Quantity" type="number" min="0.001" step="0.001" /></label><label class="field"><span>تخفیف</span><input asp-for="DiscountPercent" type="number" min="0" max="20" step="0.1" /></label></div></section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">افزودن ردیف</button></div>
+</form>

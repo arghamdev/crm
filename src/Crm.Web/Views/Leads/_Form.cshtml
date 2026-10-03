@@ -1,0 +1,20 @@
+@model CreateLeadCommand
+@{ var branches = ViewBag.Branches as IReadOnlyList<OrganizationUnitOptionDto> ?? []; var territories = ViewBag.Territories as IReadOnlyList<TerritoryOptionDto> ?? []; var owners = ViewBag.Owners as IReadOnlyList<SalesOwnerOptionDto> ?? []; }
+<form class="drawer-form" method="post" action="/leads/create" hx-post="/leads/create" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>مشخصات و راه ارتباطی</h3><div class="form-grid">
+        <label class="field field--full"><span>نام شرکت/سرنخ *</span><input asp-for="Name" autocomplete="organization"/><span asp-validation-for="Name" class="field-error"></span></label>
+        <label class="field"><span>شخص تماس</span><input asp-for="Contact" autocomplete="name"/><span asp-validation-for="Contact" class="field-error"></span></label>
+        <label class="field"><span>تلفن</span><input asp-for="Phone" inputmode="tel" autocomplete="tel"/></label>
+        <label class="field"><span>ایمیل</span><input asp-for="Email" type="email" autocomplete="email"/></label>
+        <label class="field"><span>منبع</span><select asp-for="Source"><option>وب‌سایت</option><option>نمایشگاه</option><option>معرفی مشتری</option><option>تماس ورودی</option><option>کمپین</option></select></label>
+    </div></section>
+    <section class="form-section"><h3>مالکیت و دامنه</h3><div class="form-grid">
+        <label class="field"><span>شعبه *</span><select asp-for="BranchId" hx-get="/leads/owner-options" hx-trigger="change" hx-target="#leadOwner" hx-include="this">@foreach (var branch in branches) { <option value="@branch.Id">@branch.Name — @branch.Code</option> }</select></label>
+        <label class="field"><span>قلمرو</span><select asp-for="TerritoryId"><option value="">بدون قلمرو</option>@foreach(var item in territories){<option value="@item.Id">@item.Name — @item.Code</option>}</select></label>
+        <label class="field field--full"><span>مالک *</span><select asp-for="OwnerUserId" id="leadOwner"><partial name="_OwnerOptions" model="owners"/></select><small>برای سرپرست/مدیر امکان تخصیص به عضو دیگر فعال است.</small></label>
+    </div></section>
+    <input asp-for="Owner" type="hidden"/>
+    <div class="identity-form-note">مهلت تماس اولیه به‌طور پیش‌فرض چهار ساعت پس از ثبت است و در داشبورد SLA پایش می‌شود.</div>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت و تخصیص</button></div>
+</form>

@@ -1,0 +1,4 @@
+@model IReadOnlyList<WorkItemDto>
+@{ ViewData["Title"] = "کارتابل اقدامات"; }
+<header class="page-header"><div><span class="eyebrow">کارهای نقش‌محور</span><h1>کارتابل اقدامات</h1><p>اقدامات منتسب به کاربر آزمایشی</p></div></header>
+<section class="work-layout"><aside class="panel work-filters"><strong>فیلتر سریع</strong><button class="is-active" type="button">همه <b>@Model.Count</b></button><button type="button">باز <b>@Model.Count(x => !x.IsDone)</b></button><button type="button">انجام‌شده <b>@Model.Count(x => x.IsDone)</b></button></aside><div class="panel work-list" id="workList" hx-get="/work-queue/list" hx-trigger="workItemChanged from:body"><partial name="_List" model="Model" /></div></section>
