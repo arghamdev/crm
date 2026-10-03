@@ -56,5 +56,24 @@ internal static partial class TestRunner
             Check(response.StatusCode == HttpStatusCode.OK && html.Contains("SignIn") && html.Contains("صفحه 1 از"), "AUDIT: the unfiltered log is paged newest-first.");
         }
         using (var response = await expert.GetAsync("/identity/audit")) Check(response.StatusCode != HttpStatusCode.OK, "AUDIT: non-administrators cannot read the audit log.");
+
+        string indexHtml;
+        using (var response = await manager.GetAsync("/identity/roles")) indexHtml = await response.Content.ReadAsStringAsync();
+        var createToken = Regex.Match(indexHtml, "action=\"/identity/roles\">\\s*<input name=\"__RequestVerificationToken\" type=\"hidden\" value=\"([^\"]+)\"").Groups[1].Value;
+        if (createToken.Length == 0) createToken = Regex.Match(indexHtml, "name=\"__RequestVerificationToken\" type=\"hidden\" value=\"([^\"]+)\"").Groups[1].Value;
+        FormUrlEncodedContent NewRole(string key) => new([
+            new("__RequestVerificationToken", createToken), new("roleKey", key), new("label", "ناظر کیفیت داده"),
+            new("scopeTypes", "Company"), new("scopeTypes", "Branch"), new("copyFrom", "Executive"), new("reason", "آزمون HTTP")]);
+        using (var response = await manager.PostAsync("/identity/roles", NewRole("DataSteward")))
+            Check(response.StatusCode == HttpStatusCode.Redirect && response.Headers.Location?.OriginalString == "/identity/roles/DataSteward",
+                "ROLES: creating a role redirects to its permission editor.");
+        using (var response = await manager.PostAsync("/identity/roles", NewRole("DataSteward")))
+            Check(response.StatusCode == HttpStatusCode.UnprocessableEntity, "ROLES: a duplicate role key is rejected with 422.");
+        using (var response = await manager.GetAsync("/identity/users/10000000-0000-4000-8000-000000000003"))
+        {
+            var html = await response.Content.ReadAsStringAsync();
+            Check(html.Contains("value=\"DataSteward\"") && !html.Contains("value=\"DealerUser\""),
+                "ROLES: the new role is offered for assignment on the user page; the dealer role is not.");
+        }
     }
 }

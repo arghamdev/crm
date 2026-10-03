@@ -14,6 +14,28 @@ public sealed class RolesController(IRoleAdministrationService roles, ICurrentUs
     public IActionResult Index() =>
         View(roles.GetRoles(current.CrmUserId, current.RequiredOrganization().CompanyId, DateTimeOffset.UtcNow));
 
+    [HttpPost("/identity/roles")]
+    [ValidateAntiForgeryToken]
+    public IActionResult Create([FromForm] string? roleKey, [FromForm] string? label, [FromForm] List<string>? scopeTypes,
+        [FromForm] string? copyFrom, [FromForm] string? reason)
+    {
+        var companyId = current.RequiredOrganization().CompanyId;
+        try
+        {
+            var created = roles.CreateRole(current.CrmUserId, companyId,
+                new CreateRoleCommand(roleKey, label, scopeTypes, copyFrom, reason), HttpContext.ToIdentityRequestContext());
+            TempData["RoleMessage"] = $"نقش «{created.Label}» با {created.PermissionCount} مجوز ایجاد شد؛ مجوزها را بازبینی کنید.";
+            return Redirect($"/identity/roles/{Uri.EscapeDataString(created.RoleKey)}");
+        }
+        catch (InvalidOperationException exception)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            ViewBag.NewRole = new CreateRoleCommand(roleKey, label, scopeTypes, copyFrom, reason);
+            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            return View("Index", roles.GetRoles(current.CrmUserId, companyId, DateTimeOffset.UtcNow));
+        }
+    }
+
     [HttpGet("/identity/roles/{roleKey}")]
     public IActionResult Edit(string roleKey)
     {

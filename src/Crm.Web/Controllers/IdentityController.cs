@@ -64,6 +64,7 @@ public sealed class IdentityController(
     {
         var model = await identity.GetUserAsync(id, cancellationToken);
         ViewBag.Organization = organization.GetCurrent(User.CrmUserId(), User.CrmSessionId());
+        ViewBag.AssignableRoles = identity.GetAssignableRoles();
         return model is null ? NotFound() : View(model);
     }
 

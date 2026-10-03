@@ -12,15 +12,6 @@ public sealed class IdentityApplicationService(
     ILoginAttemptGuard? loginGuard = null,
     ICrmQuerySource? querySource = null) : IIdentityApplicationService
 {
-    private static readonly Dictionary<string, (string Label, IReadOnlySet<string> ScopeTypes)> Roles =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Executive"] = ("مدیرعامل ـ گزارش خواندنی", new HashSet<string>(["Company", "Branch"], StringComparer.OrdinalIgnoreCase)),
-            ["CompanyMember"] = ("عضو شرکت", new HashSet<string>(["Company"], StringComparer.OrdinalIgnoreCase)),
-            ["SalesManager"] = ("مدیر فروش", new HashSet<string>(["Company", "Branch"], StringComparer.OrdinalIgnoreCase)),
-            ["SalesSupervisor"] = ("سرپرست فروش", new HashSet<string>(["Branch", "Territory"], StringComparer.OrdinalIgnoreCase)),
-            ["SalesExpert"] = ("کارشناس فروش", new HashSet<string>(["Branch", "Territory"], StringComparer.OrdinalIgnoreCase))
-        };
 
     public IReadOnlyList<UserDto> GetUsers() => store.Read(data =>
     {
@@ -78,9 +69,14 @@ public sealed class IdentityApplicationService(
     private static readonly string[] KnownAuditEventTypes =
     [
         "AccessDenied", "ExternalIdentityLinked", "OidcRemoteFailure", "OtherSessionsRevoked", "Reporting.Export", "RoleAssigned",
-        "RolePermissionsChanged", "RoleRevoked", "SessionRevoked", "SessionValidation", "SignIn", "UserContext.CompanyChanged",
+        "RoleCreated", "RolePermissionsChanged", "RoleRevoked", "SessionRevoked", "SessionValidation", "SignIn", "UserContext.CompanyChanged",
         "UserCreated", "UserStatusChanged"
     ];
+
+    /// <summary>Internal roles an administrator can assign, with the scope types each accepts (system and custom roles).</summary>
+    public IReadOnlyList<AssignableRoleDto> GetAssignableRoles() => store.Read(data => data.RoleDefinitions
+        .Where(x => !x.IsExternal && !x.RoleKey.Equals("CompanyMember", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(x => x.Label).Select(x => new AssignableRoleDto(x.RoleKey, x.Label, x.ScopeTypes)).ToList());
 
     public UserDto CreatePendingUser(CreatePendingUserCommand command, Guid actorUserId, IdentityRequestContext context) => store.Write(data =>
     {
@@ -126,8 +122,11 @@ public sealed class IdentityApplicationService(
     {
         var user = data.Users.Single(x => x.Id == id);
         EnsureCurrentVersion(user, command.ExpectedSecurityVersion);
-        if (!Roles.TryGetValue(command.RoleKey, out var role)) throw new InvalidOperationException("Unknown role.");
-        if (!role.ScopeTypes.Contains(command.ScopeType)) throw new InvalidOperationException("Role is not valid for this scope type.");
+        var roleKey = command.RoleKey?.Trim() ?? string.Empty;
+        var role = data.Find<RoleDefinition>(x => x.RoleKey == roleKey).SingleOrDefault() ?? throw new InvalidOperationException("Unknown role.");
+        // External (dealer) roles are bound to a dealer through the channel module, never through internal user administration.
+        if (role.IsExternal) throw new InvalidOperationException("External roles cannot be assigned here.");
+        if (!role.AllowsScope(command.ScopeType)) throw new InvalidOperationException("Role is not valid for this scope type.");
         var scope = ResolveScope(data, command.ScopeType, command.ScopeId, context.NowUtc);
         if (scope is null) throw new InvalidOperationException("Scope type and identifier do not match an active organization node.");
         if (command.ValidToUtc is { } validToUtc && validToUtc <= context.NowUtc) throw new InvalidOperationException("Validity end must be in the future.");
@@ -136,7 +135,7 @@ public sealed class IdentityApplicationService(
             x.ScopeType.Equals(command.ScopeType, StringComparison.OrdinalIgnoreCase) &&
             x.ScopeId.Equals(command.ScopeId, StringComparison.OrdinalIgnoreCase) && x.IsEffective(context.NowUtc));
         if (duplicate) throw new InvalidOperationException("This effective role assignment already exists.");
-        var assignment = new UserRoleAssignment(Guid.NewGuid(), id, command.RoleKey, role.Label, scope.Value.CompanyId, command.ScopeType,
+        var assignment = new UserRoleAssignment(Guid.NewGuid(), id, role.RoleKey, role.Label, scope.Value.CompanyId, command.ScopeType,
             Required(command.ScopeId, nameof(command.ScopeId)), scope.Value.Label, context.NowUtc,
             command.ValidToUtc, actorUserId, Required(command.Reason, nameof(command.Reason)));
         data.UserRoleAssignments.Add(assignment);

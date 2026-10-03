@@ -2,7 +2,10 @@ namespace Crm.Application.Contracts;
 
 public sealed record PermissionOptionDto(string Key, string Module, bool IsExternalAllowed);
 
-public sealed record RoleSummaryDto(string RoleKey, string Label, bool IsExternal, int PermissionCount, int ActiveUserCount, long Version);
+public sealed record RoleSummaryDto(string RoleKey, string Label, bool IsExternal, int PermissionCount, int ActiveUserCount, long Version,
+    IReadOnlyList<string>? ScopeTypes = null, bool IsSystem = false);
+
+public sealed record CreateRoleCommand(string? RoleKey, string? Label, IReadOnlyList<string>? ScopeTypes, string? CopyPermissionsFrom, string? Reason);
 
 public sealed record RoleDetailsDto(
     RoleSummaryDto Role,

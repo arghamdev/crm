@@ -51,6 +51,46 @@ public sealed class RoleAdministrationService(ICrmDataStore store, IAccessSnapsh
         });
     }
 
+    /// <summary>
+    /// Creates an internal role. Keys are stable identifiers (letters/digits, starting with a letter); permissions can be
+    /// copied from an existing role as a starting point and are then edited like any other role. Custom roles never
+    /// receive the hard-coded manager-wide visibility that SalesManager/SalesSupervisor keys carry.
+    /// </summary>
+    public RoleSummaryDto CreateRole(Guid actorUserId, string companyId, CreateRoleCommand command, IdentityRequestContext context)
+    {
+        RequireAdministrator(actorUserId, companyId);
+        var key = command.RoleKey?.Trim() ?? string.Empty;
+        if (!System.Text.RegularExpressions.Regex.IsMatch(key, "^[A-Za-z][A-Za-z0-9]{2,39}$"))
+            throw new InvalidOperationException("کلید نقش باید ۳ تا ۴۰ حرف و رقم لاتین و با حرف شروع شود.");
+        if (string.IsNullOrWhiteSpace(command.Label)) throw new InvalidOperationException("عنوان نقش الزامی است.");
+        if (string.IsNullOrWhiteSpace(command.Reason)) throw new InvalidOperationException("دلیل ایجاد نقش الزامی است.");
+        var scopes = (command.ScopeTypes ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (scopes.Count == 0 || scopes.Any(x => !RoleDefinition.InternalScopeTypes.Contains(x, StringComparer.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("حداقل یک دامنهٔ معتبر (شرکت، شعبه یا قلمرو) انتخاب کنید.");
+
+        return store.Write(data =>
+        {
+            if (data.RoleDefinitions.Any(x => x.RoleKey.Equals(key, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("نقشی با این کلید وجود دارد.");
+            var role = new RoleDefinition(Guid.NewGuid(), key, command.Label!, isExternal: false, string.Join(",", scopes));
+            data.RoleDefinitions.Add(role);
+            var copied = new List<string>();
+            if (!string.IsNullOrWhiteSpace(command.CopyPermissionsFrom))
+            {
+                var source = data.RoleDefinitions.SingleOrDefault(x => Same(x.RoleKey, command.CopyPermissionsFrom)) ??
+                    throw new InvalidOperationException("نقش مبدأ برای کپی مجوزها پیدا نشد.");
+                if (source.IsExternal) throw new InvalidOperationException("مجوزهای نقش بیرونی قابل کپی در نقش داخلی نیست.");
+                copied = data.RolePermissionGrants.Where(x => Same(x.RoleKey, source.RoleKey)).Select(x => x.Permission).ToList();
+                foreach (var permission in copied) data.RolePermissionGrants.Add(new RolePermissionGrant(Guid.NewGuid(), role.RoleKey, permission));
+            }
+            data.Append(new SecurityAuditEvent(Guid.NewGuid(), context.NowUtc, "RoleCreated", "Success", actorUserId, null, null,
+                context.CorrelationId, Truncate($"{role.RoleKey} [{role.AllowedScopeTypes}] copied {copied.Count} from {command.CopyPermissionsFrom ?? "-"}; {command.Reason!.Trim()}", 1000),
+                context.IpHash, context.UserAgentSummary));
+            return Summary(data, role, context.NowUtc);
+        });
+    }
+
     public RolePermissionChangeResult UpdatePermissions(Guid actorUserId, string companyId, string roleKey,
         UpdateRolePermissionsCommand command, IdentityRequestContext context)
     {
@@ -113,7 +153,7 @@ public sealed class RoleAdministrationService(ICrmDataStore store, IAccessSnapsh
         role.RoleKey, role.Label, role.IsExternal,
         data.RolePermissionGrants.Count(x => Same(x.RoleKey, role.RoleKey)),
         data.UserRoleAssignments.Where(x => Same(x.RoleKey, role.RoleKey) && x.IsEffective(nowUtc)).Select(x => x.CrmUserId).Distinct().Count(),
-        role.Version);
+        role.Version, role.ScopeTypes, role.IsSystem);
 
     private void RequireAdministrator(Guid actorUserId, string companyId)
     {

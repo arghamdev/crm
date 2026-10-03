@@ -6,18 +6,18 @@ namespace Crm.Application.Services;
 /// </summary>
 public static class DefaultRolePermissions
 {
-    public static readonly IReadOnlyDictionary<string, (string Label, bool IsExternal)> Roles =
-        new Dictionary<string, (string Label, bool IsExternal)>(StringComparer.OrdinalIgnoreCase)
+    public static readonly IReadOnlyDictionary<string, (string Label, bool IsExternal, string ScopeTypes)> Roles =
+        new Dictionary<string, (string Label, bool IsExternal, string ScopeTypes)>(StringComparer.OrdinalIgnoreCase)
         {
-            ["CompanyMember"] = ("عضو شرکت", false),
-            ["SalesManager"] = ("مدیر فروش", false),
-            ["SalesSupervisor"] = ("سرپرست فروش", false),
-            ["SalesExpert"] = ("کارشناس فروش", false),
-            ["FinanceManager"] = ("مدیر مالی", false),
-            ["ChannelManager"] = ("مدیر کانال", false),
-            ["Executive"] = ("مدیرعامل", false),
-            ["DealerUser"] = ("کاربر نماینده", true),
-            ["ServiceAgent"] = ("کارشناس خدمات", false)
+            ["CompanyMember"] = ("عضو شرکت", false, "Company"),
+            ["SalesManager"] = ("مدیر فروش", false, "Company,Branch"),
+            ["SalesSupervisor"] = ("سرپرست فروش", false, "Branch,Territory"),
+            ["SalesExpert"] = ("کارشناس فروش", false, "Branch,Territory"),
+            ["FinanceManager"] = ("مدیر مالی", false, "Company"),
+            ["ChannelManager"] = ("مدیر کانال", false, "Company"),
+            ["Executive"] = ("مدیرعامل", false, "Company,Branch"),
+            ["DealerUser"] = ("کاربر نماینده", true, "Dealer"),
+            ["ServiceAgent"] = ("کارشناس خدمات", false, "Branch,Territory")
         };
 
     public static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> Permissions =

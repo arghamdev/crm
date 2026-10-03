@@ -65,5 +65,28 @@ internal static class RoleAdministrationChecks
         roles.UpdatePermissions(manager, "C01", "SalesExpert",
             new UpdateRolePermissionsCommand([.. current.Permissions, "Lead.Create"], "بازگردانی", current.Role.Version), Context());
         check(access.HasPermission(expert, "C01", "Lead.Create"), "ROLES: re-granting restores access immediately.");
+
+        // Custom roles: create from an existing role, assign to a user, and the user gets exactly that permission set.
+        Reject<InvalidOperationException>(() => roles.CreateRole(manager, "C01", new CreateRoleCommand("9bad", "x", ["Branch"], null, "r"), Context()), "a key not starting with a letter");
+        Reject<InvalidOperationException>(() => roles.CreateRole(manager, "C01", new CreateRoleCommand("SalesExpert", "x", ["Branch"], null, "r"), Context()), "a duplicate key");
+        Reject<InvalidOperationException>(() => roles.CreateRole(manager, "C01", new CreateRoleCommand("Analyst", "x", ["Dealer"], null, "r"), Context()), "an external scope on an internal role");
+        Reject<InvalidOperationException>(() => roles.CreateRole(manager, "C01", new CreateRoleCommand("Analyst", "x", ["Branch"], "DealerUser", "r"), Context()), "copying an external role");
+        Reject<UnauthorizedAccessException>(() => roles.CreateRole(expert, "C01", new CreateRoleCommand("Analyst", "x", ["Branch"], null, "r"), Context()), "creation without Administration.Manage");
+        var analyst = roles.CreateRole(manager, "C01", new CreateRoleCommand("RegionalAnalyst", "تحلیلگر منطقه", ["Company", "Branch"], "Executive", "نیاز گزارش منطقه‌ای"), Context());
+        check(!analyst.IsSystem && analyst.PermissionCount == DefaultRolePermissions.Permissions["Executive"].Count && analyst.ScopeTypes!.SequenceEqual(["Company", "Branch"]),
+            "ROLES: a custom role copies the source permissions and keeps its scope types.");
+        var identity = new IdentityApplicationService(store, access,
+            new IdentityRuntimeOptions("Demo@1405", TimeSpan.FromMinutes(30), TimeSpan.FromHours(8), TimeSpan.FromMinutes(1), 3));
+        check(identity.GetAssignableRoles().Any(x => x.RoleKey == "RegionalAnalyst") && identity.GetAssignableRoles().All(x => x.RoleKey != "DealerUser"),
+            "ROLES: custom roles are assignable; the external dealer role is not offered.");
+        var supervisor = User(3);
+        var version = store.Read(d => d.Users.Single(x => x.Id == supervisor).SecurityVersion);
+        Reject<InvalidOperationException>(() => identity.AssignRole(supervisor, new AssignRoleCommand("RegionalAnalyst", "Territory", "T01", "r", null, version), manager, Context()),
+            "assigning a custom role on a scope type it does not allow");
+        identity.AssignRole(supervisor, new AssignRoleCommand("RegionalAnalyst", "Company", "C01", "تحلیل منطقه", null, version), manager, Context());
+        check(access.HasPermission(supervisor, "C01", "Reporting.Financial.Read"), "ROLES: a user assigned the custom role receives its permissions.");
+        version = store.Read(d => d.Users.Single(x => x.Id == supervisor).SecurityVersion);
+        Reject<InvalidOperationException>(() => identity.AssignRole(supervisor, new AssignRoleCommand("DealerUser", "Dealer", "P-D01", "r", null, version), manager, Context()),
+            "assigning an external role through user administration");
     }
 }

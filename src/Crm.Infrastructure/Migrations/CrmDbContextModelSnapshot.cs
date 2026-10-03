@@ -2146,11 +2146,19 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AllowedScopeTypes")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasPrecision(3)
                         .HasColumnType("datetimeoffset(3)");
 
                     b.Property<bool>("IsExternal")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
 
                     b.Property<string>("Label")

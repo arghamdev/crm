@@ -3,11 +3,28 @@
 <nav class="breadcrumb"><a href="/identity/users">کاربران و دسترسی</a><svg><use href="#i-chevron"/></svg><span>نقش‌ها و مجوزها</span></nav>
 <header class="page-header"><div><span class="eyebrow">RBAC · مدیریت مجوز</span><h1>نقش‌ها و مجوزها</h1><p>ماتریس نقش به مجوز از پایگاه داده خوانده می‌شود و تغییر آن بلافاصله روی دسترسی کاربران اعمال می‌شود.</p></div></header>
 <section class="identity-banner"><span><svg><use href="#i-shield"/></svg></span><div><strong>تعریف نقش‌ها بین همهٔ شرکت‌ها مشترک است</strong><p>تغییر مجوز یک نقش برای همهٔ کاربرانِ دارای آن نقش در همهٔ شرکت‌ها اعمال می‌شود. دامنهٔ داده (شرکت/شعبه/قلمرو) همچنان از تخصیص نقش هر کاربر تعیین می‌شود.</p></div><b>Audit</b></section>
-<section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>نقش</th><th>نوع</th><th>تعداد مجوز</th><th>کاربران فعال</th><th>نسخه</th><th></th></tr></thead><tbody>
+@{ var draft = ViewBag.NewRole as CreateRoleCommand; string ScopeLabel(string scope) => scope switch { "Company" => "شرکت", "Branch" => "شعبه", "Territory" => "قلمرو", "Dealer" => "نماینده", _ => scope }; }
+<section class="panel role-permissions">
+    <div class="panel-heading"><div><strong>نقش جدید</strong><small>نقش داخلی با دامنه‌های مجاز؛ مجوزها را می‌توان از یک نقش موجود کپی و سپس ویرایش کرد.</small></div></div>
+    <form method="post" action="/identity/roles">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="form-grid">
+            <label class="field"><span>کلید (لاتین) *</span><input name="roleKey" dir="ltr" value="@draft?.RoleKey" pattern="[A-Za-z][A-Za-z0-9]{2,39}" placeholder="RegionalAnalyst" required /></label>
+            <label class="field"><span>عنوان *</span><input name="label" value="@draft?.Label" required /></label>
+            <label class="field"><span>کپی مجوز از</span><select name="copyFrom"><option value="">بدون کپی</option>@foreach (var role in Model.Where(x => !x.IsExternal)) { <option value="@role.RoleKey" selected="@(draft?.CopyPermissionsFrom == role.RoleKey)">@role.Label</option> }</select></label>
+            <label class="field"><span>دلیل *</span><input name="reason" value="@draft?.Reason" required /></label>
+        </div>
+        <div class="form-grid">@foreach (var scope in new[] { "Company", "Branch", "Territory" }) { <label class="consent-row"><input type="checkbox" name="scopeTypes" value="@scope" checked="@(draft?.ScopeTypes?.Contains(scope) ?? scope == "Branch")" /><span>@ScopeLabel(scope)</span></label> }</div>
+        <div class="page-actions"><button class="button button--primary" type="submit"><svg><use href="#i-plus"/></svg> ایجاد نقش</button></div>
+    </form>
+</section>
+<section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>نقش</th><th>نوع</th><th>دامنه‌های مجاز</th><th>تعداد مجوز</th><th>کاربران فعال</th><th>نسخه</th><th></th></tr></thead><tbody>
 @foreach (var role in Model)
 {
     <tr><td><a class="entity-cell entity-link" href="/identity/roles/@role.RoleKey"><span class="entity-avatar">@role.Label[..1]</span><span><strong>@role.Label</strong><small>@role.RoleKey</small></span></a></td>
-    <td><span class="badge @(role.IsExternal ? "badge--warning" : "badge--info")"><span></span>@(role.IsExternal ? "بیرونی (نماینده)" : "داخلی")</span></td>
+    <td><span class="badge @(role.IsExternal ? "badge--warning" : role.IsSystem ? "badge--info" : "badge--success")"><span></span>@(role.IsExternal ? "بیرونی (نماینده)" : role.IsSystem ? "سیستمی" : "سفارشی")</span></td>
+    <td>@string.Join("، ", (role.ScopeTypes ?? []).Select(ScopeLabel))</td>
     <td>@role.PermissionCount</td><td>@role.ActiveUserCount</td><td>@role.Version</td><td><a class="link-button" href="/identity/roles/@role.RoleKey">ویرایش مجوزها</a></td></tr>
 }
 </tbody></table></div></section>

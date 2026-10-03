@@ -854,6 +854,9 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.Property(x => x.RoleKey).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Label).HasMaxLength(120).IsRequired();
             entity.Property(x => x.IsExternal);
+            entity.Property(x => x.IsSystem);
+            entity.Property(x => x.AllowedScopeTypes).HasMaxLength(64).IsRequired();
+            entity.Ignore(x => x.ScopeTypes);
             entity.HasIndex(x => x.RoleKey).IsUnique();
         });
         modelBuilder.Entity<RolePermissionGrant>(entity => {

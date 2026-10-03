@@ -71,6 +71,8 @@ public sealed record UserDetailsDto(
     IReadOnlyList<ExternalIdentityDto> ExternalIdentities,
     IReadOnlyList<SecurityAuditEventDto> AuditEvents);
 
+public sealed record AssignableRoleDto(string RoleKey, string Label, IReadOnlyList<string> ScopeTypes);
+
 public sealed record SecurityAuditQuery(string? EventType = null, string? Outcome = null, Guid? UserId = null,
     DateTimeOffset? FromUtc = null, DateTimeOffset? ToUtc = null);
 

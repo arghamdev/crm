@@ -12,7 +12,8 @@ namespace Crm.Infrastructure.Identity;
 public static class RoleCatalogSeed
 {
     public static IEnumerable<RoleDefinition> Roles() =>
-        DefaultRolePermissions.Roles.Select(x => new RoleDefinition(Id("role:" + x.Key), x.Key, x.Value.Label, x.Value.IsExternal));
+        DefaultRolePermissions.Roles.Select(x => new RoleDefinition(Id("role:" + x.Key), x.Key, x.Value.Label, x.Value.IsExternal,
+            x.Value.ScopeTypes, isSystem: true));
 
     public static IEnumerable<RolePermissionGrant> Grants() =>
         DefaultRolePermissions.Permissions.SelectMany(role => role.Value.Order(StringComparer.Ordinal)
