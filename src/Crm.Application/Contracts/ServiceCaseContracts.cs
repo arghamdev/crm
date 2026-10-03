@@ -59,7 +59,13 @@ public sealed record ServiceCaseListDto(
     decimal? AverageSatisfaction,
     decimal? ResolutionSlaComplianceRate,
     bool CanCreate,
-    bool CanTriage);
+    bool CanTriage,
+    int Page = 1,
+    int PageSize = Crm.Application.Abstractions.PageRequest.DefaultPageSize,
+    int TotalCount = 0)
+{
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize)));
+}
 
 public sealed record ServiceCaseDetailsDto(
     ServiceCaseDto Case,

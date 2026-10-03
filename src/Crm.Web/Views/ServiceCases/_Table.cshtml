@@ -14,4 +14,4 @@
         <td><a class="link-button" href="/service/@item.Id">جزئیات</a></td>
     </tr>
 }
-</tbody></table></div><div class="table-footer"><span>@Model.Items.Count پرونده قابل مشاهده</span><span>دامنه، مالکیت و SLA سمت سرور اعمال شده است</span></div>
+</tbody></table></div><div class="table-footer"><span>@Model.TotalCount پرونده قابل مشاهده · صفحه @Model.Page از @Model.TotalPages</span><nav class="pagination" aria-label="صفحه‌بندی پرونده‌ها">@if (Model.Page > 1) { <a class="link-button" href="/service?page=@(Model.Page - 1)&q=@Model.Query&status=@Model.Status&priority=@Model.Priority&includeClosed=@Model.IncludeClosed&mine=@Model.OnlyMine" hx-get="/service/table?page=@(Model.Page - 1)" hx-include="#serviceFilters" hx-target="#serviceTable">قبلی</a> }@if (Model.Page < Model.TotalPages) { <a class="link-button" href="/service?page=@(Model.Page + 1)&q=@Model.Query&status=@Model.Status&priority=@Model.Priority&includeClosed=@Model.IncludeClosed&mine=@Model.OnlyMine" hx-get="/service/table?page=@(Model.Page + 1)" hx-include="#serviceFilters" hx-target="#serviceTable">بعدی</a> }</nav></div>

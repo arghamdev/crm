@@ -7,40 +7,71 @@ using Crm.Domain.Sales;
 
 namespace Crm.Application.Services;
 
-public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotService access) : ISalesPipelineService
+public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotService access, ICrmQuerySource? querySource = null) : ISalesPipelineService
 {
     private static readonly LeadStatus[] ClosedLeadStatuses =
         [LeadStatus.Disqualified, LeadStatus.Duplicate, LeadStatus.Invalid, LeadStatus.Converted];
 
+    /// <summary>Synchronous convenience over <see cref="GetLeadsAsync"/>; returns the first page of up to 200 leads.</summary>
     public LeadListDto GetLeads(Guid currentUserId, OrganizationSelection organization, string? query = null,
-        LeadStatus? status = null, bool includeClosed = false, DateTimeOffset? nowUtc = null)
+        LeadStatus? status = null, bool includeClosed = false, DateTimeOffset? nowUtc = null) =>
+        GetLeadsAsync(currentUserId, organization, query, status, includeClosed, 1, PageRequest.MaxPageSize, nowUtc)
+            .GetAwaiter().GetResult();
+
+    /// <summary>
+    /// Filters, SLA-orders and pages leads inside the data source (SQL for the EF store) and computes the KPI tiles
+    /// with aggregate queries, so neither the table nor its history is loaded into memory.
+    /// </summary>
+    public async Task<LeadListDto> GetLeadsAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        LeadStatus? status = null, bool includeClosed = false, int page = 1, int pageSize = PageRequest.DefaultPageSize,
+        DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         var now = nowUtc ?? DateTimeOffset.UtcNow;
-        return store.Read(data =>
+        var dueSoon = now.AddHours(2);
+        var source = querySource ?? store as ICrmQuerySource ??
+            throw new InvalidOperationException("No query source is configured for lead lists.");
+
+        var visible = source.Query<Lead>().InScope(snapshot, organization, "Lead.Read");
+        if (!ManagesAllSalesRecords(snapshot, organization.CompanyId))
         {
-            IEnumerable<Lead> source = data.Leads.Where(x => CanAccessSalesRecord(data, snapshot, currentUserId,
-                organization, "Lead.Read", x, x.OwnerUserId, x.Owner));
-            if (!includeClosed) source = source.Where(x => !ClosedLeadStatuses.Contains(x.Status));
-            if (status.HasValue) source = source.Where(x => x.Status == status.Value);
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                var term = query.Trim();
-                source = source.Where(x => x.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    x.Code.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    x.Contact.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    (x.Phone?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
-            }
-            var items = source.OrderBy(x => LeadSort(x, now)).ThenByDescending(x => x.CreatedAtUtc)
-                .Select(x => Map(x, now, snapshot)).ToList();
-            var visibleOpen = data.Leads.Where(x => !ClosedLeadStatuses.Contains(x.Status) &&
-                CanAccessSalesRecord(data, snapshot, currentUserId, organization, "Lead.Read", x, x.OwnerUserId, x.Owner)).ToList();
-            return new LeadListDto(items, query?.Trim(), status, includeClosed,
-                visibleOpen.Count, visibleOpen.Count(x => x.Status == LeadStatus.Qualified),
-                visibleOpen.Count(x => Sla(x, now) == LeadSlaState.Overdue),
-                visibleOpen.Count == 0 ? 0 : Math.Round((decimal)visibleOpen.Average(x => x.Score), 1));
-        });
+            var users = await source.ToListAsync(source.Query<CrmUser>().Where(x => x.Id == currentUserId), cancellationToken);
+            var myName = users.SingleOrDefault()?.DisplayName ?? "\0";
+            visible = visible.Where(x => x.OwnerUserId == currentUserId || x.OwnerUserId == null && x.Owner == myName);
+        }
+
+        var filtered = includeClosed ? visible : visible.Where(x => !ClosedLeadStatuses.Contains(x.Status));
+        if (status.HasValue) filtered = filtered.Where(x => x.Status == status.Value);
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var term = query.Trim();
+            // Phone search is limited to users who may see phone numbers, so masking cannot be bypassed by probing.
+            filtered = HasPermission(snapshot, organization.CompanyId, FieldMasking.ContactPermission)
+                ? filtered.Where(x => x.Name.Contains(term) || x.Code.Contains(term) || x.Contact.Contains(term) ||
+                    x.Phone != null && x.Phone.Contains(term))
+                : filtered.Where(x => x.Name.Contains(term) || x.Code.Contains(term) || x.Contact.Contains(term));
+        }
+
+        // Same order as the SLA badge: overdue, due soon, on track, then completed/closed.
+        var ordered = filtered
+            .OrderBy(x => x.FirstContactAtUtc != null || ClosedLeadStatuses.Contains(x.Status) ? 3
+                : x.FirstContactDueAtUtc < now ? 0
+                : x.FirstContactDueAtUtc <= dueSoon ? 1 : 2)
+            .ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id);
+        var pageResult = await ordered.ToPageAsync(source, PageRequest.Of(page, pageSize), x => Map(x, now, snapshot), query?.Trim(), cancellationToken);
+
+        var open = visible.Where(x => !ClosedLeadStatuses.Contains(x.Status));
+        var openCount = await source.CountAsync(open, cancellationToken);
+        var qualified = await source.CountAsync(open.Where(x => x.Status == LeadStatus.Qualified), cancellationToken);
+        var overdue = await source.CountAsync(open.Where(x => x.FirstContactAtUtc == null && x.FirstContactDueAtUtc < now), cancellationToken);
+        var average = await source.AverageAsync(open.Select(x => x.Score), cancellationToken);
+        return new LeadListDto(pageResult.Items, query?.Trim(), status, includeClosed, openCount, qualified, overdue,
+            average is null ? 0 : Math.Round((decimal)average.Value, 1), pageResult.Page, pageResult.PageSize, pageResult.TotalCount);
     }
+
+    private static bool ManagesAllSalesRecords(AccessSnapshot snapshot, string companyId) =>
+        snapshot.ScopeGrants.Any(x => Same(x.CompanyId, companyId) &&
+            (x.RoleKey.Equals("SalesManager", StringComparison.OrdinalIgnoreCase) || x.RoleKey.Equals("SalesSupervisor", StringComparison.OrdinalIgnoreCase)));
 
     public LeadDetailsDto? GetLead(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset? nowUtc = null)
     {

@@ -801,6 +801,8 @@ internal sealed class DemoWebFactory(string keyRingPath, ICrmDataStore sharedSto
         {
             services.RemoveAll<ICrmDataStore>();
             services.AddSingleton<ICrmDataStore>(sharedStore);
+            services.RemoveAll<ICrmQuerySource>();
+            services.AddSingleton((ICrmQuerySource)sharedStore);
         });
     }
 }

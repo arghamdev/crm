@@ -1,3 +1,4 @@
+using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
 
 namespace Crm.Application.Services;
@@ -6,6 +7,9 @@ public interface ISalesPipelineService
 {
     LeadListDto GetLeads(Guid currentUserId, OrganizationSelection organization, string? query = null,
         Crm.Domain.Sales.LeadStatus? status = null, bool includeClosed = false, DateTimeOffset? nowUtc = null);
+    Task<LeadListDto> GetLeadsAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        Crm.Domain.Sales.LeadStatus? status = null, bool includeClosed = false, int page = 1, int pageSize = PageRequest.DefaultPageSize,
+        DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default);
     LeadDetailsDto? GetLead(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset? nowUtc = null);
     IReadOnlyList<SalesOwnerOptionDto> GetEligibleOwners(Guid currentUserId, OrganizationSelection organization, string branchId);
     LeadDto CreateLead(Guid currentUserId, OrganizationSelection organization, CreateLeadCommand command, DateTimeOffset nowUtc);

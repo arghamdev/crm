@@ -11,7 +11,7 @@ using Crm.Domain.Work;
 
 namespace Crm.Infrastructure.Data;
 
-public sealed class InMemoryCrmDataStore : ICrmDataStore, IDisposable
+public sealed class InMemoryCrmDataStore : ICrmDataStore, ICrmQuerySource, IDisposable
 {
     private readonly ReaderWriterLockSlim _gate = new();
     private readonly CrmDataSet _data = SampleData.Create();
@@ -29,6 +29,18 @@ public sealed class InMemoryCrmDataStore : ICrmDataStore, IDisposable
         try { return command(_data); }
         finally { _gate.ExitWriteLock(); }
     }
+
+    // Queries are composed lazily and only enumerated inside the read lock, so writers never mutate a list mid-scan.
+    public IQueryable<T> Query<T>() where T : class => _data.Table<T>().AsQueryable();
+
+    public Task<List<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(_ => query.ToList()));
+
+    public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(_ => query.Count()));
+
+    public Task<double?> AverageAsync(IQueryable<int> query, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Read(_ => query.Any() ? (double?)query.Average() : null));
 
     public void Dispose() => _gate.Dispose();
 }

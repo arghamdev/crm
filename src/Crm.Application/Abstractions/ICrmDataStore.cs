@@ -36,6 +36,9 @@ public sealed class CrmDataSet
 
     public bool IsLoaded<T>() => _sets.ContainsKey(typeof(T));
 
+    /// <summary>Typed access to a table's list, used by generic infrastructure such as the in-memory query source.</summary>
+    public List<T> Table<T>() where T : class => Set<T>();
+
     private List<T> Set<T>() where T : class
     {
         if (_sets.TryGetValue(typeof(T), out var existing)) return (List<T>)existing;

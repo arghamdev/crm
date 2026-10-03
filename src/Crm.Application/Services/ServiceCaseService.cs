@@ -13,49 +13,80 @@ namespace Crm.Application.Services;
 /// Visibility: permission + company/branch/territory scope; users without Service.Triage or Service.ReadAll
 /// only see cases they own or opened (record ownership).
 /// </summary>
-public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotService access) : IServiceCaseService
+public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotService access, ICrmQuerySource? querySource = null) : IServiceCaseService
 {
     private static readonly HashSet<string> ServiceOwnerRoles = new(StringComparer.OrdinalIgnoreCase)
         { "SalesManager", "SalesSupervisor", "SalesExpert", "ServiceAgent" };
 
+    /// <summary>Synchronous convenience over <see cref="GetCasesAsync"/>; returns the first page of up to 200 cases.</summary>
     public ServiceCaseListDto GetCases(Guid currentUserId, OrganizationSelection organization, string? query = null,
         ServiceCaseStatus? status = null, ServiceCasePriority? priority = null, bool includeClosed = false,
-        bool onlyMine = false, DateTimeOffset? nowUtc = null)
+        bool onlyMine = false, DateTimeOffset? nowUtc = null) =>
+        GetCasesAsync(currentUserId, organization, query, status, priority, includeClosed, onlyMine, 1, PageRequest.MaxPageSize, nowUtc)
+            .GetAwaiter().GetResult();
+
+    /// <summary>
+    /// Filters, orders and pages cases in the data source. KPI tiles use aggregates, and SLA states are evaluated only
+    /// over the open cases (a bounded set), never over the ever-growing closed history.
+    /// </summary>
+    public async Task<ServiceCaseListDto> GetCasesAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        ServiceCaseStatus? status = null, ServiceCasePriority? priority = null, bool includeClosed = false, bool onlyMine = false,
+        int page = 1, int pageSize = PageRequest.DefaultPageSize, DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         RequirePermission(snapshot, organization.CompanyId, "Service.Read");
         var now = nowUtc ?? DateTimeOffset.UtcNow;
-        return store.Read(data =>
+        var source = querySource ?? store as ICrmQuerySource ??
+            throw new InvalidOperationException("No query source is configured for service case lists.");
+
+        var visible = source.Query<ServiceCase>().InScope(snapshot, organization, "Service.Read");
+        if (!HasPermission(snapshot, organization.CompanyId, "Service.Triage") && !HasPermission(snapshot, organization.CompanyId, "Service.ReadAll"))
+            visible = visible.Where(x => x.OwnerUserId == currentUserId || x.CreatedByUserId == currentUserId);
+
+        var filtered = includeClosed ? visible : visible.Where(x => x.Status != ServiceCaseStatus.Closed);
+        if (status.HasValue) filtered = filtered.Where(x => x.Status == status.Value);
+        if (priority.HasValue) filtered = filtered.Where(x => x.Priority == priority.Value);
+        if (onlyMine) filtered = filtered.Where(x => x.OwnerUserId == currentUserId);
+        if (!string.IsNullOrWhiteSpace(query))
         {
-            var visible = data.ServiceCases.Where(x => CanSee(snapshot, currentUserId, organization, x)).ToList();
-            IEnumerable<ServiceCase> source = visible;
-            if (!includeClosed) source = source.Where(x => x.Status != ServiceCaseStatus.Closed);
-            if (status.HasValue) source = source.Where(x => x.Status == status.Value);
-            if (priority.HasValue) source = source.Where(x => x.Priority == priority.Value);
-            if (onlyMine) source = source.Where(x => x.OwnerUserId == currentUserId);
-            var customers = CustomerNames(data, organization.CompanyId);
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                var term = query.Trim();
-                source = source.Where(x => x.Code.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    x.Subject.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    customers.GetValueOrDefault(x.CustomerId, string.Empty).Contains(term, StringComparison.OrdinalIgnoreCase));
-            }
-            var items = source.OrderBy(x => Urgency(x, now)).ThenByDescending(x => x.Priority).ThenBy(x => x.ResolutionDueAtUtc)
-                .Select(x => Map(x, customers, now)).ToList();
-            var open = visible.Where(x => x.IsOpen).ToList();
-            var resolved = visible.Where(x => x.ResolvedAtUtc.HasValue).ToList();
-            var rated = visible.Where(x => x.SatisfactionScore.HasValue).ToList();
-            return new ServiceCaseListDto(items, query?.Trim(), status, priority, includeClosed, onlyMine,
-                open.Count,
-                open.Count(x => x.FirstResponseSla(now) == ServiceSlaState.Breached || x.ResolutionSla(now) == ServiceSlaState.Breached),
-                open.Count(x => x.FirstResponseSla(now) == ServiceSlaState.AtRisk || x.ResolutionSla(now) == ServiceSlaState.AtRisk),
-                open.Count(x => x.EscalationLevel > 0),
-                rated.Count == 0 ? null : Math.Round((decimal)rated.Average(x => x.SatisfactionScore!.Value), 1),
-                resolved.Count == 0 ? null : Math.Round(100m * resolved.Count(x => x.ResolutionSla(now) == ServiceSlaState.Met) / resolved.Count, 1),
-                HasPermission(snapshot, organization.CompanyId, "Service.Create"),
-                HasPermission(snapshot, organization.CompanyId, "Service.Triage"));
-        });
+            var term = query.Trim();
+            var companyId = organization.CompanyId;
+            var matchingCustomers = source.Query<Customer>().Where(c => c.CompanyId == companyId && c.Name.Contains(term)).Select(c => c.Id);
+            filtered = filtered.Where(x => x.Code.Contains(term) || x.Subject.Contains(term) || matchingCustomers.Contains(x.CustomerId));
+        }
+
+        // Open before resolved/closed, SLA-breached first, then priority (explicit rank: the column stores names) and nearest due time.
+        var ordered = filtered
+            .OrderBy(x => x.Status == ServiceCaseStatus.Resolved || x.Status == ServiceCaseStatus.Closed ? 1 : 0)
+            .ThenBy(x => x.FirstRespondedAtUtc == null && x.FirstResponseDueAtUtc < now ||
+                x.ResolvedAtUtc == null && x.Status != ServiceCaseStatus.WaitingOnCustomer && x.ResolutionDueAtUtc < now ? 0 : 1)
+            .ThenBy(x => x.Priority == ServiceCasePriority.Critical ? 0 : x.Priority == ServiceCasePriority.High ? 1 :
+                x.Priority == ServiceCasePriority.Medium ? 2 : 3)
+            .ThenBy(x => x.ResolutionDueAtUtc).ThenBy(x => x.Id);
+        var total = await source.CountAsync(ordered, cancellationToken);
+        var request = PageRequest.Of(page, pageSize);
+        request = request with { Page = Math.Min(request.Page, Math.Max(1, (int)Math.Ceiling(total / (double)request.PageSize))) };
+        var rows = await source.ToListAsync(ordered.Skip(request.Skip).Take(request.PageSize), cancellationToken);
+
+        var open = await source.ToListAsync(visible.Where(x => x.Status != ServiceCaseStatus.Resolved && x.Status != ServiceCaseStatus.Closed), cancellationToken);
+        var resolved = visible.Where(x => x.ResolvedAtUtc != null);
+        var resolvedCount = await source.CountAsync(resolved, cancellationToken);
+        var metCount = await source.CountAsync(resolved.Where(x => x.ResolvedAtUtc <= x.ResolutionDueAtUtc), cancellationToken);
+        var satisfaction = await source.AverageAsync(visible.Where(x => x.SatisfactionScore != null).Select(x => x.SatisfactionScore!.Value), cancellationToken);
+
+        var customerIds = rows.Select(x => x.CustomerId).Distinct().ToList();
+        var customers = (await source.ToListAsync(source.Query<Customer>().Where(c => customerIds.Contains(c.Id)), cancellationToken))
+            .ToDictionary(c => c.Id, c => c.Name);
+        return new ServiceCaseListDto(rows.Select(x => Map(x, customers, now)).ToList(), query?.Trim(), status, priority, includeClosed, onlyMine,
+            open.Count,
+            open.Count(x => x.FirstResponseSla(now) == ServiceSlaState.Breached || x.ResolutionSla(now) == ServiceSlaState.Breached),
+            open.Count(x => x.FirstResponseSla(now) == ServiceSlaState.AtRisk || x.ResolutionSla(now) == ServiceSlaState.AtRisk),
+            open.Count(x => x.EscalationLevel > 0),
+            satisfaction is null ? null : Math.Round((decimal)satisfaction.Value, 1),
+            resolvedCount == 0 ? null : Math.Round(100m * metCount / resolvedCount, 1),
+            HasPermission(snapshot, organization.CompanyId, "Service.Create"),
+            HasPermission(snapshot, organization.CompanyId, "Service.Triage"),
+            request.Page, request.PageSize, total);
     }
 
     public ServiceCaseDetailsDto? GetCase(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset? nowUtc = null)
@@ -253,15 +284,6 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
     private static void History(CrmDataSet data, ServiceCase item, ServiceCaseStatus? from, string action, string note, Guid? actor, DateTimeOffset nowUtc) =>
         data.ServiceCaseHistory.Add(new ServiceCaseHistory(Guid.NewGuid(), item.Id, item.CompanyId, item.BranchId, item.TerritoryId,
             from, item.Status, action, note, actor, nowUtc));
-
-    private static int Urgency(ServiceCase x, DateTimeOffset now)
-    {
-        if (!x.IsOpen) return 4;
-        var states = new[] { x.FirstResponseSla(now), x.ResolutionSla(now) };
-        if (states.Contains(ServiceSlaState.Breached)) return 0;
-        if (states.Contains(ServiceSlaState.AtRisk)) return 1;
-        return x.Status == ServiceCaseStatus.WaitingOnCustomer ? 3 : 2;
-    }
 
     private static string NextCode(CrmDataSet data, DateTimeOffset nowUtc) =>
         RecordCodes.Next(data.ServiceCases.Select(x => x.Code), $"CS-{nowUtc.Year}-", 1001, 4);

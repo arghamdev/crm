@@ -16,12 +16,16 @@ public sealed class LeadsController(
     IOrganizationContextService organization) : Controller
 {
     [HttpGet("/leads")]
-    public IActionResult Index(string? q = null, LeadStatus? status = null, bool includeClosed = false) =>
-        View(pipeline.GetLeads(current.CrmUserId, current.RequiredOrganization(), q, status, includeClosed));
+    public async Task<IActionResult> Index(string? q = null, LeadStatus? status = null, bool includeClosed = false, int page = 1,
+        CancellationToken cancellationToken = default) =>
+        View(await pipeline.GetLeadsAsync(current.CrmUserId, current.RequiredOrganization(), q, status, includeClosed, page,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/leads/table")]
-    public IActionResult Table(string? q = null, LeadStatus? status = null, bool includeClosed = false) =>
-        PartialView("_Table", pipeline.GetLeads(current.CrmUserId, current.RequiredOrganization(), q, status, includeClosed));
+    public async Task<IActionResult> Table(string? q = null, LeadStatus? status = null, bool includeClosed = false, int page = 1,
+        CancellationToken cancellationToken = default) =>
+        PartialView("_Table", await pipeline.GetLeadsAsync(current.CrmUserId, current.RequiredOrganization(), q, status, includeClosed,
+            page, cancellationToken: cancellationToken));
 
     [HttpGet("/leads/{id:guid}")]
     public IActionResult Details(Guid id)

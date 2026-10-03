@@ -1,3 +1,4 @@
+using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
 using Crm.Domain.Service;
 
@@ -8,6 +9,9 @@ public interface IServiceCaseService
     ServiceCaseListDto GetCases(Guid currentUserId, OrganizationSelection organization, string? query = null,
         ServiceCaseStatus? status = null, ServiceCasePriority? priority = null, bool includeClosed = false,
         bool onlyMine = false, DateTimeOffset? nowUtc = null);
+    Task<ServiceCaseListDto> GetCasesAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        ServiceCaseStatus? status = null, ServiceCasePriority? priority = null, bool includeClosed = false, bool onlyMine = false,
+        int page = 1, int pageSize = PageRequest.DefaultPageSize, DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default);
     ServiceCaseDetailsDto? GetCase(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset? nowUtc = null);
     IReadOnlyList<ServiceCaseCustomerOptionDto> GetCustomerOptions(Guid currentUserId, OrganizationSelection organization);
     ServiceCaseDto CreateCase(Guid currentUserId, OrganizationSelection organization, CreateServiceCaseCommand command, DateTimeOffset nowUtc);

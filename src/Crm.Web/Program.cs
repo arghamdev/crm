@@ -144,11 +144,14 @@ if (useSqlServer)
         sql.CommandTimeout(builder.Configuration.GetValue("Persistence:CommandTimeoutSeconds", 30));
     }));
     builder.Services.AddScoped<ICrmDataStore, EfCoreCrmDataStore>();
+    builder.Services.AddScoped<ICrmQuerySource, EfCoreCrmQuerySource>();
     builder.Services.AddScoped<ICustomerQueryStore, EfCoreCustomerQueryStore>();
 }
 else
 {
-    builder.Services.AddSingleton<ICrmDataStore, InMemoryCrmDataStore>();
+    builder.Services.AddSingleton<InMemoryCrmDataStore>();
+    builder.Services.AddSingleton<ICrmDataStore>(services => services.GetRequiredService<InMemoryCrmDataStore>());
+    builder.Services.AddSingleton<ICrmQuerySource>(services => services.GetRequiredService<InMemoryCrmDataStore>());
     builder.Services.AddSingleton<ICustomerQueryStore, InMemoryCustomerQueryStore>();
 }
 

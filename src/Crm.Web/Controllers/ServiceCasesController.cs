@@ -12,14 +12,16 @@ namespace Crm.Web.Controllers;
 public sealed class ServiceCasesController(IServiceCaseService service, ICurrentUserContext current) : Controller
 {
     [HttpGet("/service")]
-    public IActionResult Index(string? q = null, ServiceCaseStatus? status = null, ServiceCasePriority? priority = null,
-        bool includeClosed = false, bool mine = false) =>
-        View(service.GetCases(current.CrmUserId, current.RequiredOrganization(), q, status, priority, includeClosed, mine));
+    public async Task<IActionResult> Index(string? q = null, ServiceCaseStatus? status = null, ServiceCasePriority? priority = null,
+        bool includeClosed = false, bool mine = false, int page = 1, CancellationToken cancellationToken = default) =>
+        View(await service.GetCasesAsync(current.CrmUserId, current.RequiredOrganization(), q, status, priority, includeClosed, mine, page,
+            cancellationToken: cancellationToken));
 
     [HttpGet("/service/table")]
-    public IActionResult Table(string? q = null, ServiceCaseStatus? status = null, ServiceCasePriority? priority = null,
-        bool includeClosed = false, bool mine = false) =>
-        PartialView("_Table", service.GetCases(current.CrmUserId, current.RequiredOrganization(), q, status, priority, includeClosed, mine));
+    public async Task<IActionResult> Table(string? q = null, ServiceCaseStatus? status = null, ServiceCasePriority? priority = null,
+        bool includeClosed = false, bool mine = false, int page = 1, CancellationToken cancellationToken = default) =>
+        PartialView("_Table", await service.GetCasesAsync(current.CrmUserId, current.RequiredOrganization(), q, status, priority, includeClosed,
+            mine, page, cancellationToken: cancellationToken));
 
     [HttpGet("/service/{id:guid}")]
     public IActionResult Details(Guid id)

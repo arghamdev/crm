@@ -1,3 +1,4 @@
+using Crm.Application.Abstractions;
 using Crm.Domain.Sales;
 
 namespace Crm.Application.Contracts;
@@ -11,7 +12,11 @@ public sealed record LeadStatusHistoryDto(Guid Id, LeadStatus? FromStatus, LeadS
 public sealed record LeadDetailsDto(LeadDto Lead, IReadOnlyList<LeadStatusHistoryDto> History,
     IReadOnlyList<SalesOwnerOptionDto> EligibleOwners, bool CanAssign, bool CanUpdate, bool CanConvert);
 public sealed record LeadListDto(IReadOnlyList<LeadDto> Items, string? Query, LeadStatus? Status, bool IncludeClosed,
-    int OpenCount, int QualifiedCount, int OverdueCount, decimal AverageScore);
+    int OpenCount, int QualifiedCount, int OverdueCount, decimal AverageScore, int Page = 1, int PageSize = PageRequest.DefaultPageSize,
+    int TotalCount = 0)
+{
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)Math.Max(1, PageSize)));
+}
 
 public sealed record AssignLeadCommand(Guid OwnerUserId, DateTimeOffset FirstContactDueAtUtc,
     string Reason, long ExpectedVersion);
