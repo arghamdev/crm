@@ -156,6 +156,7 @@ const required = [
   ,"scripts/sql/priority10-portal-mobile-rollback.sql"
   ,"src/Crm.Infrastructure/Migrations/202610030009_ServiceDeskSla.cs"
   ,"src/Crm.Infrastructure/Migrations/202610030010_RoleCatalog.cs"
+  ,"scripts/ci/coverage-gate.mjs"
   ,"scripts/sql/role-catalog-idempotent.sql"
   ,"scripts/sql/role-catalog-rollback.sql"
   ,"scripts/sql/phase8-service-desk-idempotent.sql"

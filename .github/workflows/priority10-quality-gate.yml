@@ -78,14 +78,28 @@ jobs:
       - name: Build Release
         run: dotnet build EnterpriseCrm.sln --configuration Release --no-restore
 
+      - name: Install coverage tools
+        run: |
+          dotnet tool install --global dotnet-coverage --version 18.*
+          dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.*
+
       - name: Architecture, portal, mobile, analytics and scope tests
-        run: dotnet run --project tests/Crm.ArchitectureTests --configuration Release --no-build
+        run: dotnet-coverage collect "dotnet run --project tests/Crm.ArchitectureTests --configuration Release --no-build" -f cobertura -o artifacts/coverage/architecture.cobertura.xml
 
       - name: MVC, HTMX and security integration tests
-        run: dotnet run --project tests/Crm.WebTests --configuration Release --no-build
+        run: dotnet-coverage collect "dotnet run --project tests/Crm.WebTests --configuration Release --no-build" -f cobertura -o artifacts/coverage/web.cobertura.xml
 
       - name: SQL migration, rollback and persistence tests
-        run: dotnet run --project tests/Crm.PersistenceTests --configuration Release --no-build
+        run: dotnet-coverage collect "dotnet run --project tests/Crm.PersistenceTests --configuration Release --no-build" -f cobertura -o artifacts/coverage/persistence.cobertura.xml
+
+      - name: Coverage report and gate
+        run: |
+          reportgenerator "-reports:artifacts/coverage/*.cobertura.xml" "-targetdir:artifacts/coverage/report" \
+            "-reporttypes:Html;JsonSummary;MarkdownSummaryGithub" \
+            "-assemblyfilters:+Crm.Domain;+Crm.Application;+Crm.Infrastructure;+Crm.Web" \
+            "-classfilters:-Crm.Infrastructure.Migrations.*;-AspNetCoreGeneratedDocument.*"
+          cat artifacts/coverage/report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          node scripts/ci/coverage-gate.mjs artifacts/coverage/report/Summary.json Crm.Domain=75 Crm.Application=80
 
       - name: Install Chromium for Playwright
         run: dotnet run --project tests/Crm.BrowserTests --configuration Release --no-build -- install --with-deps chromium
