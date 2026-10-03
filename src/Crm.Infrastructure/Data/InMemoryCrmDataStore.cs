@@ -6,6 +6,7 @@ using Crm.Domain.Customers;
 using Crm.Domain.Identity;
 using Crm.Domain.Organization;
 using Crm.Domain.Sales;
+using Crm.Domain.Service;
 using Crm.Domain.Work;
 
 namespace Crm.Infrastructure.Data;
@@ -55,6 +56,7 @@ internal static class SampleData
         SeedOrders(data);
         SeedDealers(data);
         SeedSelfService(data);
+        SeedServiceCases(data);
         SeedWorkItems(data);
         return data;
     }
@@ -367,6 +369,51 @@ internal static class SampleData
         foreach (var owner in new[] { DemoManagerId, DemoExpertId })
             data.MobileVisits.Add(new(Guid.NewGuid(), customer.CompanyId, customer.BranchId, customer.TerritoryId,
                 customer.Id, owner, new DateTimeOffset(DateTime.UtcNow.Date.AddHours(8), TimeSpan.Zero), "بررسی نیاز مشتری و پیگیری همکاری"));
+    }
+
+    private static void SeedServiceCases(CrmDataSet data)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var sepehr = Guid.Parse("20000000-0000-4000-8000-000000000001");
+        var nakhl = Guid.Parse("20000000-0000-4000-8000-000000000003");
+        var mahan = Guid.Parse("20000000-0000-4000-8000-000000000004");
+
+        // Breached critical complaint: already escalated to level 1 so the background job has nothing new to do at startup.
+        var breached = new ServiceCase(Guid.Parse("a0000000-0000-4000-8000-000000000001"), "CS-1405-1001",
+            "تأخیر سه‌روزه در تحویل محموله اقلام یخچالی", "محموله سفارش اخیر با تأخیر و دمای نامناسب تحویل شده است.",
+            sepehr, "C01", "B01", "T01", ServiceCaseCategory.Delivery, ServiceCaseChannel.Phone, ServiceCasePriority.Critical,
+            DemoManagerId, now.AddHours(-10));
+        breached.Triage(ServiceCasePriority.Critical, DemoExpertId, "سارا احمدی", now.AddHours(-9.5));
+        breached.StartWork(now.AddHours(-9));
+        breached.Escalate(now);
+
+        var waiting = new ServiceCase(Guid.Parse("a0000000-0000-4000-8000-000000000002"), "CS-1405-1002",
+            "مغایرت مبلغ فاکتور با پیشنهاد قیمت", "مشتری مستندات پرداخت را ارسال نکرده است.",
+            nakhl, "C01", "B03", "T02", ServiceCaseCategory.Invoice, ServiceCaseChannel.Email, ServiceCasePriority.Medium,
+            DemoManagerId, now.AddHours(-20));
+        waiting.Triage(ServiceCasePriority.Medium, DemoManagerId, "مهدی نادری", now.AddHours(-19));
+        waiting.StartWork(now.AddHours(-18));
+        waiting.WaitOnCustomer(now.AddHours(-6));
+
+        var fresh = new ServiceCase(Guid.Parse("a0000000-0000-4000-8000-000000000003"), "CS-1405-1003",
+            "درخواست راهنمای نگهداری تجهیزات", "پرسش درباره دوره سرویس دوره‌ای.",
+            mahan, "C01", "B03", "T01", ServiceCaseCategory.Inquiry, ServiceCaseChannel.Portal, ServiceCasePriority.Low,
+            DemoManagerId, now.AddMinutes(-40));
+
+        var closed = new ServiceCase(Guid.Parse("a0000000-0000-4000-8000-000000000004"), "CS-1405-1000",
+            "نقص بسته‌بندی در محموله قبلی", "دو کارتن آسیب‌دیده گزارش شد.",
+            sepehr, "C01", "B01", "T01", ServiceCaseCategory.ProductDefect, ServiceCaseChannel.Visit, ServiceCasePriority.High,
+            DemoExpertId, now.AddDays(-5));
+        closed.Triage(ServiceCasePriority.High, DemoExpertId, "سارا احمدی", now.AddDays(-5).AddHours(1));
+        closed.StartWork(now.AddDays(-5).AddHours(2));
+        closed.Resolve("ضعف استحکام کارتن در مسیر حمل طولانی", "تغییر مشخصات کارتن و افزودن کنترل کیفیت قبل از بارگیری",
+            "ارسال جایگزین اقلام آسیب‌دیده", now.AddDays(-4.5));
+        closed.Close(4, "رسیدگی سریع بود.", now.AddDays(-4));
+
+        data.ServiceCases.AddRange([breached, waiting, fresh, closed]);
+        foreach (var item in data.ServiceCases)
+            data.ServiceCaseHistory.Add(new ServiceCaseHistory(Guid.NewGuid(), item.Id, item.CompanyId, item.BranchId, item.TerritoryId,
+                null, item.Status, "داده نمونه", "پرونده نمونه اولویت خدمات", DemoManagerId, item.OpenedAtUtc));
     }
 
     private static void SeedWorkItems(CrmDataSet data)

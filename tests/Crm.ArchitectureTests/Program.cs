@@ -596,6 +596,7 @@ Check(staleConcurrencyRejected, "A stale SecurityVersion must be rejected as an 
 
 ReportingChecks.Run(Check);
 SelfServiceChecks.Run(Check);
+ServiceDeskChecks.Run(Check);
 
 if (failures.Count > 0)
 {

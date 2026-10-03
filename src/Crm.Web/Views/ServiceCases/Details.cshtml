@@ -1,0 +1,40 @@
+@model ServiceCaseDetailsDto
+@{ ViewData["Title"] = "پرونده خدمات"; var item = Model.Case; string Time(DateTimeOffset? value) => value?.ToLocalTime().ToString("yyyy/MM/dd HH:mm") ?? "—"; }
+@* Refresher lives outside #caseDetails so its hx-select/hx-swap are not inherited by the action links inside. *@
+<div hidden hx-get="/service/@item.Id" hx-select="#caseDetails" hx-target="#caseDetails" hx-swap="outerHTML" hx-trigger="serviceChanged from:body"></div>
+<div id="caseDetails">
+<nav class="breadcrumb"><a href="/service">خدمات و SLA</a><svg><use href="#i-chevron"/></svg><span>@item.Code</span></nav>
+<section class="customer-hero"><div class="customer-hero__identity"><span class="entity-avatar entity-avatar--blue">@item.Subject[..1]</span><div>
+    <div class="title-line"><h1>@item.Subject</h1><span class="badge @item.Status.Badge()"><span></span>@item.Status.Label()</span><span class="badge @item.Priority.Badge()"><span></span>@item.Priority.Label()</span></div>
+    <p>@item.Code · @item.Category.Label() · کانال @item.Channel.Label()</p>
+    <div class="contact-line"><span>مشتری: <a href="/customers/@item.CustomerId">@item.CustomerName</a></span><i></i><span>مسئول: @(item.Owner.Length == 0 ? "تعیین نشده" : item.Owner)</span><i></i><span>@item.BranchId / @(item.TerritoryId ?? "*")</span><i></i><span>نسخه @item.Version</span></div>
+</div></div><div class="page-actions">
+    @if (Model.CanTriage) { <a class="button button--ghost" href="/service/@item.Id/triage" hx-get="/service/@item.Id/triage" hx-target="#drawerBody">تریاژ / تخصیص</a> }
+    @if (Model.CanWork && item.OwnerUserId is not null && item.Status is ServiceCaseStatus.Triaged or ServiceCaseStatus.WaitingOnCustomer or ServiceCaseStatus.New) { <a class="button button--ghost" href="/service/@item.Id/action?action=StartWork" hx-get="/service/@item.Id/action?action=StartWork" hx-target="#drawerBody">@(item.Status == ServiceCaseStatus.WaitingOnCustomer ? "ادامه رسیدگی" : "شروع رسیدگی")</a> }
+    @if (Model.CanWork && item.Status == ServiceCaseStatus.InProgress) {
+        <a class="button button--ghost" href="/service/@item.Id/action?action=WaitOnCustomer" hx-get="/service/@item.Id/action?action=WaitOnCustomer" hx-target="#drawerBody">در انتظار مشتری</a>
+        <a class="button button--primary" href="/service/@item.Id/action?action=Resolve" hx-get="/service/@item.Id/action?action=Resolve" hx-target="#drawerBody">حل پرونده</a>
+    }
+    @if (Model.CanClose) { <a class="button button--primary" href="/service/@item.Id/action?action=Close" hx-get="/service/@item.Id/action?action=Close" hx-target="#drawerBody">بستن و ثبت رضایت</a> }
+    @if (Model.CanReopen) { <a class="button button--ghost" href="/service/@item.Id/action?action=Reopen" hx-get="/service/@item.Id/action?action=Reopen" hx-target="#drawerBody">بازگشایی</a> }
+</div></section>
+<section class="customer-kpis">
+    <article><small>SLA پاسخ اول</small><strong><span class="badge @item.FirstResponseSla.Badge()"><span></span>@item.FirstResponseSla.Label()</span></strong><span>مهلت @Time(item.FirstResponseDueAtUtc) · پاسخ @Time(item.FirstRespondedAtUtc)</span></article>
+    <article><small>SLA حل</small><strong><span class="badge @item.ResolutionSla.Badge()"><span></span>@item.ResolutionSla.Label()</span></strong><span>مهلت @Time(item.ResolutionDueAtUtc) · حل @Time(item.ResolvedAtUtc)</span></article>
+    <article><small>توقف و ارجاع</small><strong>@item.PausedMinutes دقیقه توقف</strong><span>سطح ارجاع @item.EscalationLevel · بازگشایی @item.ReopenCount بار</span></article>
+    <article><small>رضایت مشتری</small><strong>@(item.SatisfactionScore?.ToString() ?? "—") از ۵</strong><span>@(item.SatisfactionComment ?? "ثبت نشده")</span></article>
+</section>
+<section class="customer-360-grid">
+    <article class="panel"><div class="panel-heading"><div><strong>شرح درخواست</strong><small>ثبت @Time(item.OpenedAtUtc)</small></div></div><p class="empty-inline">@(item.Description.Length == 0 ? "بدون شرح" : item.Description)</p></article>
+    <article class="panel"><div class="panel-heading"><div><strong>تحلیل و اقدام اصلاحی</strong><small>الزامی برای حل پرونده</small></div></div><dl class="details-grid">
+        <div><dt>علت ریشه‌ای</dt><dd>@(item.RootCause ?? "—")</dd></div>
+        <div><dt>اقدام اصلاحی</dt><dd>@(item.CorrectiveAction ?? "—")</dd></div>
+        <div><dt>راه‌حل</dt><dd>@(item.Resolution ?? "—")</dd></div>
+        <div><dt>بسته‌شده</dt><dd>@Time(item.ClosedAtUtc)</dd></div>
+    </dl></article>
+</section>
+<section class="panel table-panel"><div class="panel-heading"><div><strong>تاریخچه پرونده</strong><small>ممیزی هر تغییر با عامل و توضیح</small></div></div><div class="table-wrap"><table><thead><tr><th>زمان</th><th>اقدام</th><th>از</th><th>به</th><th>عامل</th><th>توضیح</th></tr></thead><tbody>
+@if (Model.History.Count == 0) { <tr><td colspan="6" class="empty-cell">تاریخچه‌ای ثبت نشده است.</td></tr> }
+@foreach (var entry in Model.History) { <tr><td>@Time(entry.OccurredAtUtc)</td><td>@entry.Action</td><td>@(entry.FromStatus?.Label() ?? "—")</td><td>@entry.ToStatus.Label()</td><td>@entry.ActorName</td><td>@entry.Note</td></tr> }
+</tbody></table></div></section>
+</div>

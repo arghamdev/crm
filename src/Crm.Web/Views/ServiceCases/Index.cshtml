@@ -1,0 +1,24 @@
+@model ServiceCaseListDto
+@{ ViewData["Title"] = "خدمات و SLA"; }
+<header class="page-header"><div><span class="eyebrow">Service Desk · مرحله هشتم</span><h1>خدمات و SLA</h1><p>ثبت و تریاژ پرونده، SLA پاسخ و حل با قاعده توقف، ارجاع خودکار، علت ریشه‌ای و رضایت مشتری</p></div><div class="page-actions">
+    @if (Model.CanTriage) {
+        <form method="post" action="/service/escalate" hx-post="/service/escalate" hx-swap="none">@Html.AntiForgeryToken()<button class="button button--ghost" type="submit" title="ارجاع پرونده‌های دارای نقض SLA"><svg><use href="#i-bell"/></svg> اجرای ارجاع</button></form>
+    }
+    @if (Model.CanCreate) { <a class="button button--primary" href="/service/create" hx-get="/service/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg> پرونده جدید</a> }</div></header>
+<section class="mini-stats">
+    <div><span class="mini-icon"><svg><use href="#i-inbox"/></svg></span><p><small>پرونده باز</small><strong>@Model.OpenCount</strong></p></div>
+    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>نقض SLA / در خطر</small><strong>@Model.BreachedCount / @Model.AtRiskCount</strong></p></div>
+    <div><span class="mini-icon"><svg><use href="#i-bell"/></svg></span><p><small>ارجاع‌شده</small><strong>@Model.EscalatedCount</strong></p></div>
+    <div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>رعایت SLA حل / رضایت</small><strong>@(Model.ResolutionSlaComplianceRate?.ToString("0.#") ?? "—")٪ / @(Model.AverageSatisfaction?.ToString("0.0") ?? "—")</strong></p></div>
+</section>
+<section class="panel table-panel">
+    <form id="serviceFilters" class="toolbar pipeline-filter" method="get" action="/service" hx-get="/service/table" hx-target="#serviceTable" hx-trigger="submit, change delay:200ms">
+        <label class="search-inline"><svg><use href="#i-search"/></svg><input name="q" value="@Model.Query" placeholder="کد، موضوع یا مشتری" /></label>
+        <select name="status"><option value="">همه وضعیت‌ها</option>@foreach (var status in Enum.GetValues<ServiceCaseStatus>()) { <option value="@status" selected="@(Model.Status == status)">@status.Label()</option> }</select>
+        <select name="priority"><option value="">همه اولویت‌ها</option>@foreach (var priority in Enum.GetValues<ServiceCasePriority>()) { <option value="@priority" selected="@(Model.Priority == priority)">@priority.Label()</option> }</select>
+        <label class="consent-row"><input name="mine" type="checkbox" value="true" checked="@Model.OnlyMine"/><span>فقط پرونده‌های من</span></label>
+        <label class="consent-row"><input name="includeClosed" type="checkbox" value="true" checked="@Model.IncludeClosed"/><span>نمایش بسته‌ها</span></label>
+        <button class="button button--ghost button--xs" type="submit">اعمال فیلتر</button>
+    </form>
+    <div id="serviceTable" hx-get="/service/table" hx-include="#serviceFilters" hx-trigger="serviceChanged from:body"><partial name="_Table" model="Model" /></div>
+</section>

@@ -1,0 +1,20 @@
+@model ServiceCaseActionCommand
+@{ var item = (ServiceCaseDto)ViewBag.Case; }
+<form class="drawer-form" method="post" action="/service/@item.Id/action" hx-post="/service/@item.Id/action" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<input asp-for="ExpectedVersion" type="hidden"/><input asp-for="Action" type="hidden"/><div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>@Model.Action.Label() — @item.Code</h3><div class="form-grid">
+    @if (Model.Action == ServiceCaseAction.Resolve)
+    {
+        <label class="field field--full"><span>علت ریشه‌ای *</span><textarea asp-for="RootCause" rows="2"></textarea></label>
+        <label class="field field--full"><span>اقدام اصلاحی *</span><textarea asp-for="CorrectiveAction" rows="2"></textarea></label>
+        <label class="field field--full"><span>شرح راه‌حل *</span><textarea asp-for="Resolution" rows="3"></textarea></label>
+    }
+    @if (Model.Action == ServiceCaseAction.Close)
+    {
+        <label class="field field--full"><span>امتیاز رضایت مشتری (۱ تا ۵)</span><select asp-for="SatisfactionScore"><option value="">ثبت نشده</option>@for (var score = 5; score >= 1; score--) { <option value="@score">@score</option> }</select></label>
+    }
+    <label class="field field--full"><span>@(Model.Action switch { ServiceCaseAction.Reopen => "دلیل بازگشایی *", ServiceCaseAction.Close => "نظر مشتری", _ => "توضیح" })</span><textarea asp-for="Note" rows="3"></textarea></label>
+    </div></section>
+    @if (Model.Action == ServiceCaseAction.WaitOnCustomer) { <div class="identity-form-note">تا ادامه رسیدگی، ساعت SLA متوقف می‌شود و مدت توقف به مهلت‌ها اضافه خواهد شد.</div> }
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت</button></div>
+</form>

@@ -1,0 +1,17 @@
+@model ServiceCaseListDto
+<div class="table-wrap"><table><thead><tr><th>پرونده</th><th>مشتری</th><th>اولویت</th><th>وضعیت</th><th>SLA پاسخ</th><th>SLA حل</th><th>مسئول</th><th></th></tr></thead><tbody>
+@if (Model.Items.Count == 0) { <tr><td colspan="8" class="empty-cell">پرونده‌ای با این فیلتر پیدا نشد.</td></tr> }
+@foreach (var item in Model.Items)
+{
+    <tr>
+        <td><a class="entity-cell entity-link" href="/service/@item.Id"><span class="entity-avatar entity-avatar--blue">@item.Subject[..1]</span><span><strong>@item.Subject</strong><small>@item.Code · @item.Category.Label() · @item.Channel.Label()</small></span></a></td>
+        <td>@item.CustomerName<small class="table-subline">@item.BranchId</small></td>
+        <td><span class="badge @item.Priority.Badge()"><span></span>@item.Priority.Label()</span>@if (item.EscalationLevel > 0) { <small class="table-subline">ارجاع سطح @item.EscalationLevel</small> }</td>
+        <td><span class="badge @item.Status.Badge()"><span></span>@item.Status.Label()</span></td>
+        <td><span class="badge @item.FirstResponseSla.Badge()"><span></span>@item.FirstResponseSla.Label()</span><small class="table-subline">@item.FirstResponseDueAtUtc.ToLocalTime().ToString("MM/dd HH:mm")</small></td>
+        <td><span class="badge @item.ResolutionSla.Badge()"><span></span>@item.ResolutionSla.Label()</span><small class="table-subline">@item.ResolutionDueAtUtc.ToLocalTime().ToString("MM/dd HH:mm")</small></td>
+        <td>@(item.Owner.Length == 0 ? "تعیین نشده" : item.Owner)</td>
+        <td><a class="link-button" href="/service/@item.Id">جزئیات</a></td>
+    </tr>
+}
+</tbody></table></div><div class="table-footer"><span>@Model.Items.Count پرونده قابل مشاهده</span><span>دامنه، مالکیت و SLA سمت سرور اعمال شده است</span></div>

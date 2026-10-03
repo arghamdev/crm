@@ -25,7 +25,7 @@ var page = await context.NewPageAsync();
 var browserErrors = new List<string>();
 page.Console += (_, message) =>
 {
-    if (message.Type == "error") browserErrors.Add($"console: {message.Text}");
+    if (message.Type == "error") browserErrors.Add($"console: {message.Text} ({message.Location})");
 };
 page.PageError += (_, error) => browserErrors.Add($"page: {error}");
 
@@ -38,6 +38,7 @@ try
     await VerifyOrderForm(page, baseUrl);
     await VerifyDealerForm(page, baseUrl);
     await VerifyActivityForm(page, baseUrl);
+    await VerifyServiceDesk(page, baseUrl, artifacts);
     await VerifyReporting(page, baseUrl);
     await VerifyPortalAndMobile(page, baseUrl, artifacts);
     await VerifyUnifiedPreview(page, artifacts);
@@ -82,6 +83,39 @@ static async Task LoginAsManager(IPage page, string baseUrl)
     }
 
     Assert(await page.Locator(".app-shell").CountAsync() == 1, "Authenticated application shell was not rendered.");
+}
+
+static async Task VerifyServiceDesk(IPage page, string baseUrl, string artifacts)
+{
+    await page.GotoAsync(baseUrl + "/service", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    Assert(await page.Locator(".main-nav a[href='/service'].is-active").CountAsync() == 1, "Service desk navigation item must be active.");
+    await page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "پرونده جدید" }).ClickAsync();
+    var form = page.Locator("#drawerBody form[action='/service/create']");
+    await form.WaitForAsync();
+    var subject = "پرونده مرورگر " + Guid.NewGuid().ToString("N")[..6];
+    await form.Locator("select[name='CustomerId']").SelectOptionAsync("20000000-0000-4000-8000-000000000001");
+    await form.Locator("input[name='Subject']").FillAsync(subject);
+    await form.Locator("select[name='Priority']").SelectOptionAsync("High");
+    await form.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت پرونده" }).ClickAsync();
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+    var row = page.Locator("#serviceTable a.entity-link").Filter(new LocatorFilterOptions { HasText = subject });
+    await row.WaitForAsync();
+    await row.ClickAsync();
+    await page.WaitForURLAsync(url => url.Contains("/service/", StringComparison.OrdinalIgnoreCase));
+    await page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "تریاژ / تخصیص" }).ClickAsync();
+    var triage = page.Locator("#drawerBody form[action$='/triage']");
+    await triage.WaitForAsync();
+    await triage.Locator("select[name='OwnerUserId']").SelectOptionAsync("10000000-0000-4000-8000-000000000001");
+    await triage.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت تریاژ" }).ClickAsync();
+    // The details block re-renders itself on serviceChanged; wait for the new status badge.
+    await page.Locator("#caseDetails .title-line").GetByText("تریاژشده").WaitForAsync();
+    await page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "شروع رسیدگی" }).ClickAsync();
+    var start = page.Locator("#drawerBody form[action$='/action']");
+    await start.WaitForAsync();
+    await start.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت" }).ClickAsync();
+    await page.Locator("#caseDetails .title-line").GetByText("در حال رسیدگی").WaitForAsync();
+    Assert(await page.Locator("#caseDetails tbody tr").CountAsync() >= 3, "Service case history must list create, triage and start.");
+    await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifacts, "service-case.png"), FullPage = true });
 }
 
 static async Task VerifyReporting(IPage page, string baseUrl)
@@ -195,7 +229,7 @@ static async Task VerifyLeadForm(IPage page, string baseUrl)
     await form.Locator("input[name='Phone']").FillAsync("09120005505");
     await form.Locator("input[name='Email']").FillAsync("browser-p5@test.local");
     await form.Locator("select[name='BranchId']").SelectOptionAsync("B01");
-    await form.Locator("select[name='OwnerUserId'] option").First.WaitForAsync();
+    await form.Locator("select[name='OwnerUserId'] option").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await form.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت و تخصیص" }).ClickAsync();
     await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
     await page.GotoAsync(baseUrl + "/leads?q=" + Uri.EscapeDataString(leadName),
@@ -216,7 +250,7 @@ static async Task VerifyOpportunityForm(IPage page, string baseUrl)
     await form.Locator("input[name='Title']").FillAsync(title);
     await form.Locator("input[name='Value']").FillAsync("1500000000");
     await form.Locator("select[name='BranchId']").SelectOptionAsync("B01");
-    await form.Locator("select[name='CustomerId'] option").First.WaitForAsync();
+    await form.Locator("select[name='CustomerId'] option").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await form.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ایجاد فرصت" }).ClickAsync();
     await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
     await page.GotoAsync(baseUrl + "/opportunities?q=" + Uri.EscapeDataString(title),
@@ -254,7 +288,7 @@ static async Task VerifyQuoteForm(IPage page, string baseUrl)
     Assert(await form.Locator("input[name='__RequestVerificationToken']").CountAsync() == 1,
         "Quote HTMX form is missing its anti-forgery token.");
     await form.Locator("select[name='CustomerId']").SelectOptionAsync("20000000-0000-4000-8000-000000000001");
-    await form.Locator("select[name='OpportunityId'] option[value='40000000-0000-4000-8000-000000000001']").WaitForAsync();
+    await form.Locator("select[name='OpportunityId'] option[value='40000000-0000-4000-8000-000000000001']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await form.Locator("select[name='OpportunityId']").SelectOptionAsync("40000000-0000-4000-8000-000000000001");
     await form.Locator("select[name='BranchId']").SelectOptionAsync("B01");
     await form.Locator("select[name='ProductCode']").SelectOptionAsync("PRD-1002");
@@ -301,6 +335,9 @@ static async Task VerifyDealerForm(IPage page, string baseUrl)
     await form.Locator("select[name='CustomerId']").SelectOptionAsync(customerId);
     await form.Locator("textarea[name='Reason']").FillAsync("تخصیص از آزمون مرورگر اولویت هشت");
     await form.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "افزودن به سبد نماینده" }).ClickAsync();
+    // HX-Redirect targets the page we are already on, so the URL check passes before the reload; wait for the reloaded content.
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+    await page.GetByText("صنایع غذایی سپهر", new PageGetByTextOptions { Exact = true }).First.WaitForAsync();
     await page.WaitForURLAsync(url => url.Contains("/dealers/" + dealerId, StringComparison.OrdinalIgnoreCase));
     await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
     Assert(await page.GetByText("صنایع غذایی سپهر", new PageGetByTextOptions { Exact = true }).CountAsync() >= 1,

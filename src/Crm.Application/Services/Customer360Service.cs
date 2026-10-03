@@ -259,6 +259,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
                 DealerAssignments = data.DealerCustomerAssignments.Where(x => x.CustomerId == merged.Id).Select(x => x.Id).ToArray(),
                 MobileVisits = data.MobileVisits.Where(x=>x.CustomerId==merged.Id).Select(x=>x.Id).ToArray(),
                 PortalRequests = data.PortalRequests.Where(x=>x.CustomerId==merged.Id).Select(x=>x.Id).ToArray(),
+                ServiceCases = data.ServiceCases.Where(x => x.CustomerId == merged.Id).Select(x => x.Id).ToArray(),
                 PrimaryContacts = data.CustomerContacts.Where(x => x.CustomerId == merged.Id && x.IsPrimary).Select(x => x.Id).ToArray(),
                 PrimaryAddresses = data.CustomerAddresses.Where(x => x.CustomerId == merged.Id && x.IsPrimary).Select(x => x.Id).ToArray()
             };
@@ -275,6 +276,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             foreach (var item in data.DealerCustomerAssignments.Where(x => manifest.DealerAssignments.Contains(x.Id))) item.ReassignCustomer(survivor.Id);
             foreach(var item in data.MobileVisits.Where(x=>manifest.MobileVisits.Contains(x.Id)))item.ReassignCustomer(survivor.Id);
             foreach(var item in data.PortalRequests.Where(x=>manifest.PortalRequests.Contains(x.Id)))item.ReassignCustomer(survivor.Id);
+            foreach (var item in data.ServiceCases.Where(x => manifest.ServiceCases.Contains(x.Id))) item.ReassignCustomer(survivor.Id);
             var previousStatus = merged.Status;
             merged.MergeInto();
             var operation = new CustomerMergeOperation(Guid.NewGuid(), merged.CompanyId, candidate.Id, survivor.Id,
@@ -330,6 +332,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             EnsureManifestRelations(manifest.DealerAssignments, data.DealerCustomerAssignments.Where(x => manifest.DealerAssignments.Contains(x.Id)).Select(x => (x.Id, (Guid?)x.CustomerId)), survivor.Id, "DealerAssignment");
             EnsureManifestRelations(manifest.MobileVisits,data.MobileVisits.Where(x=>manifest.MobileVisits.Contains(x.Id)).Select(x=>(x.Id,(Guid?)x.CustomerId)),survivor.Id,"MobileVisit");
             EnsureManifestRelations(manifest.PortalRequests,data.PortalRequests.Where(x=>manifest.PortalRequests.Contains(x.Id)).Select(x=>(x.Id,x.CustomerId)),survivor.Id,"PortalRequest");
+            EnsureManifestRelations(manifest.ServiceCases, data.ServiceCases.Where(x => manifest.ServiceCases.Contains(x.Id)).Select(x => (x.Id, (Guid?)x.CustomerId)), survivor.Id, "ServiceCase");
             foreach (var item in data.CustomerContacts.Where(x => manifest.Contacts.Contains(x.Id))) item.ReassignCustomer(merged.Id);
             foreach (var item in data.CustomerAddresses.Where(x => manifest.Addresses.Contains(x.Id))) item.ReassignCustomer(merged.Id);
             foreach (var item in data.Leads.Where(x => manifest.Leads.Contains(x.Id))) item.ReassignCustomer(merged.Id);
@@ -339,6 +342,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             foreach (var item in data.DealerCustomerAssignments.Where(x => manifest.DealerAssignments.Contains(x.Id))) item.ReassignCustomer(merged.Id);
             foreach(var item in data.MobileVisits.Where(x=>manifest.MobileVisits.Contains(x.Id)))item.ReassignCustomer(merged.Id);
             foreach(var item in data.PortalRequests.Where(x=>manifest.PortalRequests.Contains(x.Id)))item.ReassignCustomer(merged.Id);
+            foreach (var item in data.ServiceCases.Where(x => manifest.ServiceCases.Contains(x.Id))) item.ReassignCustomer(merged.Id);
             foreach (var item in data.CustomerContacts.Where(x => manifest.PrimaryContacts.Contains(x.Id))) item.SetPrimary(true);
             foreach (var item in data.CustomerAddresses.Where(x => manifest.PrimaryAddresses.Contains(x.Id))) item.SetPrimary(true);
             merged.RestoreAfterMerge(operation.MergedCustomerPreviousStatus);
@@ -511,6 +515,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         var invalid = data.CustomerContacts.Any(x => x.CustomerId == customer.Id && !Same(x.CompanyId, customer.CompanyId)) ||
             data.MobileVisits.Any(x=>x.CustomerId==customer.Id && !Same(x.CompanyId,customer.CompanyId)) ||
             data.PortalRequests.Any(x=>x.CustomerId==customer.Id && !Same(x.CompanyId,customer.CompanyId)) ||
+            data.ServiceCases.Any(x => x.CustomerId == customer.Id && !Same(x.CompanyId, customer.CompanyId)) ||
             data.CustomerAddresses.Any(x => x.CustomerId == customer.Id && !Same(x.CompanyId, customer.CompanyId)) ||
             data.Leads.Any(x => x.CustomerId == customer.Id && !Same(x.CompanyId, customer.CompanyId)) ||
             data.Opportunities.Any(x => x.CustomerId == customer.Id && !Same(x.CompanyId, customer.CompanyId)) ||
@@ -540,6 +545,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         public Guid[] Orders { get; init; } = [];
         public Guid[] DealerAssignments { get; init; } = [];
         public Guid[] MobileVisits { get; init; } = [];
+        public Guid[] ServiceCases { get; init; } = [];
         public Guid[] PortalRequests { get; init; } = [];
         public Guid[] PrimaryContacts { get; init; } = [];
         public Guid[] PrimaryAddresses { get; init; } = [];

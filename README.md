@@ -17,7 +17,10 @@
 | اولویت ۸ | پیاده‌سازی نمونه؛ Dealer Master، قرارداد، Territory، سبد مشتری، هدف و Projection مالی/عملکرد |
 | اولویت ۹ | پیاده‌سازی نمونه؛ KPI Catalog، داشبورد نقش‌محور، Forecast، قیف تبدیل، وصول، کیفیت داده، Drilldown و خروجی امن CSV/BI |
 | اولویت ۱۰ | پیاده‌سازی نمونه؛ پرتال نماینده، درخواست سفارش/سرنخ/شکایت/Claim/حساب کاربری، بررسی داخلی، بازدید موبایل و صف موقت آفلاین |
+| مرحله ۸ نقشهٔ راه | پیاده‌سازی نمونه؛ خدمات و SLA: پرونده، تریاژ، SLA پاسخ/حل با توقف، ارجاع خودکار، علت ریشه‌ای، CSAT و Reopen — [مستند](docs/phase-8-service-desk-fa.md) |
 | Production Readiness | نیازمند IdP/Redis/SQL HA واقعی، Secret Store، داده سازمانی و آزمون چند Node |
+
+> گزارش تحلیل ضعف‌ها، اصلاحات انجام‌شده و تطبیق با نقشهٔ راه: [docs/analysis-report-fa.md](docs/analysis-report-fa.md)
 
 ## معماری
 
@@ -60,6 +63,7 @@
 - مدیریت نماینده با Scope مستقل Dealer، قرارداد و Territory کنترل‌شده
 - هدف فروش CRM-owned و Projection فقط‌خواندنی مالی/عملکرد از Adapterهای نمونه
 - انتقال و بازگردانی رابطه نماینده-مشتری در Merge/Unmerge
+- خدمات و SLA: صف پرونده، تریاژ، SLA پاسخ و حل با قاعدهٔ توقف، ارجاع خودکار به کارتابل، علت ریشه‌ای/اقدام اصلاحی و رضایت مشتری
 - کارتابل اقدامات
 - صفحه خودکاربر برای مشاهده نشست‌ها و ابطال سایر نشست‌ها
 - فرم‌های Partial در Drawer با HTMX محلی، fallback عادی، Anti-forgery و مدیریت پاسخ 422
@@ -96,6 +100,8 @@
     ConnectionStrings__CrmDatabase=<from-secret-store>
     Cache__Mode=Redis
     ConnectionStrings__Redis=<from-secret-store>
+
+حالت Demo فقط در محیط Development اجرا می‌شود؛ برای محیط آزمون مجزا باید `Authentication__AllowDemoOutsideDevelopment=true` صریحاً تنظیم شود.
 
 در توسعهٔ خالی می‌توان AutoMigrate را موقتاً فعال کرد. در Production از اسکریپت Idempotent و Runbook `docs/runbooks/sqlserver-migration-and-rollback-fa.md` استفاده کنید.
 

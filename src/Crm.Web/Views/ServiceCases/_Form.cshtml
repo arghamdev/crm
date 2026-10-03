@@ -1,0 +1,17 @@
+@model CreateServiceCaseCommand
+@{ var customers = ViewBag.Customers as IReadOnlyList<ServiceCaseCustomerOptionDto> ?? []; }
+<form class="drawer-form" method="post" action="/service/create" hx-post="/service/create" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>مشتری و موضوع</h3><div class="form-grid">
+        <label class="field field--full"><span>مشتری *</span><select asp-for="CustomerId"><option value="">انتخاب مشتری</option>@foreach (var customer in customers) { <option value="@customer.Id" selected="@(customer.Id == Model.CustomerId)">@customer.Name — @customer.Code (@customer.BranchId)</option> }</select><span asp-validation-for="CustomerId" class="field-error"></span></label>
+        <label class="field field--full"><span>موضوع *</span><input asp-for="Subject" maxlength="200"/><span asp-validation-for="Subject" class="field-error"></span></label>
+        <label class="field field--full"><span>شرح</span><textarea asp-for="Description" rows="4" maxlength="4000"></textarea></label>
+    </div></section>
+    <section class="form-section"><h3>دسته‌بندی و اولویت</h3><div class="form-grid">
+        <label class="field"><span>دسته</span><select asp-for="Category">@foreach (var value in Enum.GetValues<ServiceCaseCategory>()) { <option value="@value">@value.Label()</option> }</select></label>
+        <label class="field"><span>کانال دریافت</span><select asp-for="Channel">@foreach (var value in Enum.GetValues<ServiceCaseChannel>()) { <option value="@value">@value.Label()</option> }</select></label>
+        <label class="field field--full"><span>اولویت</span><select asp-for="Priority">@foreach (var value in Enum.GetValues<ServiceCasePriority>()) { <option value="@value">@value.Label() — پاسخ @ServiceSlaPolicy.FirstResponse(value).TotalHours ساعت / حل @ServiceSlaPolicy.Resolution(value).TotalHours ساعت</option> }</select></label>
+    </div></section>
+    <div class="identity-form-note">مهلت SLA از زمان ثبت آغاز می‌شود. پرونده پس از ثبت در صف تریاژ قرار می‌گیرد؛ نقض SLA به‌طور خودکار به کارتابل سرپرست ارجاع می‌شود.</div>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت پرونده</button></div>
+</form>

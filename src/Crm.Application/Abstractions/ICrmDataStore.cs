@@ -44,6 +44,8 @@ public sealed class CrmDataSet
         return loaded;
     }
 
+    public List<Crm.Domain.Service.ServiceCase> ServiceCases => Set<Crm.Domain.Service.ServiceCase>();
+    public List<Crm.Domain.Service.ServiceCaseHistory> ServiceCaseHistory => Set<Crm.Domain.Service.ServiceCaseHistory>();
     public List<Crm.Domain.SelfService.PortalRequest> PortalRequests => Set<Crm.Domain.SelfService.PortalRequest>();
     public List<Crm.Domain.SelfService.MobileVisit> MobileVisits => Set<Crm.Domain.SelfService.MobileVisit>();
     public List<Crm.Domain.SelfService.MobileOperationReceipt> MobileOperationReceipts => Set<Crm.Domain.SelfService.MobileOperationReceipt>();

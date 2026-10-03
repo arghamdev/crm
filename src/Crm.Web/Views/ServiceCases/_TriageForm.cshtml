@@ -1,0 +1,12 @@
+@model TriageServiceCaseCommand
+@{ var item = (ServiceCaseDto)ViewBag.Case; var owners = ViewBag.Owners as IReadOnlyList<SalesOwnerOptionDto> ?? []; }
+<form class="drawer-form" method="post" action="/service/@item.Id/triage" hx-post="/service/@item.Id/triage" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<input asp-for="ExpectedVersion" type="hidden"/><div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>تریاژ @item.Code</h3><div class="form-grid">
+        <label class="field"><span>اولویت</span><select asp-for="Priority">@foreach (var value in Enum.GetValues<ServiceCasePriority>()) { <option value="@value">@value.Label()</option> }</select></label>
+        <label class="field"><span>مسئول *</span><select asp-for="OwnerUserId"><option value="">انتخاب مسئول</option>@foreach (var owner in owners) { <option value="@owner.UserId" selected="@(owner.UserId == Model.OwnerUserId)">@owner.DisplayName — @owner.RoleLabel</option> }</select></label>
+        <label class="field field--full"><span>یادداشت تریاژ</span><textarea asp-for="Note" rows="3"></textarea></label>
+    </div></section>
+    <div class="identity-form-note">تغییر اولویت، مهلت‌های SLA را از زمان ثبت پرونده بازمحاسبه می‌کند؛ زمان توقف قبلی حفظ می‌شود.</div>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت تریاژ</button></div>
+</form>

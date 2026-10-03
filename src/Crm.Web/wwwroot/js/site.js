@@ -11,7 +11,7 @@
   const unsafeMethods = new Set(["post", "put", "patch", "delete"]);
   const changeEvents = [
     "customerChanged", "leadChanged", "opportunityChanged",
-    "quoteChanged", "orderChanged", "dealerChanged", "workItemChanged", "userChanged", "organizationChanged", "duplicateChanged", "mergeChanged"
+    "quoteChanged", "orderChanged", "dealerChanged", "workItemChanged", "userChanged", "organizationChanged", "duplicateChanged", "mergeChanged", "serviceChanged"
   ];
 
   function openDrawer() {

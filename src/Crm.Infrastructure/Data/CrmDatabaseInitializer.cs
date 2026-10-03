@@ -54,6 +54,8 @@ public static class CrmDatabaseInitializer
         db.AddRange(seed.DealerPerformanceSnapshots);
         db.AddRange(seed.DealerStatusHistory);
         db.AddRange(seed.WorkItems);
+        db.AddRange(seed.ServiceCases);
+        db.AddRange(seed.ServiceCaseHistory);
         db.AddRange(seed.OrganizationChanges);
         await db.SaveChangesAsync(cancellationToken);
     }

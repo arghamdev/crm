@@ -23,6 +23,7 @@ public sealed class DemoAccessSnapshotService(
                 "Quote.Send", "Quote.Accept", "Quote.Expire",
                 "Order.Read", "Order.Create", "Order.CreditCheck", "Order.Submit", "Order.Integration.Process", "Order.Sync",
                 "Dealer.Read", "Dealer.Contract.Request", "Dealer.Territory.Request", "Dealer.Customer.Assign",
+                "Service.Read", "Service.Create", "Service.Update", "Service.Triage",
                 "WorkQueue.Read", "WorkQueue.Complete", "Administration.Manage"),
             ["SalesSupervisor"] = Set(
                 "Mobile.Visit.Read", "Mobile.Visit.Write",
@@ -33,6 +34,7 @@ public sealed class DemoAccessSnapshotService(
                 "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Approve",
                 "Quote.Approve.Supervisor", "Quote.Send", "Quote.Accept", "Quote.Expire",
                 "Order.Read", "Order.Create", "Order.CreditCheck", "Order.Submit",
+                "Service.Read", "Service.Create", "Service.Update", "Service.Triage",
                 "WorkQueue.Read", "WorkQueue.Complete"),
             ["SalesExpert"] = Set(
                 "Mobile.Visit.Read", "Mobile.Visit.Write",
@@ -42,6 +44,7 @@ public sealed class DemoAccessSnapshotService(
                 "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Advance",
                 "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Send",
                 "Quote.Accept", "Quote.Expire", "Order.Read", "Order.Create", "Order.CreditCheck", "Order.Submit",
+                "Service.Read", "Service.Create", "Service.Update",
                 "WorkQueue.Read", "WorkQueue.Complete"),
             ["FinanceManager"] = Set(
                 "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
@@ -56,7 +59,11 @@ public sealed class DemoAccessSnapshotService(
                 "Dealer.Customer.Assign", "Dealer.Target.Manage", "Dealer.Financial.Read", "Dealer.Financial.Sync",
                 "Dealer.Performance.Sync", "WorkQueue.Read", "WorkQueue.Complete"),
             ["Executive"] = Set("Dashboard.Read", "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
-                "Customer.Read", "Lead.Read", "Opportunity.Read", "Quote.Read", "Order.Read", "Dealer.Read", "Dealer.Financial.Read", "WorkQueue.Read"),
+                "Customer.Read", "Lead.Read", "Opportunity.Read", "Quote.Read", "Order.Read", "Dealer.Read", "Dealer.Financial.Read",
+                "Service.Read", "Service.ReadAll", "WorkQueue.Read"),
+            ["ServiceAgent"] = Set(
+                "Dashboard.Read", "Customer.Read", "Service.Read", "Service.Create", "Service.Update",
+                "WorkQueue.Read", "WorkQueue.Complete"),
             ["DealerUser"] = Set(
                 "Portal.Read", "Portal.Submit",
                 "Dashboard.Read", "Dealer.Read", "Dealer.Portal", "Dealer.Financial.Read", "WorkQueue.Read")

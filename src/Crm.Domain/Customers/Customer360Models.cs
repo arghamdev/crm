@@ -17,7 +17,8 @@ public enum CustomerTimelineType
     Unmerge,
     LeadConverted,
     OpportunityChanged,
-    VisitCompleted
+    VisitCompleted,
+    ServiceCase
 }
 public enum DuplicateReviewStatus { Pending, Confirmed, Dismissed }
 public enum CustomerMergeStatus { Merged, Reverted }

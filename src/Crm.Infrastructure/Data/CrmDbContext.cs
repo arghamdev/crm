@@ -6,6 +6,7 @@ using Crm.Domain.Customers;
 using Crm.Domain.Identity;
 using Crm.Domain.Organization;
 using Crm.Domain.Sales;
+using Crm.Domain.Service;
 using Crm.Domain.Work;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -62,6 +63,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureSelfService(modelBuilder);
+        ConfigureServiceDesk(modelBuilder);
         ConfigureCompany(modelBuilder.Entity<Company>());
         ConfigureOrganizationUnit(modelBuilder.Entity<OrganizationUnit>());
         ConfigureTerritory(modelBuilder.Entity<Territory>());
@@ -835,6 +837,55 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.Property(x => x.ReceivedAtUtc).HasPrecision(3);
             entity.HasIndex(x => new { x.CompanyId, x.ActorUserId, x.OperationId }).IsUnique();
             entity.HasOne<MobileVisit>().WithMany().HasForeignKey(x => x.VisitId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+    }
+
+    public DbSet<ServiceCase> ServiceCases => Set<ServiceCase>();
+    public DbSet<ServiceCaseHistory> ServiceCaseHistory => Set<ServiceCaseHistory>();
+
+    private static void ConfigureServiceDesk(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ServiceCase>(entity => {
+            ConfigureEntity(entity, "ServiceCases", "service"); Scope(entity);
+            entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Subject).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.Category).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Channel).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Priority).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Owner).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.OpenedAtUtc).HasPrecision(3);
+            entity.Property(x => x.FirstResponseDueAtUtc).HasPrecision(3);
+            entity.Property(x => x.ResolutionDueAtUtc).HasPrecision(3);
+            entity.Property(x => x.FirstRespondedAtUtc).HasPrecision(3);
+            entity.Property(x => x.PausedAtUtc).HasPrecision(3);
+            entity.Property(x => x.ResolvedAtUtc).HasPrecision(3);
+            entity.Property(x => x.ClosedAtUtc).HasPrecision(3);
+            entity.Property(x => x.LastEscalatedAtUtc).HasPrecision(3);
+            entity.Property(x => x.RootCause).HasMaxLength(1000);
+            entity.Property(x => x.CorrectiveAction).HasMaxLength(1000);
+            entity.Property(x => x.Resolution).HasMaxLength(2000);
+            entity.Property(x => x.SatisfactionComment).HasMaxLength(1000);
+            entity.Ignore(x => x.IsOpen);
+            entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+            entity.HasIndex(x => new { x.CompanyId, x.Status, x.ResolutionDueAtUtc });
+            entity.HasIndex(x => new { x.CompanyId, x.OwnerUserId, x.Status });
+            entity.HasIndex(x => new { x.CompanyId, x.CustomerId });
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<ServiceCaseHistory>(entity => {
+            ConfigureEntity(entity, "ServiceCaseHistory", "service"); Scope(entity);
+            entity.Property(x => x.FromStatus).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Note).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.OccurredAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.CaseId, x.OccurredAtUtc });
+            entity.HasOne<ServiceCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);
         });
     }
