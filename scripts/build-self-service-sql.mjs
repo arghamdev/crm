@@ -3,7 +3,8 @@ const root=new URL('../',import.meta.url);
 for (const {id,baseline,prefix} of [
  {id:'202609270007_DealerChannelGovernance',baseline:'202609260006_OrderIntegrationVisibility',prefix:'priority8-dealer-channel'},
  {id:'202609270008_PortalMobileSelfService',baseline:'202609270007_DealerChannelGovernance',prefix:'priority10-portal-mobile'},
- {id:'202610030009_ServiceDeskSla',baseline:'202609270008_PortalMobileSelfService',prefix:'phase8-service-desk'}
+ {id:'202610030009_ServiceDeskSla',baseline:'202609270008_PortalMobileSelfService',prefix:'phase8-service-desk'},
+ {id:'202610030010_RoleCatalog',baseline:'202610030009_ServiceDeskSla',prefix:'role-catalog'}
 ]) {
 const source=readFileSync(new URL('src/Crm.Infrastructure/Migrations/'+id+'.cs',root),'utf8');
 function body(direction){const match=source.match(new RegExp('protected override void '+direction+'\\(MigrationBuilder \\w+\\) => \\w+\\.Sql\\("""([\\s\\S]*?)"""\\);'));if(!match)throw new Error('Migration raw SQL boundary changed: '+id);return match[1].trim();}

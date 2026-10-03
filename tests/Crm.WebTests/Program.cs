@@ -62,6 +62,7 @@ internal static partial class TestRunner
         using var serviceManager = CreateClient(firstNode);
         await Login(serviceManager, "sales.manager", "Demo@1405");
         await CheckServiceDesk(serviceManager, expert, dealerUser, financeUser);
+        await CheckRoleAdministration(serviceManager, expert);
 
         using var secondNode = new DemoWebFactory(keyRingPath, sharedStore);
         await CheckSharedKeyRing(secondNode, managerCookie);

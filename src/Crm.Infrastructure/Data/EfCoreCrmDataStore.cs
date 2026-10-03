@@ -8,7 +8,7 @@ namespace Crm.Infrastructure.Data;
 /// EF Core adapter for <see cref="ICrmDataStore"/>. Tables are loaded lazily on first access by the
 /// use case, so a request only reads the tables it touches. New entities appended to a loaded list are
 /// inserted, tracked entities are updated through change tracking, and removals are honored for
-/// aggregate children that the domain deletes (quote lines).
+/// aggregate children that the domain deletes (quote lines, role permission grants).
 /// </summary>
 public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
 {
@@ -69,7 +69,7 @@ public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
     private sealed class LazySource(CrmDbContext db, bool tracking) : ICrmDataSetSource
     {
         // Types whose rows the domain removes from the list; everything else is append/update only.
-        private static readonly HashSet<Type> Removable = [typeof(Crm.Domain.Commercial.QuoteLine)];
+        private static readonly HashSet<Type> Removable = [typeof(Crm.Domain.Commercial.QuoteLine), typeof(Crm.Domain.Identity.RolePermissionGrant)];
         private readonly List<Action<CrmDataSet>> _pending = [];
 
         public List<T> Load<T>() where T : class

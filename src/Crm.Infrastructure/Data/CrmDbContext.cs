@@ -64,6 +64,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     {
         ConfigureSelfService(modelBuilder);
         ConfigureServiceDesk(modelBuilder);
+        ConfigureRoleCatalog(modelBuilder);
         ConfigureCompany(modelBuilder.Entity<Company>());
         ConfigureOrganizationUnit(modelBuilder.Entity<OrganizationUnit>());
         ConfigureTerritory(modelBuilder.Entity<Territory>());
@@ -838,6 +839,27 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.HasIndex(x => new { x.CompanyId, x.ActorUserId, x.OperationId }).IsUnique();
             entity.HasOne<MobileVisit>().WithMany().HasForeignKey(x => x.VisitId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+    }
+
+    public DbSet<RoleDefinition> RoleDefinitions => Set<RoleDefinition>();
+    public DbSet<RolePermissionGrant> RolePermissionGrants => Set<RolePermissionGrant>();
+
+    private static void ConfigureRoleCatalog(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<RoleDefinition>(entity => {
+            ConfigureEntity(entity, "RoleDefinitions", "iam");
+            entity.Property(x => x.RoleKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Label).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.IsExternal);
+            entity.HasIndex(x => x.RoleKey).IsUnique();
+        });
+        modelBuilder.Entity<RolePermissionGrant>(entity => {
+            ConfigureEntity(entity, "RolePermissionGrants", "iam");
+            entity.Property(x => x.RoleKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Permission).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => new { x.RoleKey, x.Permission }).IsUnique();
+            entity.HasOne<RoleDefinition>().WithMany().HasForeignKey(x => x.RoleKey).HasPrincipalKey(x => x.RoleKey).OnDelete(DeleteBehavior.Cascade);
         });
     }
 

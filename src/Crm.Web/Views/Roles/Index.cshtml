@@ -1,0 +1,13 @@
+@model IReadOnlyList<RoleSummaryDto>
+@{ ViewData["Title"] = "نقش‌ها و مجوزها"; }
+<nav class="breadcrumb"><a href="/identity/users">کاربران و دسترسی</a><svg><use href="#i-chevron"/></svg><span>نقش‌ها و مجوزها</span></nav>
+<header class="page-header"><div><span class="eyebrow">RBAC · مدیریت مجوز</span><h1>نقش‌ها و مجوزها</h1><p>ماتریس نقش به مجوز از پایگاه داده خوانده می‌شود و تغییر آن بلافاصله روی دسترسی کاربران اعمال می‌شود.</p></div></header>
+<section class="identity-banner"><span><svg><use href="#i-shield"/></svg></span><div><strong>تعریف نقش‌ها بین همهٔ شرکت‌ها مشترک است</strong><p>تغییر مجوز یک نقش برای همهٔ کاربرانِ دارای آن نقش در همهٔ شرکت‌ها اعمال می‌شود. دامنهٔ داده (شرکت/شعبه/قلمرو) همچنان از تخصیص نقش هر کاربر تعیین می‌شود.</p></div><b>Audit</b></section>
+<section class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>نقش</th><th>نوع</th><th>تعداد مجوز</th><th>کاربران فعال</th><th>نسخه</th><th></th></tr></thead><tbody>
+@foreach (var role in Model)
+{
+    <tr><td><a class="entity-cell entity-link" href="/identity/roles/@role.RoleKey"><span class="entity-avatar">@role.Label[..1]</span><span><strong>@role.Label</strong><small>@role.RoleKey</small></span></a></td>
+    <td><span class="badge @(role.IsExternal ? "badge--warning" : "badge--info")"><span></span>@(role.IsExternal ? "بیرونی (نماینده)" : "داخلی")</span></td>
+    <td>@role.PermissionCount</td><td>@role.ActiveUserCount</td><td>@role.Version</td><td><a class="link-button" href="/identity/roles/@role.RoleKey">ویرایش مجوزها</a></td></tr>
+}
+</tbody></table></div></section>

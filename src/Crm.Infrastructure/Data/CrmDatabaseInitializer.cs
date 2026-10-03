@@ -55,6 +55,8 @@ public static class CrmDatabaseInitializer
         db.AddRange(seed.DealerStatusHistory);
         db.AddRange(seed.WorkItems);
         db.AddRange(seed.ServiceCases);
+        db.AddRange(seed.RoleDefinitions.Where(x => !db.RoleDefinitions.Any(r => r.RoleKey == x.RoleKey)));
+        db.AddRange(seed.RolePermissionGrants.Where(x => !db.RolePermissionGrants.Any(g => g.Id == x.Id)));
         db.AddRange(seed.ServiceCaseHistory);
         db.AddRange(seed.OrganizationChanges);
         await db.SaveChangesAsync(cancellationToken);

@@ -8,70 +8,6 @@ public sealed class DemoAccessSnapshotService(
     ICrmDataStore store,
     IDistributedCache cache) : IAccessSnapshotService
 {
-    private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> RolePermissions =
-        new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["CompanyMember"] = Set(),
-            ["SalesManager"] = Set(
-                "Portal.Review", "Mobile.Visit.Read", "Mobile.Visit.Write",
-                "Reporting.Read", "Reporting.Export", "Reporting.BiExport",
-                "Dashboard.Read", "Customer.Read", "Customer.Create", "Customer.Update", "Customer.MergeReview",
-                "Customer.Contact.Read", "Customer.NationalId.Read", "Customer.Financial.Read", "Quote.Margin.Read",
-                "Lead.Read", "Lead.Create", "Lead.Assign", "Lead.Update", "Lead.Convert",
-                "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Assign", "Opportunity.Close", "Opportunity.Advance",
-                "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Approve",
-                "Quote.Approve.Supervisor", "Quote.Approve.Commercial", "Quote.Approve.Sales",
-                "Quote.Send", "Quote.Accept", "Quote.Expire",
-                "Order.Read", "Order.Create", "Order.CreditCheck", "Order.Submit", "Order.Integration.Process", "Order.Sync",
-                "Dealer.Read", "Dealer.Contract.Request", "Dealer.Territory.Request", "Dealer.Customer.Assign",
-                "Service.Read", "Service.Create", "Service.Update", "Service.Triage",
-                "WorkQueue.Read", "WorkQueue.Complete", "Administration.Manage"),
-            ["SalesSupervisor"] = Set(
-                "Mobile.Visit.Read", "Mobile.Visit.Write",
-                "Reporting.Read", "Reporting.Export",
-                "Dashboard.Read", "Customer.Read", "Customer.Create", "Customer.Update",
-                "Customer.Contact.Read", "Customer.NationalId.Read", "Customer.Financial.Read", "Quote.Margin.Read",
-                "Lead.Read", "Lead.Create", "Lead.Assign", "Lead.Update", "Lead.Convert",
-                "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Assign", "Opportunity.Close", "Opportunity.Advance",
-                "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Approve",
-                "Quote.Approve.Supervisor", "Quote.Send", "Quote.Accept", "Quote.Expire",
-                "Order.Read", "Order.Create", "Order.CreditCheck", "Order.Submit",
-                "Service.Read", "Service.Create", "Service.Update", "Service.Triage",
-                "WorkQueue.Read", "WorkQueue.Complete"),
-            ["SalesExpert"] = Set(
-                "Mobile.Visit.Read", "Mobile.Visit.Write",
-                "Reporting.Read",
-                "Dashboard.Read", "Customer.Read", "Customer.Create", "Customer.Contact.Read",
-                "Lead.Read", "Lead.Create", "Lead.Update", "Lead.Convert",
-                "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Advance",
-                "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Send",
-                "Quote.Accept", "Quote.Expire", "Order.Read", "Order.Create", "Order.CreditCheck", "Order.Submit",
-                "Service.Read", "Service.Create", "Service.Update",
-                "WorkQueue.Read", "WorkQueue.Complete"),
-            ["FinanceManager"] = Set(
-                "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
-                "Dashboard.Read", "Customer.Read", "Opportunity.Read", "Quote.Read",
-                "Customer.Contact.Read", "Customer.NationalId.Read", "Customer.Financial.Read", "Quote.Margin.Read",
-                "Quote.Approve.Finance", "Order.Read", "Order.CreditOverride",
-                "Dealer.Read", "Dealer.Financial.Read", "WorkQueue.Read", "WorkQueue.Complete"),
-            ["ChannelManager"] = Set(
-                "Portal.Review",
-                "Reporting.Read", "Reporting.Export",
-                "Dashboard.Read", "Customer.Read", "Dealer.Read", "Dealer.Manage", "Dealer.Submit", "Dealer.Approve",
-                "Dealer.Contract.Request", "Dealer.Contract.Approve", "Dealer.Territory.Request", "Dealer.Territory.Approve",
-                "Dealer.Customer.Assign", "Dealer.Target.Manage", "Dealer.Financial.Read", "Dealer.Financial.Sync",
-                "Dealer.Performance.Sync", "WorkQueue.Read", "WorkQueue.Complete"),
-            ["Executive"] = Set("Dashboard.Read", "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
-                "Customer.Read", "Lead.Read", "Opportunity.Read", "Quote.Read", "Order.Read", "Dealer.Read", "Dealer.Financial.Read",
-                "Customer.Financial.Read", "Quote.Margin.Read",
-                "Service.Read", "Service.ReadAll", "WorkQueue.Read"),
-            ["ServiceAgent"] = Set(
-                "Dashboard.Read", "Customer.Read", "Customer.Contact.Read", "Service.Read", "Service.Create", "Service.Update",
-                "WorkQueue.Read", "WorkQueue.Complete"),
-            ["DealerUser"] = Set(
-                "Portal.Read", "Portal.Submit",
-                "Dashboard.Read", "Dealer.Read", "Dealer.Portal", "Dealer.Financial.Read", "WorkQueue.Read")
-        };
 
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(5);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -92,6 +28,13 @@ public sealed class DemoAccessSnapshotService(
             var user = data.Users.SingleOrDefault(x => x.Id == userId && x.IsActiveAt(now));
             if (user is null) return null;
             var assignments = data.UserRoleAssignments.Where(x => x.CrmUserId == userId && x.IsEffective(now)).ToList();
+            var roleKeys = assignments.Select(x => x.RoleKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var grantsByRole = data.RolePermissionGrants.Where(x => roleKeys.Contains(x.RoleKey))
+                .GroupBy(x => x.RoleKey, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => (IReadOnlySet<string>)g.Select(x => x.Permission).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase);
+            IEnumerable<string> PermissionsFor(string roleKey) =>
+                grantsByRole.TryGetValue(roleKey, out var values) ? values : Array.Empty<string>();
             var permissions = assignments.SelectMany(x => PermissionsFor(x.RoleKey))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var roles = assignments.Select(x => x.RoleLabel).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -125,9 +68,6 @@ public sealed class DemoAccessSnapshotService(
     public void Invalidate(Guid userId) => cache.Remove(Key(userId));
 
     private static string Key(Guid userId) => $"crm:access:v4:{userId:N}";
-    private static IReadOnlySet<string> Set(params string[] values) => new HashSet<string>(values, StringComparer.OrdinalIgnoreCase);
-    private static IEnumerable<string> PermissionsFor(string roleKey) =>
-        RolePermissions.TryGetValue(roleKey, out var values) ? values : Array.Empty<string>();
 
     private sealed record CachedCompanyPermissionSet(string CompanyId, string[] Permissions, string[] RoleLabels);
 

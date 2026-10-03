@@ -44,6 +44,8 @@ public sealed class CrmDataSet
         return loaded;
     }
 
+    public List<RoleDefinition> RoleDefinitions => Set<RoleDefinition>();
+    public List<RolePermissionGrant> RolePermissionGrants => Set<RolePermissionGrant>();
     public List<Crm.Domain.Service.ServiceCase> ServiceCases => Set<Crm.Domain.Service.ServiceCase>();
     public List<Crm.Domain.Service.ServiceCaseHistory> ServiceCaseHistory => Set<Crm.Domain.Service.ServiceCaseHistory>();
     public List<Crm.Domain.SelfService.PortalRequest> PortalRequests => Set<Crm.Domain.SelfService.PortalRequest>();

@@ -1,0 +1,22 @@
+@model RoleDetailsDto
+@{ ViewData["Title"] = "مجوزهای نقش"; var role = Model.Role; }
+<nav class="breadcrumb"><a href="/identity/roles">نقش‌ها و مجوزها</a><svg><use href="#i-chevron"/></svg><span>@role.Label</span></nav>
+<header class="page-header"><div><span class="eyebrow">@role.RoleKey · نسخه @role.Version</span><h1>@role.Label</h1><p>@role.ActiveUserCount کاربر فعال این نقش را دارند. @(role.IsExternal ? "این نقش بیرونی است و فقط مجوزهای پرتال نماینده قابل انتخاب‌اند." : "")</p></div></header>
+@if (TempData["RoleMessage"] is string message) { <div class="identity-form-note" role="status">@message</div> }
+<form method="post" action="/identity/roles/@role.RoleKey" class="panel role-permissions">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="expectedVersion" value="@role.Version" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    @foreach (var module in Model.Catalog.GroupBy(x => x.Module))
+    {
+        <fieldset class="form-section"><legend><h3>@module.Key</h3></legend><div class="form-grid">
+        @foreach (var permission in module)
+        {
+            <label class="consent-row"><input type="checkbox" name="permissions" value="@permission.Key" checked="@Model.Permissions.Contains(permission.Key)" /><span>@permission.Key</span></label>
+        }
+        </div></fieldset>
+    }
+    <section class="form-section"><div class="form-grid"><label class="field field--full"><span>دلیل تغییر *</span><textarea name="reason" rows="2" required>@ViewBag.Reason</textarea></label></div></section>
+    <div class="identity-form-note">تغییرات در گزارش ممیزی امنیتی ثبت می‌شود. حذف «Administration.Manage» در صورتی مجاز است که کاربر فعال دیگری همچنان آن را داشته باشد.</div>
+    <div class="page-actions"><a class="button button--ghost" href="/identity/roles">بازگشت</a><button class="button button--primary" type="submit">ذخیرهٔ مجوزها</button></div>
+</form>

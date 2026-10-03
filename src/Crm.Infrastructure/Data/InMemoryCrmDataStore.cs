@@ -46,6 +46,7 @@ internal static class SampleData
     {
         var data = new CrmDataSet();
         SeedOrganization(data);
+        SeedRoles(data);
         SeedUsers(data);
         SeedIdentity(data);
         SeedCustomers(data);
@@ -369,6 +370,12 @@ internal static class SampleData
         foreach (var owner in new[] { DemoManagerId, DemoExpertId })
             data.MobileVisits.Add(new(Guid.NewGuid(), customer.CompanyId, customer.BranchId, customer.TerritoryId,
                 customer.Id, owner, new DateTimeOffset(DateTime.UtcNow.Date.AddHours(8), TimeSpan.Zero), "بررسی نیاز مشتری و پیگیری همکاری"));
+    }
+
+    private static void SeedRoles(CrmDataSet data)
+    {
+        data.RoleDefinitions.AddRange(Crm.Infrastructure.Identity.RoleCatalogSeed.Roles());
+        data.RolePermissionGrants.AddRange(Crm.Infrastructure.Identity.RoleCatalogSeed.Grants());
     }
 
     private static void SeedServiceCases(CrmDataSet data)

@@ -190,6 +190,7 @@ builder.Services.AddScoped<IDealerApplicationService, DealerApplicationService>(
 builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddScoped<ISelfServiceService, SelfServiceService>();
 builder.Services.AddScoped<IServiceCaseService, ServiceCaseService>();
+builder.Services.AddScoped<IRoleAdministrationService, RoleAdministrationService>();
 builder.Services.AddHostedService<Crm.Web.Background.ServiceEscalationWorker>();
 builder.Services.AddSingleton<IPortalReadSource, DemoPortalReadSource>();
 builder.Services.AddSingleton<IReportingFinanceSource, Crm.Infrastructure.Reporting.DemoReportingFinanceSource>();
