@@ -22,6 +22,87 @@ namespace Crm.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Crm.Domain.Channel.CommissionPayoutMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BranchId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CompanyId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<string>("ExternalReference")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("StatementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("TerritoryId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("StatementId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAtUtc");
+
+                    b.ToTable("CommissionPayoutMessages", "channel");
+                });
+
             modelBuilder.Entity("Crm.Domain.Channel.Dealer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -244,6 +325,10 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<decimal>("RatePercent")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("SplitDefinition")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -603,6 +688,100 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("DealerFinancialSnapshots", "channel");
                 });
 
+            modelBuilder.Entity("Crm.Domain.Channel.DealerGuarantee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BranchId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CompanyId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateOnly?>("ExpiresOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("IssuedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Issuer")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<Guid>("RegisteredByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("TerritoryId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("RegisteredByUserId");
+
+                    b.HasIndex("DealerId", "Status");
+
+                    b.HasIndex("CompanyId", "Status", "ExpiresOn");
+
+                    b.ToTable("DealerGuarantees", "channel");
+                });
+
             modelBuilder.Entity("Crm.Domain.Channel.DealerPerformanceSnapshot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -873,6 +1052,79 @@ namespace Crm.Infrastructure.Migrations
                     b.HasIndex("CompanyId", "TerritoryId", "Status", "ValidFromUtc");
 
                     b.ToTable("DealerTerritoryAssignments", "channel");
+                });
+
+            modelBuilder.Entity("Crm.Domain.Channel.DealerTraining", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BranchId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateOnly?>("CertificateValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<string>("CompanyId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<Guid>("DealerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("HeldOn")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("Hours")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("decimal(5,1)");
+
+                    b.Property<int>("Participants")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RecordedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("decimal(5,1)");
+
+                    b.Property<string>("TerritoryId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.HasIndex("DealerId", "HeldOn");
+
+                    b.ToTable("DealerTrainings", "channel");
                 });
 
             modelBuilder.Entity("Crm.Domain.Commercial.OrderCreditDecision", b =>
@@ -4182,6 +4434,15 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("WorkItems", "crm");
                 });
 
+            modelBuilder.Entity("Crm.Domain.Channel.CommissionPayoutMessage", b =>
+                {
+                    b.HasOne("Crm.Domain.Channel.DealerCommissionStatement", null)
+                        .WithMany()
+                        .HasForeignKey("StatementId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Crm.Domain.Channel.Dealer", b =>
                 {
                     b.HasOne("Crm.Domain.Identity.CrmUser", null)
@@ -4296,6 +4557,26 @@ namespace Crm.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Crm.Domain.Channel.DealerGuarantee", b =>
+                {
+                    b.HasOne("Crm.Domain.Channel.Dealer", null)
+                        .WithMany()
+                        .HasForeignKey("DealerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Crm.Domain.Identity.CrmUser", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Crm.Domain.Identity.CrmUser", null)
+                        .WithMany()
+                        .HasForeignKey("RegisteredByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Crm.Domain.Channel.DealerPerformanceSnapshot", b =>
                 {
                     b.HasOne("Crm.Domain.Channel.Dealer", null)
@@ -4351,6 +4632,21 @@ namespace Crm.Infrastructure.Migrations
                     b.HasOne("Crm.Domain.Identity.CrmUser", null)
                         .WithMany()
                         .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Domain.Channel.DealerTraining", b =>
+                {
+                    b.HasOne("Crm.Domain.Channel.Dealer", null)
+                        .WithMany()
+                        .HasForeignKey("DealerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Crm.Domain.Identity.CrmUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

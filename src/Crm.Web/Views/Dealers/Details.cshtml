@@ -58,3 +58,4 @@
 </div></section>
 
 <section class="panel"><div class="panel-heading"><div><strong>تاریخچه وضعیت</strong><small>Actor، دلیل و زمان تغییر</small></div></div><div class="timeline-list">@foreach(var item in Model.History){<div><i></i><span><strong>@(item.FromStatus.HasValue ? DealerStatusLabel(item.FromStatus.Value) : "شروع") ← @DealerStatusLabel(item.ToStatus)</strong><small>@item.Reason · @item.ChangedBy</small><time>@item.ChangedAtUtc.ToString("yyyy/MM/dd HH:mm")</time></span></div>}</div></section>
+<div id="assurance" hx-get="/dealers/@Model.Dealer.Id/assurance" hx-trigger="load" hx-swap="outerHTML"></div>

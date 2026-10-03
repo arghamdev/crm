@@ -53,7 +53,7 @@
     @if (Model.Statements.Count == 0) { <p class="empty-state">برای این دوره هنوز کمیسیونی محاسبه نشده است.</p> }
     else
     {
-    <div class="table-wrap"><table id="commissionTable"><thead><tr><th>نماینده</th><th>فروش خالص / هدف</th><th>تحقق</th><th>نرخ</th><th>کمیسیون (ریال)</th><th>مطالبات سررسیدشده</th><th>وضعیت</th><th>محاسبه / تصمیم</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table id="commissionTable"><thead><tr><th>نماینده</th><th>فروش خالص / هدف</th><th>تحقق</th><th>نرخ</th><th>کمیسیون (ریال)</th><th>مطالبات سررسیدشده</th><th>وضعیت</th><th>تقسیم کمیسیون / حسابداری</th><th>محاسبه / تصمیم</th><th></th></tr></thead><tbody>
     @foreach (var item in Model.Statements)
     {
         <tr data-dealer="@item.DealerCode" data-status="@item.Status">
@@ -64,6 +64,29 @@
             <td><strong><bdi dir="ltr">@($"{item.CommissionAmount:N0}")</bdi></strong></td>
             <td>@if (item.OverdueAmount > 0) { <bdi dir="ltr">@($"{item.OverdueAmount:N0}")</bdi> } else { <text>—</text> }</td>
             <td><span class="badge @item.Status.Badge()"><span></span>@item.Status.Label()</span></td>
+            <td>
+                @if (item.Lines is { Count: > 1 } lines) { foreach (var line in lines) { <small class="split-line">@line.Beneficiary: <bdi dir="ltr">@line.SharePercent.ToString("0.##")%</bdi> = <bdi dir="ltr">@($"{line.Amount:N0}")</bdi></small> } }
+                else if (item.Status != CommissionStatementStatus.Rejected) { <small>۱۰۰٪ نماینده</small> }
+                @if (item.CanSplit && Model.InternalUsers is { Count: > 0 } people)
+                {
+                    <form method="post" action="/dealers/commissions/@item.Id/split" class="commission-split">
+                        @Html.AntiForgeryToken()<input type="hidden" name="period" value="@periodKey" /><input type="hidden" name="expectedVersion" value="@item.Version" />
+                        <select name="internalUserId" aria-label="همکار داخلی"><option value="">بدون تقسیم</option>@foreach (var person in people) { <option value="@person.Id" selected="@(item.Lines?.Any(x => x.UserId == person.Id) == true)">@person.Name</option> }</select>
+                        <input name="internalSharePercent" type="number" min="0" max="50" step="0.5" value="@(item.Lines?.Skip(1).FirstOrDefault()?.SharePercent.ToString(CultureInfo.InvariantCulture) ?? "0")" aria-label="سهم همکار ٪" dir="ltr" />
+                        <button class="link-button" type="submit">تقسیم</button>
+                    </form>
+                }
+                @if (item.Payout is { } payout)
+                {
+                    <span class="badge @payout.Status.Badge()"><span></span>@payout.Status.Label()</span>
+                    @if (payout.ExternalReference is not null) { <small> سند <bdi dir="ltr">@payout.ExternalReference</bdi></small> }
+                    @if (payout.LastError is not null && payout.Status != CommissionPayoutStatus.Sent) { <small> @payout.LastError</small> }
+                    @if (item.CanRetryPayout && payout.Status == CommissionPayoutStatus.DeadLetter)
+                    {
+                        <form method="post" action="/dealers/commissions/@item.Id/payout/retry">@Html.AntiForgeryToken()<input type="hidden" name="period" value="@periodKey" /><button class="link-button" type="submit">ارسال دوباره</button></form>
+                    }
+                }
+            </td>
             <td><small>@item.CalculatedBy · <bdi dir="ltr">@Crm.Domain.Common.JalaliDate.Format(item.CalculatedAtUtc.UtcDateTime) @item.CalculatedAtUtc.ToString("HH:mm")</bdi></small>@if (item.DecidedBy is not null) { <br /><small>@item.DecidedBy@(item.DecisionNote is null ? "" : $": {item.DecisionNote}")</small> }</td>
             <td>
             @if (item.CanDecide)

@@ -7,6 +7,9 @@ namespace Crm.Domain.Channel;
 public enum CommissionStatementStatus { Calculated, OnHold, Approved, Rejected }
 public enum DealerTier { Bronze, Silver, Gold, Platinum }
 
+/// <summary>One beneficiary of a commission: the dealer (UserId null) or an internal user.</summary>
+public sealed record CommissionSplitLine(Guid? UserId, decimal SharePercent, decimal Amount);
+
 /// <summary>One step of a tiered plan: from this target-achievement percentage upward, this commission rate applies.</summary>
 public sealed record CommissionTier(decimal MinAchievementPercent, decimal RatePercent);
 
@@ -145,8 +148,42 @@ public sealed class DealerCommissionStatement : Entity, IOrganizationScoped
     public Guid? DecidedByUserId { get; private set; }
     public DateTimeOffset? DecidedAtUtc { get; private set; }
     public string? DecisionNote { get; private set; }
+    /// <summary>"userId:percent" of the internal co-seller's share; null means 100% to the dealer.</summary>
+    public string? SplitDefinition { get; private set; }
 
     public bool IsFinal => Status is CommissionStatementStatus.Approved or CommissionStatementStatus.Rejected;
+
+    /// <summary>
+    /// Split credit: an internal user (e.g. the sales expert who co-sold) receives a share of the commission and the dealer
+    /// the rest. Only an open statement can be split; the split is approved together with the statement.
+    /// </summary>
+    public void SetSplit(Guid? internalUserId, decimal internalSharePercent)
+    {
+        EnsureOpen();
+        if (internalUserId is null || internalSharePercent == 0)
+        {
+            SplitDefinition = null;
+        }
+        else
+        {
+            if (internalSharePercent is < 1 or > 50 || decimal.Round(internalSharePercent, 2) != internalSharePercent)
+                throw new InvalidOperationException("سهم همکار داخلی باید بین ۱ تا ۵۰ درصد (حداکثر دو رقم اعشار) باشد.");
+            SplitDefinition = $"{internalUserId:N}:{internalSharePercent.ToString(CultureInfo.InvariantCulture)}";
+        }
+        Touch();
+    }
+
+    public (Guid UserId, decimal SharePercent)? InternalSplit => SplitDefinition?.Split(':') is [var user, var share]
+        ? (Guid.Parse(user), decimal.Parse(share, CultureInfo.InvariantCulture)) : null;
+
+    /// <summary>Commission lines: the dealer's part first, then the internal co-seller's (rounded so the parts add up).</summary>
+    public IReadOnlyList<CommissionSplitLine> Lines()
+    {
+        if (InternalSplit is not { } split) return [new CommissionSplitLine(null, 100m, CommissionAmount)];
+        var internalAmount = Math.Round(CommissionAmount * split.SharePercent / 100m, 0);
+        return [new CommissionSplitLine(null, 100m - split.SharePercent, CommissionAmount - internalAmount),
+            new CommissionSplitLine(split.UserId, split.SharePercent, internalAmount)];
+    }
 
     /// <summary>Approves the statement. A statement on hold (overdue receivables) needs an explicit justification.</summary>
     public void Approve(Guid approverUserId, string? note, DateTimeOffset nowUtc)

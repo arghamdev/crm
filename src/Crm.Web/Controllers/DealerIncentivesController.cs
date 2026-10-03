@@ -66,6 +66,28 @@ public sealed class DealerIncentivesController(IDealerIncentiveService incentive
                 : $"صورت کمیسیون {statement.DealerName} رد شد.";
         });
 
+    [Authorize(Policy = "perm:Dealer.Commission.Manage")]
+    [HttpPost("/dealers/commissions/{id:guid}/split")]
+    [ValidateAntiForgeryToken]
+    public IActionResult Split(Guid id, [FromForm] string? period, [FromForm] Guid? internalUserId, [FromForm] decimal internalSharePercent,
+        [FromForm] long expectedVersion) => Mutate(period, () =>
+    {
+        var statement = incentives.SetSplit(current.CrmUserId, current.RequiredOrganization(), id,
+            new SetCommissionSplitCommand(internalUserId, internalSharePercent, expectedVersion), DateTimeOffset.UtcNow);
+        return statement.Lines is { Count: > 1 } lines
+            ? $"کمیسیون {statement.DealerName} تقسیم شد: {lines[1].Beneficiary} {lines[1].SharePercent:0.##}٪."
+            : $"کمیسیون {statement.DealerName} کامل به نماینده تعلق می‌گیرد.";
+    });
+
+    [Authorize(Policy = "perm:Dealer.Commission.Approve")]
+    [HttpPost("/dealers/commissions/{id:guid}/payout/retry")]
+    [ValidateAntiForgeryToken]
+    public IActionResult RetryPayout(Guid id, [FromForm] string? period) => Mutate(period, () =>
+    {
+        incentives.RetryPayout(current.CrmUserId, current.RequiredOrganization(), id, DateTimeOffset.UtcNow);
+        return "ارسال کمیسیون به حسابداری دوباره در صف قرار گرفت.";
+    });
+
     [Authorize(Policy = "perm:Dealer.Evaluation.Read")]
     [HttpGet("/dealers/ranking")]
     public IActionResult Ranking(string? period = null)

@@ -1,0 +1,88 @@
+@model DealerAssuranceDto
+<section class="panel dealer-assurance" id="assurance">
+    <div class="panel-heading"><div><strong>تضمین‌ها و آموزش نماینده</strong><small>مرحلهٔ هفتم · پوشش اعتبار با تضمین‌های معتبر و سوابق آموزشی</small></div></div>
+    @if (TempData["AssuranceMessage"] is string message) { <div class="identity-form-note" role="status">@message</div> }
+    @if (TempData["AssuranceError"] is string error) { <div class="validation-summary" role="alert">@error</div> }
+    @if (Model.CanReadGuarantees)
+    {
+        <section class="mini-stats">
+            <div><span class="mini-icon mini-icon--green"><svg><use href="#i-shield"/></svg></span><p><small>تضمین معتبر (ریال)</small><strong><bdi dir="ltr">@($"{Model.EffectiveGuaranteeAmount:N0}")</bdi></strong></p></div>
+            <div><span class="mini-icon"><svg><use href="#i-check"/></svg></span><p><small>پوشش سقف اعتبار</small><strong>@(Model.CoveragePercent is { } coverage ? $"{coverage:0.#}٪" : "محرمانه / نامشخص")</strong></p></div>
+            <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>سررسید تا ۳۰ روز آینده</small><strong>@Model.ExpiringSoonCount</strong></p></div>
+            @if (Model.CanReadTrainings) { <div><span class="mini-icon"><svg><use href="#i-users"/></svg></span><p><small>ساعات آموزش ۱۲ ماه اخیر</small><strong>@Model.TrainingHoursLast12Months.ToString("0.#")</strong></p></div> }
+        </section>
+        @if (Model.CoveragePercent is < 100) { <p class="validation-summary">تضمین‌های معتبر کمتر از سقف اعتبار نماینده است؛ افزایش تضمین یا کاهش سقف اعتبار را بررسی کنید.</p> }
+        <h3 class="assurance-title">تضمین‌ها</h3>
+        <div class="table-wrap"><table id="guaranteeTable"><thead><tr><th>نوع</th><th>شماره / صادرکننده</th><th>مبلغ (ریال)</th><th>صدور</th><th>سررسید</th><th>وضعیت</th><th></th></tr></thead><tbody>
+        @if (Model.Guarantees.Count == 0) { <tr><td colspan="7" class="empty-cell">تضمینی ثبت نشده است.</td></tr> }
+        @foreach (var g in Model.Guarantees)
+        {
+            <tr data-guarantee="@g.Number">
+                <td>@g.Type.Label()</td>
+                <td><bdi dir="ltr">@g.Number</bdi>@if (g.Issuer is not null) { <small> · @g.Issuer</small> }</td>
+                <td><bdi dir="ltr">@($"{g.Amount:N0}")</bdi></td>
+                <td><bdi dir="ltr">@g.IssuedOn</bdi></td>
+                <td><bdi dir="ltr">@(g.ExpiresOn ?? "—")</bdi>@if (g.ExpiresSoon) { <span class="badge badge--warning"><span></span>نزدیک سررسید</span> }</td>
+                <td><span class="badge @(g.IsEffective ? "badge--success" : "badge--neutral")"><span></span>@(g.Status == DealerGuaranteeStatus.Active && !g.IsEffective ? "منقضی" : g.Status.Label())</span>@if (g.DecisionReason is not null) { <small> @g.DecisionReason</small> }</td>
+                <td>@if (Model.CanManageGuarantees && g.Status == DealerGuaranteeStatus.Active)
+                {
+                    <form method="post" action="/dealers/@Model.DealerId/guarantees/@g.Id/decide" class="inline-actions commission-decision">
+                        @Html.AntiForgeryToken()<input type="hidden" name="ExpectedVersion" value="@g.Version" />
+                        <input name="Reason" placeholder="دلیل (الزامی)" aria-label="دلیل" maxlength="500" required />
+                        <button class="link-button" type="submit" name="Forfeit" value="false">آزادسازی</button>
+                        <button class="link-button link-button--danger" type="submit" name="Forfeit" value="true">ضبط</button>
+                    </form>
+                }</td>
+            </tr>
+        }
+        </tbody></table></div>
+        @if (Model.CanManageGuarantees)
+        {
+            <details class="assurance-form"><summary>ثبت تضمین جدید</summary>
+                <form method="post" action="/dealers/@Model.DealerId/guarantees">
+                    @Html.AntiForgeryToken()
+                    <div class="form-grid form-grid--4">
+                        <label class="field"><span>نوع تضمین</span><select name="Type">@foreach (var type in Enum.GetValues<DealerGuaranteeType>()) { <option value="@type">@type.Label()</option> }</select></label>
+                        <label class="field"><span>شماره *</span><input name="Number" required maxlength="60" dir="ltr" /></label>
+                        <label class="field"><span>بانک / صادرکننده</span><input name="Issuer" maxlength="120" /></label>
+                        <label class="field"><span>مبلغ (ریال) *</span><input name="Amount" type="number" min="1" step="1" required dir="ltr" /></label>
+                        <label class="field"><span>تاریخ صدور *</span><input name="IssuedOn" required placeholder="1405/07/01" dir="ltr" maxlength="10" /></label>
+                        <label class="field"><span>سررسید</span><input name="ExpiresOn" placeholder="1406/07/01" dir="ltr" maxlength="10" /></label>
+                        <label class="field span-2"><span>توضیحات</span><input name="Notes" maxlength="500" /></label>
+                    </div>
+                    <div class="page-actions"><button class="button button--primary" type="submit">ثبت تضمین</button></div>
+                </form>
+            </details>
+        }
+    }
+    @if (Model.CanReadTrainings)
+    {
+        <h3 class="assurance-title">آموزش‌ها</h3>
+        <div class="table-wrap"><table id="trainingTable"><thead><tr><th>دوره</th><th>موضوع</th><th>تاریخ</th><th>ساعت</th><th>نفرات</th><th>نمره</th><th>اعتبار گواهی</th></tr></thead><tbody>
+        @if (Model.Trainings.Count == 0) { <tr><td colspan="7" class="empty-cell">آموزشی ثبت نشده است.</td></tr> }
+        @foreach (var t in Model.Trainings)
+        {
+            <tr><td>@t.Title</td><td>@t.Topic.Label()</td><td><bdi dir="ltr">@t.HeldOn</bdi></td><td>@t.Hours.ToString("0.#")</td><td>@t.Participants</td><td>@(t.Score?.ToString("0.#") ?? "—")</td>
+                <td>@if (t.CertificateValidTo is null) { <text>—</text> } else { <bdi dir="ltr">@t.CertificateValidTo</bdi> @if (t.CertificateExpired) { <span class="badge badge--danger"><span></span>منقضی</span> } }</td></tr>
+        }
+        </tbody></table></div>
+        @if (Model.CanManageTrainings)
+        {
+            <details class="assurance-form"><summary>ثبت آموزش</summary>
+                <form method="post" action="/dealers/@Model.DealerId/trainings">
+                    @Html.AntiForgeryToken()
+                    <div class="form-grid form-grid--4">
+                        <label class="field span-2"><span>عنوان دوره *</span><input name="Title" required maxlength="160" /></label>
+                        <label class="field"><span>موضوع</span><select name="Topic">@foreach (var topic in Enum.GetValues<DealerTrainingTopic>()) { <option value="@topic">@topic.Label()</option> }</select></label>
+                        <label class="field"><span>تاریخ برگزاری *</span><input name="HeldOn" required placeholder="1405/07/01" dir="ltr" maxlength="10" /></label>
+                        <label class="field"><span>مدت (ساعت) *</span><input name="Hours" type="number" min="0.5" max="200" step="0.5" required dir="ltr" /></label>
+                        <label class="field"><span>تعداد شرکت‌کننده *</span><input name="Participants" type="number" min="1" max="500" required dir="ltr" /></label>
+                        <label class="field"><span>نمرهٔ آزمون</span><input name="Score" type="number" min="0" max="100" step="0.1" dir="ltr" /></label>
+                        <label class="field"><span>اعتبار گواهی تا</span><input name="CertificateValidTo" placeholder="1406/07/01" dir="ltr" maxlength="10" /></label>
+                    </div>
+                    <div class="page-actions"><button class="button button--primary" type="submit">ثبت آموزش</button></div>
+                </form>
+            </details>
+        }
+    }
+</section>

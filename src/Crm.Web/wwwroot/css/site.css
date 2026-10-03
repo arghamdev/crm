@@ -909,3 +909,12 @@ a { color: inherit; text-decoration: none; }
   .form-grid--4, .details-grid--4 { grid-template-columns: 1fr; }
   .form-grid .span-2 { grid-column: auto; }
 }
+
+/* Dealer guarantees & training (phase 7) */
+.dealer-assurance { display: grid; gap: 14px; }
+.assurance-title { margin: 6px 0 0; font-size: 13px; }
+.assurance-form summary { color: var(--primary-700); cursor: pointer; font-weight: 700; }
+.assurance-form form { display: grid; gap: 12px; margin-top: 12px; }
+.commission-split { display: grid; grid-template-columns: 1fr 70px auto; gap: 4px; align-items: center; min-width: 210px; margin-top: 6px; }
+.commission-split select, .commission-split input { min-width: 0; padding: 5px 6px; border: 1px solid var(--line-strong); border-radius: 8px; font: inherit; font-size: 11px; }
+.split-line { display: block; white-space: nowrap; }

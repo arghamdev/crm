@@ -30,16 +30,64 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
                 .Where(x => InContext(snapshot, organization, "Dealer.Commission.Read", x))
                 .OrderBy(x => x.Status == CommissionStatementStatus.Rejected).ThenByDescending(x => x.CommissionAmount).ToList();
             var dealers = Dealers(data, statements.Select(x => x.DealerId));
-            var users = Users(data, statements.SelectMany(x => new[] { x.CalculatedByUserId, x.DecidedByUserId ?? Guid.Empty }));
+            var users = Users(data, statements.SelectMany(x => new[] { x.CalculatedByUserId, x.DecidedByUserId ?? Guid.Empty, x.InternalSplit?.UserId ?? Guid.Empty }));
             var live = statements.Where(x => x.Status != CommissionStatementStatus.Rejected).ToList();
+            var ids = statements.Select(x => x.Id).ToArray();
+            var payouts = data.Find<CommissionPayoutMessage>(x => ids.Contains(x.StatementId)).ToDictionary(x => x.StatementId);
+            var canManage = Has(snapshot, organization.CompanyId, "Dealer.Commission.Manage");
             return new CommissionWorkspaceDto(from, plan is null ? null : Map(plan),
-                statements.Select(x => Map(x, dealers, users, canApprove && currentUserId != x.CalculatedByUserId)).ToList(),
+                statements.Select(x => Map(x, dealers, users, canApprove && currentUserId != x.CalculatedByUserId, payouts.GetValueOrDefault(x.Id),
+                    canManage, canApprove)).ToList(),
                 live.Sum(x => x.CommissionAmount),
                 live.Where(x => x.Status == CommissionStatementStatus.Approved).Sum(x => x.CommissionAmount),
                 live.Count(x => x.Status == CommissionStatementStatus.OnHold),
-                Has(snapshot, organization.CompanyId, "Dealer.Commission.Manage"),
-                canApprove);
+                canManage,
+                canApprove,
+                canManage ? InternalUsers(data, organization.CompanyId, DateTimeOffset.UtcNow) : []);
         });
+    }
+
+    /// <summary>Split credit on an open statement: an internal co-seller receives a share, the dealer the rest.</summary>
+    public CommissionStatementDto SetSplit(Guid currentUserId, OrganizationSelection organization, Guid statementId,
+        SetCommissionSplitCommand command, DateTimeOffset nowUtc)
+    {
+        var snapshot = RequiredSnapshot(currentUserId);
+        Require(snapshot, organization.CompanyId, "Dealer.Commission.Manage");
+        return store.Write(data =>
+        {
+            var statement = data.Find<DealerCommissionStatement>(x => x.Id == statementId).SingleOrDefault(x =>
+                InContext(snapshot, organization, "Dealer.Commission.Manage", x)) ?? throw new KeyNotFoundException("صورت کمیسیون پیدا نشد.");
+            if (statement.Version != command.ExpectedVersion) throw new InvalidOperationException("صورت کمیسیون تغییر کرده است؛ صفحه را تازه‌سازی کنید.");
+            if (command.InternalUserId is { } userId && !InternalUsers(data, organization.CompanyId, nowUtc).Any(x => x.Id == userId))
+                throw new InvalidOperationException("همکار انتخاب‌شده کاربر داخلی فعال این شرکت نیست.");
+            statement.SetSplit(command.InternalUserId, command.InternalUserId is null ? 0 : command.InternalSharePercent);
+            Audit(data, currentUserId, "Dealer.CommissionSplit", $"{statement.Id:N} {statement.SplitDefinition ?? "dealer:100"}", nowUtc);
+            return Map(statement, Dealers(data, [statement.DealerId]), Users(data, [statement.CalculatedByUserId, command.InternalUserId ?? Guid.Empty]),
+                false, null, true, false);
+        });
+    }
+
+    /// <summary>Re-queues a payout that accounting rejected or that ran out of attempts.</summary>
+    public void RetryPayout(Guid currentUserId, OrganizationSelection organization, Guid statementId, DateTimeOffset nowUtc)
+    {
+        var snapshot = RequiredSnapshot(currentUserId);
+        Require(snapshot, organization.CompanyId, "Dealer.Commission.Approve");
+        store.Write(data =>
+        {
+            var message = data.Find<CommissionPayoutMessage>(x => x.StatementId == statementId).SingleOrDefault(x =>
+                InContext(snapshot, organization, "Dealer.Commission.Approve", x)) ?? throw new KeyNotFoundException("پیام ارسال کمیسیون پیدا نشد.");
+            message.Retry(nowUtc);
+            Audit(data, currentUserId, "Dealer.CommissionPayoutRetried", message.IdempotencyKey, nowUtc);
+            return true;
+        });
+    }
+
+    private static List<UserOptionDto> InternalUsers(CrmDataSet data, string companyId, DateTimeOffset nowUtc)
+    {
+        var ids = data.Find<UserRoleAssignment>(x => x.CompanyId == companyId && x.RoleKey != "DealerUser").Where(x => x.IsEffective(nowUtc))
+            .Select(x => x.CrmUserId).Distinct().ToArray();
+        return data.Find<CrmUser>(x => ids.Contains(x.Id)).Where(x => x.IsActiveAt(nowUtc)).OrderBy(x => x.DisplayName)
+            .Select(x => new UserOptionDto(x.Id, x.DisplayName)).ToList();
     }
 
     public CommissionPlanDto SavePlan(Guid currentUserId, OrganizationSelection organization, SaveCommissionPlanCommand command, DateTimeOffset nowUtc)
@@ -125,7 +173,15 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
             else statement.Reject(currentUserId, command.Note ?? string.Empty, nowUtc);
             Audit(data, currentUserId, "Dealer.CommissionDecided", $"{statement.Id:N} {statement.Status} {statement.CommissionAmount}", nowUtc);
             var dealers = Dealers(data, [statement.DealerId]);
-            return Map(statement, dealers, Users(data, [statement.CalculatedByUserId, currentUserId]), false);
+            var users = Users(data, [statement.CalculatedByUserId, currentUserId, statement.InternalSplit?.UserId ?? Guid.Empty]);
+            CommissionPayoutMessage? payout = null;
+            if (statement.Status == CommissionStatementStatus.Approved)
+            {
+                // Handed to accounting through the outbox, in the same write as the approval (no approval without a payable).
+                payout = new CommissionPayoutMessage(Guid.NewGuid(), statement, Payload(statement, dealers, users, nowUtc), nowUtc);
+                data.CommissionPayoutMessages.Add(payout);
+            }
+            return Map(statement, dealers, users, false, payout, false, false);
         });
     }
 
@@ -231,13 +287,33 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
     private static CommissionPlanDto Map(DealerCommissionPlan x) =>
         new(x.Id, x.Name, x.Tiers.Select(t => new CommissionTierDto(t.MinAchievementPercent, t.RatePercent)).ToList(), x.Version);
 
+    private static string Payload(DealerCommissionStatement x, IReadOnlyDictionary<Guid, (string Code, string Name, string BranchId)> dealers,
+        IReadOnlyDictionary<Guid, string> users, DateTimeOffset nowUtc) => System.Text.Json.JsonSerializer.Serialize(new
+    {
+        schema = "crm.commission-payout.v1",
+        statementId = x.Id,
+        company = x.CompanyId,
+        branch = x.BranchId,
+        period = ChannelPeriod.Key(x.PeriodFromUtc),
+        dealerCode = dealers.GetValueOrDefault(x.DealerId).Code,
+        currency = "IRR",
+        total = x.CommissionAmount,
+        lines = x.Lines().Select(l => new { beneficiary = l.UserId is null ? "Dealer" : "InternalUser", userId = l.UserId,
+            name = l.UserId is { } id ? users.GetValueOrDefault(id, "—") : dealers.GetValueOrDefault(x.DealerId).Name, share = l.SharePercent, amount = l.Amount }),
+        approvedAtUtc = nowUtc
+    });
+
     private static CommissionStatementDto Map(DealerCommissionStatement x, IReadOnlyDictionary<Guid, (string Code, string Name, string BranchId)> dealers,
-        IReadOnlyDictionary<Guid, string> users, bool canDecide) => new(
+        IReadOnlyDictionary<Guid, string> users, bool canDecide, CommissionPayoutMessage? payout = null, bool canManage = false, bool canApprove = false) => new(
         x.Id, x.DealerId, dealers.GetValueOrDefault(x.DealerId).Code ?? "—", dealers.GetValueOrDefault(x.DealerId).Name ?? "—",
         x.PeriodFromUtc, x.NetSales, x.TargetAmount, x.AchievementPercent, x.RatePercent, x.CommissionAmount, x.OverdueAmount, x.Status,
         users.GetValueOrDefault(x.CalculatedByUserId, "—"), x.CalculatedAtUtc,
         x.DecidedByUserId is { } decidedBy ? users.GetValueOrDefault(decidedBy, "—") : null, x.DecidedAtUtc, x.DecisionNote,
-        canDecide && !x.IsFinal, x.Version);
+        canDecide && !x.IsFinal, x.Version,
+        x.Lines().Select(l => new CommissionSplitLineDto(l.UserId is { } id ? users.GetValueOrDefault(id, "—") : "نماینده", l.UserId, l.SharePercent, l.Amount)).ToList(),
+        payout is null ? null : new CommissionPayoutDto(payout.Status, payout.AttemptCount, payout.ExternalReference, payout.LastError, payout.CompletedAtUtc),
+        canManage && !x.IsFinal,
+        canApprove && payout is { Status: not CommissionPayoutStatus.Sent });
 
     private static DealerEvaluationDto Map(DealerEvaluation x, IReadOnlyDictionary<Guid, (string Code, string Name, string BranchId)> dealers) => new(
         x.DealerId, dealers.GetValueOrDefault(x.DealerId).Code ?? "—", dealers.GetValueOrDefault(x.DealerId).Name ?? "—", x.BranchId,

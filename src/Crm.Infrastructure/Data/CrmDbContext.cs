@@ -904,6 +904,9 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     public DbSet<DealerCommissionPlan> DealerCommissionPlans => Set<DealerCommissionPlan>();
     public DbSet<DealerCommissionStatement> DealerCommissionStatements => Set<DealerCommissionStatement>();
     public DbSet<DealerEvaluation> DealerEvaluations => Set<DealerEvaluation>();
+    public DbSet<DealerGuarantee> DealerGuarantees => Set<DealerGuarantee>();
+    public DbSet<DealerTraining> DealerTrainings => Set<DealerTraining>();
+    public DbSet<CommissionPayoutMessage> CommissionPayoutMessages => Set<CommissionPayoutMessage>();
 
     private static void ConfigureDealerIncentives(ModelBuilder modelBuilder)
     {
@@ -930,7 +933,9 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.Property(x => x.CalculatedAtUtc).HasPrecision(3);
             entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
             entity.Property(x => x.DecisionNote).HasMaxLength(1000);
+            entity.Property(x => x.SplitDefinition).HasMaxLength(60);
             entity.Ignore(x => x.IsFinal);
+            entity.Ignore(x => x.InternalSplit);
             entity.HasIndex(x => new { x.CompanyId, x.PeriodFromUtc, x.Status });
             entity.HasIndex(x => new { x.DealerId, x.PeriodFromUtc });
             entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
@@ -953,6 +958,46 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.HasIndex(x => new { x.DealerId, x.PeriodFromUtc });
             entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.EvaluatedByUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<DealerGuarantee>(entity => {
+            ConfigureEntity(entity, "DealerGuarantees", "channel"); Scope(entity);
+            entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Number).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.Issuer).HasMaxLength(120);
+            entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
+            entity.Property(x => x.DecisionReason).HasMaxLength(500);
+            entity.HasIndex(x => new { x.DealerId, x.Status });
+            entity.HasIndex(x => new { x.CompanyId, x.Status, x.ExpiresOn });
+            entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.RegisteredByUserId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.DecidedByUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<DealerTraining>(entity => {
+            ConfigureEntity(entity, "DealerTrainings", "channel"); Scope(entity);
+            entity.Property(x => x.Title).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Topic).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.Hours).HasPrecision(5, 1);
+            entity.Property(x => x.Score).HasPrecision(5, 1);
+            entity.HasIndex(x => new { x.DealerId, x.HeldOn });
+            entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.RecordedByUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<CommissionPayoutMessage>(entity => {
+            ConfigureEntity(entity, "CommissionPayoutMessages", "channel"); Scope(entity);
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Payload).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.NextAttemptAtUtc).HasPrecision(3);
+            entity.Property(x => x.LastError).HasMaxLength(500);
+            entity.Property(x => x.ExternalReference).HasMaxLength(80);
+            entity.Property(x => x.CompletedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => x.IdempotencyKey).IsUnique();
+            entity.HasIndex(x => x.StatementId).IsUnique();
+            entity.HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
+            entity.HasOne<DealerCommissionStatement>().WithMany().HasForeignKey(x => x.StatementId).OnDelete(DeleteBehavior.NoAction);
         });
     }
 

@@ -423,6 +423,29 @@ internal static class SampleData
             "طرح کمیسیون پله‌ای ۱۴۰۵",
             [new CommissionTier(0, 0), new CommissionTier(80, 1.5m), new CommissionTier(100, 2.5m), new CommissionTier(120, 3.5m)],
             DemoChannelManagerId));
+
+        // Guarantees and training: the pilot dealer's bank guarantee expires soon (shows the warning); P-D03 holds a cheque.
+        var today = DateOnly.FromDateTime(now.UtcDateTime);
+        var central = data.Dealers.Single(x => x.DealerId == "P-D02");
+        var isfahan = data.Dealers.Single(x => x.DealerId == "P-D03");
+        data.DealerGuarantees.AddRange([
+            new DealerGuarantee(Guid.Parse("c1000000-0000-4000-8000-000000000001"), pilot.Id, pilot.CompanyId, pilot.BranchId, pilot.TerritoryId,
+                DealerGuaranteeType.BankGuarantee, "BG-1404-7781", "بانک ملت", 5_000_000_000m, today.AddMonths(-11), today.AddDays(20),
+                "ضمانت‌نامهٔ حسن انجام تعهدات", DemoChannelManagerId),
+            new DealerGuarantee(Guid.Parse("c1000000-0000-4000-8000-000000000002"), pilot.Id, pilot.CompanyId, pilot.BranchId, pilot.TerritoryId,
+                DealerGuaranteeType.PromissoryNote, "PN-220145", null, 3_000_000_000m, today.AddMonths(-6), null, null, DemoChannelManagerId),
+            new DealerGuarantee(Guid.Parse("c1000000-0000-4000-8000-000000000003"), central.Id, central.CompanyId, central.BranchId, central.TerritoryId,
+                DealerGuaranteeType.BankGuarantee, "BG-1405-0102", "بانک تجارت", 6_000_000_000m, today.AddMonths(-2), today.AddMonths(10),
+                null, DemoChannelManagerId),
+            new DealerGuarantee(Guid.Parse("c1000000-0000-4000-8000-000000000004"), isfahan.Id, isfahan.CompanyId, isfahan.BranchId, isfahan.TerritoryId,
+                DealerGuaranteeType.Cheque, "CH-884512", "بانک صادرات", 1_000_000_000m, today.AddMonths(-3), today.AddMonths(3), null, DemoChannelManagerId)
+        ]);
+        data.DealerTrainings.AddRange([
+            new DealerTraining(Guid.Parse("c2000000-0000-4000-8000-000000000001"), pilot.Id, pilot.CompanyId, pilot.BranchId, pilot.TerritoryId,
+                "معرفی محصولات خط کنسرو ۱۴۰۵", DealerTrainingTopic.Product, today.AddMonths(-2), 8, 6, 86, today.AddMonths(10), DemoChannelManagerId, today),
+            new DealerTraining(Guid.Parse("c2000000-0000-4000-8000-000000000002"), central.Id, central.CompanyId, central.BranchId, central.TerritoryId,
+                "فروش مشاوره‌ای و مذاکره", DealerTrainingTopic.Sales, today.AddMonths(-1), 12, 4, 92, null, DemoChannelManagerId, today)
+        ]);
     }
 
     private static void SeedSelfService(CrmDataSet data)

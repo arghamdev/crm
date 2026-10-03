@@ -10,6 +10,8 @@ public interface IDealerIncentiveService
     CommissionRunResult CalculateCommissions(Guid currentUserId, OrganizationSelection organization, DateTimeOffset period, DateTimeOffset nowUtc);
     CommissionStatementDto DecideCommission(Guid currentUserId, OrganizationSelection organization, Guid statementId,
         DecideCommissionCommand command, DateTimeOffset nowUtc);
+    CommissionStatementDto SetSplit(Guid currentUserId, OrganizationSelection organization, Guid statementId, SetCommissionSplitCommand command, DateTimeOffset nowUtc);
+    void RetryPayout(Guid currentUserId, OrganizationSelection organization, Guid statementId, DateTimeOffset nowUtc);
     DealerRankingDto GetRanking(Guid currentUserId, OrganizationSelection organization, DateTimeOffset period);
     DealerEvaluationRunResult RunEvaluation(Guid currentUserId, OrganizationSelection organization, DateTimeOffset period, DateTimeOffset nowUtc);
 }

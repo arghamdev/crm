@@ -605,6 +605,7 @@ RoleAdministrationChecks.Run(Check);
 DealerIncentiveChecks.Run(Check);
 CustomerProfileChecks.Run(Check);
 PortalServiceChecks.Run(Check);
+DealerAssuranceChecks.Run(Check);
 
 if (failures.Count > 0)
 {
