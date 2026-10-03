@@ -76,6 +76,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         ConfigureCustomerContact(modelBuilder.Entity<CustomerContact>());
         ConfigureCustomerAddress(modelBuilder.Entity<CustomerAddress>());
         ConfigureCustomerProfile(modelBuilder);
+        ConfigureNotifications(modelBuilder);
         ConfigureCustomerTimeline(modelBuilder.Entity<CustomerTimelineEvent>());
         ConfigureCustomerOwnership(modelBuilder.Entity<CustomerOwnershipHistory>());
         ConfigureCustomerDuplicate(modelBuilder.Entity<CustomerDuplicateCandidate>());
@@ -907,6 +908,39 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     public DbSet<DealerGuarantee> DealerGuarantees => Set<DealerGuarantee>();
     public DbSet<DealerTraining> DealerTrainings => Set<DealerTraining>();
     public DbSet<CommissionPayoutMessage> CommissionPayoutMessages => Set<CommissionPayoutMessage>();
+    public DbSet<Crm.Domain.Notifications.NotificationPreference> NotificationPreferences => Set<Crm.Domain.Notifications.NotificationPreference>();
+    public DbSet<Crm.Domain.Notifications.NotificationMessage> NotificationMessages => Set<Crm.Domain.Notifications.NotificationMessage>();
+
+    private static void ConfigureNotifications(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Crm.Domain.Notifications.NotificationPreference>(entity => {
+            ConfigureEntity(entity, "NotificationPreferences", "notify");
+            entity.Ignore(x => x.UserId);
+            entity.Property(x => x.Mobile).HasMaxLength(20);
+            entity.Property(x => x.MutedCategories).HasMaxLength(200);
+            entity.HasOne<CrmUser>().WithOne().HasForeignKey<Crm.Domain.Notifications.NotificationPreference>(x => x.Id).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Notifications.NotificationMessage>(entity => {
+            ConfigureEntity(entity, "NotificationMessages", "notify");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Channel).HasConversion<string>().HasMaxLength(8);
+            entity.Property(x => x.Address).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Category).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.Subject).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.SourceReference).HasMaxLength(120);
+            entity.Property(x => x.DedupKey).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.NextAttemptAtUtc).HasPrecision(3);
+            entity.Property(x => x.LastError).HasMaxLength(500);
+            entity.Property(x => x.ProviderMessageId).HasMaxLength(120);
+            entity.Property(x => x.SentAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.DedupKey, x.RecipientUserId, x.Channel }).IsUnique();
+            entity.HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
+            entity.HasIndex(x => new { x.RecipientUserId, x.CreatedAtUtc });
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.RecipientUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+    }
 
     private static void ConfigureDealerIncentives(ModelBuilder modelBuilder)
     {

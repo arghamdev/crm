@@ -1,0 +1,43 @@
+@model NotificationSettingsDto
+@using Crm.Domain.Notifications
+@{
+    ViewData["Title"] = "اعلان‌ها";
+    string CategoryLabel(NotificationCategory c) => c switch
+    {
+        NotificationCategory.ServiceEscalation => "ارجاع پرونده‌های خدمات (نقض SLA)",
+        NotificationCategory.CommissionApproval => "کمیسیون‌های در انتظار تأیید",
+        _ => "سررسید تضمین نمایندگان"
+    };
+}
+<header class="page-header"><div><span class="eyebrow">ایمیل و پیامک</span><h1>اعلان‌ها</h1><p>رویدادهای مهم از طریق صف ارسال (Outbox) با تلاش مجدد خودکار به ایمیل یا پیامک شما فرستاده می‌شوند.</p></div></header>
+@if (TempData["NotificationMessage"] is string message) { <div class="identity-form-note" role="status">@message</div> }
+@if (TempData["NotificationError"] is string error) { <div class="validation-summary" role="alert">@error</div> }
+@if (!Model.EmailConfigured || !Model.SmsConfigured) { <div class="identity-form-note">در این محیط @(Model.EmailConfigured ? "" : "ایمیل")@(Model.EmailConfigured || Model.SmsConfigured ? "" : " و ")@(Model.SmsConfigured ? "" : "پیامک") در حالت نمایشی است: پیام‌ها ثبت می‌شوند ولی واقعاً ارسال نمی‌شوند. پیکربندی در <code>Notifications:Email</code> و <code>Notifications:Sms</code>.</div> }
+<section class="panel role-permissions">
+    <div class="panel-heading"><div><strong>تنظیمات دریافت</strong><small>ایمیل حساب: <bdi dir="ltr">@Model.Email</bdi></small></div></div>
+    <form method="post" action="/account/notifications">
+        @Html.AntiForgeryToken()
+        <div class="form-grid form-grid--4">
+            <label class="consent-row"><input type="checkbox" name="emailEnabled" value="true" checked="@Model.EmailEnabled" /><span>دریافت ایمیل</span></label>
+            <label class="consent-row"><input type="checkbox" name="smsEnabled" value="true" checked="@Model.SmsEnabled" /><span>دریافت پیامک</span></label>
+            <label class="field"><span>شمارهٔ همراه برای پیامک</span><input name="mobile" value="@Model.Mobile" placeholder="09xxxxxxxxx" dir="ltr" inputmode="tel" maxlength="20" /></label>
+        </div>
+        <fieldset class="form-section"><legend><h3>رویدادها</h3></legend><div class="form-grid">
+            @foreach (var category in Enum.GetValues<NotificationCategory>()) { <label class="consent-row"><input type="checkbox" name="enabledCategories" value="@category" checked="@(!Model.MutedCategories.Contains(category))" /><span>@CategoryLabel(category)</span></label> }
+        </div></fieldset>
+        <div class="page-actions"><button class="button button--primary" type="submit">ذخیرهٔ تنظیمات</button></div>
+    </form>
+</section>
+<section class="panel table-panel">
+    <div class="panel-heading"><div><strong>اعلان‌های اخیر</strong><small>۳۰ اعلان آخر شما</small></div></div>
+    <div class="table-wrap"><table id="notificationTable"><thead><tr><th>زمان</th><th>کانال</th><th>موضوع</th><th>وضعیت</th></tr></thead><tbody>
+    @if (Model.Recent.Count == 0) { <tr><td colspan="4" class="empty-cell">اعلانی ثبت نشده است.</td></tr> }
+    @foreach (var item in Model.Recent)
+    {
+        <tr><td><bdi dir="ltr">@Crm.Domain.Common.JalaliDate.Format(item.CreatedAtUtc.UtcDateTime) @item.CreatedAtUtc.ToString("HH:mm")</bdi></td>
+            <td>@(item.Channel == NotificationChannel.Email ? "ایمیل" : "پیامک") <small><bdi dir="ltr">@item.Address</bdi></small></td>
+            <td>@if (item.SourceReference is { } link && link.StartsWith('/')) { <a href="@link">@item.Subject</a> } else { @item.Subject }<small class="notification-body">@item.Body</small></td>
+            <td><span class="badge @(item.Status switch { NotificationStatus.Sent => "badge--success", NotificationStatus.Pending => "badge--info", _ => "badge--danger" })"><span></span>@(item.Status switch { NotificationStatus.Sent => "ارسال‌شده", NotificationStatus.Pending => "در صف ارسال", _ => "ناموفق" })</span>@if (item.LastError is not null && item.Status != NotificationStatus.Sent) { <small> @item.LastError</small> }</td></tr>
+    }
+    </tbody></table></div>
+</section>

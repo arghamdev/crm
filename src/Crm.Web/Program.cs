@@ -197,9 +197,35 @@ builder.Services.AddScoped<IRoleAdministrationService, RoleAdministrationService
 builder.Services.AddScoped<IDealerIncentiveService, DealerIncentiveService>();
 builder.Services.AddScoped<IDealerAssuranceService, DealerAssuranceService>();
 builder.Services.AddScoped<CommissionPayoutDispatcher>();
+builder.Services.AddScoped<NotificationDispatcher>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+// Email: Demo (log only) or Smtp; SMS: Demo or Http gateway. Secrets come from configuration/environment, never source.
+if (string.Equals(builder.Configuration["Notifications:Email:Mode"], "Smtp", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<INotificationSender>(_ => new Crm.Infrastructure.Notifications.SmtpEmailSender(new(
+        builder.Configuration["Notifications:Email:Smtp:Host"] ?? throw new InvalidOperationException("Notifications:Email:Smtp:Host is required."),
+        builder.Configuration.GetValue("Notifications:Email:Smtp:Port", 587), builder.Configuration.GetValue("Notifications:Email:Smtp:EnableSsl", true),
+        builder.Configuration["Notifications:Email:Smtp:UserName"], builder.Configuration["Notifications:Email:Smtp:Password"],
+        builder.Configuration["Notifications:Email:From"] ?? throw new InvalidOperationException("Notifications:Email:From is required."),
+        builder.Configuration["Notifications:Email:FromName"])));
+else
+    builder.Services.AddSingleton<INotificationSender>(sp => new Crm.Infrastructure.Notifications.DemoNotificationSender(
+        Crm.Domain.Notifications.NotificationChannel.Email, sp.GetRequiredService<ILogger<Crm.Infrastructure.Notifications.DemoNotificationSender>>()));
+if (string.Equals(builder.Configuration["Notifications:Sms:Mode"], "Http", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient("sms", client => client.Timeout = TimeSpan.FromSeconds(15));
+    builder.Services.AddSingleton<INotificationSender>(sp => new Crm.Infrastructure.Notifications.HttpSmsSender(
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient("sms"), new(
+            new Uri(builder.Configuration["Notifications:Sms:Endpoint"] ?? throw new InvalidOperationException("Notifications:Sms:Endpoint is required.")),
+            builder.Configuration["Notifications:Sms:ApiKey"] ?? throw new InvalidOperationException("Notifications:Sms:ApiKey is required."),
+            builder.Configuration["Notifications:Sms:Sender"])));
+}
+else
+    builder.Services.AddSingleton<INotificationSender>(sp => new Crm.Infrastructure.Notifications.DemoNotificationSender(
+        Crm.Domain.Notifications.NotificationChannel.Sms, sp.GetRequiredService<ILogger<Crm.Infrastructure.Notifications.DemoNotificationSender>>()));
 builder.Services.AddSingleton<IAccountingCommissionGateway, Crm.Infrastructure.Channel.DemoAccountingCommissionGateway>();
 builder.Services.AddHostedService<Crm.Web.Background.ServiceEscalationWorker>();
 builder.Services.AddHostedService<Crm.Web.Background.CommissionPayoutWorker>();
+builder.Services.AddHostedService<Crm.Web.Background.NotificationWorker>();
 builder.Services.AddSingleton<IPortalReadSource, DemoPortalReadSource>();
 builder.Services.AddSingleton<IReportingFinanceSource, Crm.Infrastructure.Reporting.DemoReportingFinanceSource>();
 builder.Services.AddSingleton<IDealerFinancialProjectionProvider, DemoDealerFinancialProjectionProvider>();

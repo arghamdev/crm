@@ -154,6 +154,14 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
                     dealer.BranchId, dealer.TerritoryId, from, to, sales.NetSales, target.Amount, overdue, plan, currentUserId, nowUtc));
                 calculated++;
             }
+            if (calculated > 0)
+                foreach (var approver in NotificationOutbox.UsersWithPermission(data, organization.CompanyId, "Dealer.Commission.Approve", nowUtc)
+                             .Where(x => x != currentUserId))
+                    NotificationOutbox.Enqueue(data, organization.CompanyId, approver, Crm.Domain.Notifications.NotificationCategory.CommissionApproval,
+                        $"کمیسیون {ChannelPeriod.Label(from)} در انتظار تأیید",
+                        $"{calculated} صورت کمیسیون نماینده محاسبه شد و منتظر تأیید مالی است.",
+                        $"/dealers/commissions?period={ChannelPeriod.Key(from)}",
+                        $"commission-run:{organization.CompanyId}:{ChannelPeriod.Key(from)}:{nowUtc:yyyyMMddHHmmss}", nowUtc);
             Audit(data, currentUserId, "Dealer.CommissionCalculated", $"{organization.CompanyId} {ChannelPeriod.Key(from)}: {calculated} calculated, {skipped} skipped", nowUtc);
             return new CommissionRunResult(calculated, skipped, issues);
         });

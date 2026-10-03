@@ -66,6 +66,7 @@ internal static partial class TestRunner
         await CheckRoleAdministration(serviceManager, expert);
         await CheckDealerIncentives(channelManager, financeUser, expert, dealerUser);
         await CheckDealerAssurance(channelManager, financeUser, expert);
+        await CheckNotificationSettings(expert);
 
         using var secondNode = new DemoWebFactory(keyRingPath, sharedStore);
         await CheckSharedKeyRing(secondNode, managerCookie);

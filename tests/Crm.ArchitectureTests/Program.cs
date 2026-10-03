@@ -606,6 +606,7 @@ DealerIncentiveChecks.Run(Check);
 CustomerProfileChecks.Run(Check);
 PortalServiceChecks.Run(Check);
 DealerAssuranceChecks.Run(Check);
+NotificationChecks.Run(Check);
 
 if (failures.Count > 0)
 {

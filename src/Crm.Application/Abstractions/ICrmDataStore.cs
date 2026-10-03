@@ -79,6 +79,8 @@ public sealed class CrmDataSet
     public List<DealerGuarantee> DealerGuarantees => Set<DealerGuarantee>();
     public List<DealerTraining> DealerTrainings => Set<DealerTraining>();
     public List<CommissionPayoutMessage> CommissionPayoutMessages => Set<CommissionPayoutMessage>();
+    public List<Crm.Domain.Notifications.NotificationPreference> NotificationPreferences => Set<Crm.Domain.Notifications.NotificationPreference>();
+    public List<Crm.Domain.Notifications.NotificationMessage> NotificationMessages => Set<Crm.Domain.Notifications.NotificationMessage>();
     public List<RoleDefinition> RoleDefinitions => Set<RoleDefinition>();
     public List<RolePermissionGrant> RolePermissionGrants => Set<RolePermissionGrant>();
     public List<Crm.Domain.Service.ServiceCase> ServiceCases => Set<Crm.Domain.Service.ServiceCase>();

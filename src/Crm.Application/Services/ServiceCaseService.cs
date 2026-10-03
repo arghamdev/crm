@@ -239,6 +239,10 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
                 $"ارجاع سطح {item.EscalationLevel} پرونده {item.Code}: نقض SLA", "فوری", nowUtc.AddHours(2),
                 target.Value.UserId, item.CompanyId, item.BranchId, item.TerritoryId));
             workItems++;
+            NotificationOutbox.Enqueue(data, item.CompanyId, target.Value.UserId, Crm.Domain.Notifications.NotificationCategory.ServiceEscalation,
+                $"ارجاع سطح {item.EscalationLevel} پرونده {item.Code}",
+                $"پرونده «{item.Subject}» مهلت SLA را رد کرده و به کارتابل شما ارجاع شد (اولویت {item.Priority}).",
+                $"/service/{item.Id}", $"escalation:{item.Id:N}:{item.EscalationLevel}", nowUtc);
         }
         return new ServiceEscalationResult(escalated, workItems);
     }
