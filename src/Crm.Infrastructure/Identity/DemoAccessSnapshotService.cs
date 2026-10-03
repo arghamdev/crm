@@ -67,7 +67,7 @@ public sealed class DemoAccessSnapshotService(
 
     public void Invalidate(Guid userId) => cache.Remove(Key(userId));
 
-    private static string Key(Guid userId) => $"crm:access:v4:{userId:N}";
+    private static string Key(Guid userId) => $"crm:access:v5:{userId:N}";
 
     private sealed record CachedCompanyPermissionSet(string CompanyId, string[] Permissions, string[] RoleLabels);
 

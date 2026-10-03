@@ -1,0 +1,84 @@
+@model CommissionWorkspaceDto
+@{
+    ViewData["Title"] = "کمیسیون نمایندگان";
+    ViewData["IncentiveTab"] = "commissions";
+    var periodKey = Model.PeriodFromUtc.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    var tiers = Model.Plan?.Tiers.ToList() ?? [new CommissionTierDto(0, 0)];
+    while (tiers.Count < 6) tiers.Add(null!);
+}
+<nav class="breadcrumb"><a href="/dealers">مدیریت نمایندگان</a><svg><use href="#i-chevron"/></svg><span>کمیسیون نمایندگان</span></nav>
+<header class="page-header"><div><span class="eyebrow">مرحله هفتم · Dealer Incentives</span><h1>کمیسیون نمایندگان</h1><p>محاسبهٔ پله‌ای کمیسیون از فروش همگام‌شدهٔ ERP و هدف دوره، با تأیید مالی و تفکیک وظایف؛ کمیسیون نمایندهٔ دارای مطالبهٔ سررسیدشده معلق می‌شود.</p></div>
+    @if (Model.CanManage && Model.Plan is not null)
+    {
+        <div class="page-actions"><form method="post" action="/dealers/commissions/calculate">@Html.AntiForgeryToken()<input type="hidden" name="period" value="@periodKey" /><button class="button button--primary" type="submit"><svg><use href="#i-check"/></svg> محاسبهٔ کمیسیون دوره</button></form></div>
+    }
+</header>
+<partial name="_Nav" />
+<section class="mini-stats">
+    <div><span class="mini-icon"><svg><use href="#i-file"/></svg></span><p><small>صورت‌های فعال دوره</small><strong>@Model.Statements.Count(x => x.Status != CommissionStatementStatus.Rejected)</strong></p></div>
+    <div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>کمیسیون محاسبه‌شده (ریال)</small><strong><bdi dir="ltr">@($"{Model.TotalCommission:N0}")</bdi></strong></p></div>
+    <div><span class="mini-icon mini-icon--green"><svg><use href="#i-shield"/></svg></span><p><small>تأییدشدهٔ مالی (ریال)</small><strong><bdi dir="ltr">@($"{Model.ApprovedCommission:N0}")</bdi></strong></p></div>
+    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>معلق به‌دلیل مطالبات</small><strong>@Model.OnHoldCount</strong></p></div>
+</section>
+<section class="panel role-permissions" id="commissionPlan">
+    <div class="panel-heading"><div><strong>طرح کمیسیون پله‌ای</strong><small>نرخ هر پله روی کل فروش خالص دوره اعمال می‌شود (پلهٔ اول از ۰٪ تحقق). تغییر طرح، صورت‌های تأییدشده را تغییر نمی‌دهد.</small></div></div>
+    @if (Model.CanManage)
+    {
+        <form method="post" action="/dealers/commissions/plan">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="period" value="@periodKey" />
+            <input type="hidden" name="expectedVersion" value="@(Model.Plan?.Version ?? 0)" />
+            <div class="form-grid"><label class="field field--full"><span>نام طرح *</span><input name="name" value="@Model.Plan?.Name" required maxlength="160" /></label></div>
+            <div class="form-grid">
+            @for (var i = 0; i < tiers.Count; i++)
+            {
+                var tier = tiers[i];
+                <label class="field"><span>پله @(i + 1): از تحقق (٪)</span><input name="thresholds" type="number" step="0.01" min="0" max="300" dir="ltr" value="@tier?.MinAchievementPercent.ToString(CultureInfo.InvariantCulture)" /></label>
+                <label class="field"><span>نرخ کمیسیون (٪)</span><input name="rates" type="number" step="0.01" min="0" max="20" dir="ltr" value="@tier?.RatePercent.ToString(CultureInfo.InvariantCulture)" /></label>
+            }
+            </div>
+            <div class="page-actions"><button class="button button--ghost" type="submit">ذخیرهٔ طرح</button></div>
+        </form>
+    }
+    else if (Model.Plan is null) { <p class="empty-state">طرح کمیسیونی برای این شرکت تعریف نشده است.</p> }
+    else
+    {
+        <div class="table-wrap"><table><thead><tr><th>از تحقق</th><th>نرخ</th></tr></thead><tbody>
+        @foreach (var tier in Model.Plan.Tiers) { <tr><td><bdi dir="ltr">@tier.MinAchievementPercent.ToString("0.##")%</bdi></td><td><bdi dir="ltr">@tier.RatePercent.ToString("0.##")%</bdi></td></tr> }
+        </tbody></table></div>
+    }
+</section>
+<section class="panel table-panel">
+    <div class="panel-heading"><div><strong>صورت‌های کمیسیون دوره</strong><small>تأیید یا رد فقط توسط مالی و غیر از محاسبه‌کننده؛ صورت تأییدشده نهایی است و در محاسبهٔ مجدد تغییر نمی‌کند.</small></div></div>
+    @if (Model.Statements.Count == 0) { <p class="empty-state">برای این دوره هنوز کمیسیونی محاسبه نشده است.</p> }
+    else
+    {
+    <div class="table-wrap"><table id="commissionTable"><thead><tr><th>نماینده</th><th>فروش خالص / هدف</th><th>تحقق</th><th>نرخ</th><th>کمیسیون (ریال)</th><th>مطالبات سررسیدشده</th><th>وضعیت</th><th>محاسبه / تصمیم</th><th></th></tr></thead><tbody>
+    @foreach (var item in Model.Statements)
+    {
+        <tr data-dealer="@item.DealerCode" data-status="@item.Status">
+            <td><a class="entity-cell entity-link" href="/dealers/@item.DealerId"><span class="entity-avatar">@item.DealerName[..1]</span><span><strong>@item.DealerName</strong><small>@item.DealerCode</small></span></a></td>
+            <td><bdi dir="ltr">@($"{item.NetSales:N0}")</bdi><small> از <bdi dir="ltr">@($"{item.TargetAmount:N0}")</bdi></small></td>
+            <td><bdi dir="ltr">@item.AchievementPercent.ToString("0.##")%</bdi></td>
+            <td><bdi dir="ltr">@item.RatePercent.ToString("0.##")%</bdi></td>
+            <td><strong><bdi dir="ltr">@($"{item.CommissionAmount:N0}")</bdi></strong></td>
+            <td>@if (item.OverdueAmount > 0) { <bdi dir="ltr">@($"{item.OverdueAmount:N0}")</bdi> } else { <text>—</text> }</td>
+            <td><span class="badge @item.Status.Badge()"><span></span>@item.Status.Label()</span></td>
+            <td><small>@item.CalculatedBy · <bdi dir="ltr">@item.CalculatedAtUtc.ToString("yyyy/MM/dd HH:mm")</bdi></small>@if (item.DecidedBy is not null) { <br /><small>@item.DecidedBy@(item.DecisionNote is null ? "" : $": {item.DecisionNote}")</small> }</td>
+            <td>
+            @if (item.CanDecide)
+            {
+                <form method="post" action="/dealers/commissions/@item.Id/decide" class="inline-actions commission-decision">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="period" value="@periodKey" /><input type="hidden" name="expectedVersion" value="@item.Version" />
+                    <input name="note" placeholder="@(item.Status == CommissionStatementStatus.OnHold ? "توضیح الزامی" : "توضیح")" aria-label="توضیح تصمیم" maxlength="1000" />
+                    <button class="link-button" type="submit" name="approve" value="true">تأیید</button>
+                    <button class="link-button link-button--danger" type="submit" name="approve" value="false">رد</button>
+                </form>
+            }
+            </td>
+        </tr>
+    }
+    </tbody></table></div>
+    }
+</section>

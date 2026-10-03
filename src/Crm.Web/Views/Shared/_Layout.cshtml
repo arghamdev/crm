@@ -66,6 +66,8 @@
                 {
                     <a class="nav-item @Active("Dealers")" asp-controller="Dealers" asp-action="Index"><svg><use href="#i-building"/></svg><span>نمایندگان فروش</span></a>
                 }
+                @if (Can("Dealer.Commission.Read")) { <a class="nav-item @Active("DealerIncentives")" href="/dealers/commissions"><svg><use href="#i-check"/></svg><span>کمیسیون و رتبه‌بندی</span></a> }
+                else if (Can("Dealer.Evaluation.Read")) { <a class="nav-item @Active("DealerIncentives")" href="/dealers/ranking"><svg><use href="#i-target"/></svg><span>رتبه‌بندی نمایندگان</span></a> }
                 @if (Can("Service.Read")) { <a class="nav-item @Active("ServiceCases")" href="/service"><svg><use href="#i-shield"/></svg><span>خدمات و SLA</span></a> }
                 @if (Can("WorkQueue.Read")) { <a class="nav-item @Active("WorkQueue")" asp-controller="WorkQueue" asp-action="Index"><svg><use href="#i-inbox"/></svg><span>کارتابل اقدامات</span></a> }
                 @if (selectedCompanyId is not null && access?.PermissionsFor(selectedCompanyId).Contains("Reporting.Read") == true)

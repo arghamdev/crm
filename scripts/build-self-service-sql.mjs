@@ -6,7 +6,8 @@ for (const {id,baseline,prefix} of [
  {id:'202610030009_ServiceDeskSla',baseline:'202609270008_PortalMobileSelfService',prefix:'phase8-service-desk'},
  {id:'202610030010_RoleCatalog',baseline:'202610030009_ServiceDeskSla',prefix:'role-catalog'},
  {id:'202610030011_AuditLogIndexes',baseline:'202610030010_RoleCatalog',prefix:'audit-log-indexes'},
- {id:'202610030012_RoleScopes',baseline:'202610030011_AuditLogIndexes',prefix:'role-scopes'}
+ {id:'202610030012_RoleScopes',baseline:'202610030011_AuditLogIndexes',prefix:'role-scopes'},
+ {id:'202610030013_DealerIncentives',baseline:'202610030012_RoleScopes',prefix:'phase7-dealer-incentives'}
 ]) {
 const source=readFileSync(new URL('src/Crm.Infrastructure/Migrations/'+id+'.cs',root),'utf8');
 function body(direction){const match=source.match(new RegExp('protected override void '+direction+'\\(MigrationBuilder \\w+\\) => \\w+\\.Sql\\("""([\\s\\S]*?)"""\\);'));if(!match)throw new Error('Migration raw SQL boundary changed: '+id);return match[1].trim();}

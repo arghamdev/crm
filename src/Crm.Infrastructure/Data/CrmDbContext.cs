@@ -65,6 +65,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         ConfigureSelfService(modelBuilder);
         ConfigureServiceDesk(modelBuilder);
         ConfigureRoleCatalog(modelBuilder);
+        ConfigureDealerIncentives(modelBuilder);
         ConfigureCompany(modelBuilder.Entity<Company>());
         ConfigureOrganizationUnit(modelBuilder.Entity<OrganizationUnit>());
         ConfigureTerritory(modelBuilder.Entity<Territory>());
@@ -841,6 +842,61 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.HasIndex(x => new { x.CompanyId, x.ActorUserId, x.OperationId }).IsUnique();
             entity.HasOne<MobileVisit>().WithMany().HasForeignKey(x => x.VisitId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+    }
+
+    public DbSet<DealerCommissionPlan> DealerCommissionPlans => Set<DealerCommissionPlan>();
+    public DbSet<DealerCommissionStatement> DealerCommissionStatements => Set<DealerCommissionStatement>();
+    public DbSet<DealerEvaluation> DealerEvaluations => Set<DealerEvaluation>();
+
+    private static void ConfigureDealerIncentives(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DealerCommissionPlan>(entity => {
+            ConfigureEntity(entity, "DealerCommissionPlans", "channel");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.TierDefinition).HasMaxLength(400).IsRequired();
+            entity.Ignore(x => x.Tiers);
+            entity.HasIndex(x => x.CompanyId).IsUnique();
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.UpdatedByUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<DealerCommissionStatement>(entity => {
+            ConfigureEntity(entity, "DealerCommissionStatements", "channel"); Scope(entity);
+            entity.Property(x => x.PeriodFromUtc).HasPrecision(3);
+            entity.Property(x => x.PeriodToUtc).HasPrecision(3);
+            entity.Property(x => x.NetSales).HasPrecision(18, 2);
+            entity.Property(x => x.TargetAmount).HasPrecision(18, 2);
+            entity.Property(x => x.OverdueAmount).HasPrecision(18, 2);
+            entity.Property(x => x.AchievementPercent).HasPrecision(9, 2);
+            entity.Property(x => x.RatePercent).HasPrecision(5, 2);
+            entity.Property(x => x.CommissionAmount).HasPrecision(18, 2);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.CalculatedAtUtc).HasPrecision(3);
+            entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
+            entity.Property(x => x.DecisionNote).HasMaxLength(1000);
+            entity.Ignore(x => x.IsFinal);
+            entity.HasIndex(x => new { x.CompanyId, x.PeriodFromUtc, x.Status });
+            entity.HasIndex(x => new { x.DealerId, x.PeriodFromUtc });
+            entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<DealerCommissionPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.CalculatedByUserId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.DecidedByUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<DealerEvaluation>(entity => {
+            ConfigureEntity(entity, "DealerEvaluations", "channel"); Scope(entity);
+            entity.Property(x => x.PeriodFromUtc).HasPrecision(3);
+            entity.Property(x => x.PeriodToUtc).HasPrecision(3);
+            entity.Property(x => x.AchievementScore).HasPrecision(5, 1);
+            entity.Property(x => x.CollectionScore).HasPrecision(5, 1);
+            entity.Property(x => x.GrowthScore).HasPrecision(5, 1);
+            entity.Property(x => x.ServiceScore).HasPrecision(5, 1);
+            entity.Property(x => x.TotalScore).HasPrecision(5, 1);
+            entity.Property(x => x.Tier).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.EvaluatedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.CompanyId, x.PeriodFromUtc, x.Rank });
+            entity.HasIndex(x => new { x.DealerId, x.PeriodFromUtc });
+            entity.HasOne<Dealer>().WithMany().HasForeignKey(x => x.DealerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.EvaluatedByUserId).OnDelete(DeleteBehavior.NoAction);
         });
     }
 

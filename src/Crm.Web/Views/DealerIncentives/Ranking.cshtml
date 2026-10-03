@@ -1,0 +1,33 @@
+@model DealerRankingDto
+@{
+    ViewData["Title"] = "ارزیابی و رتبه‌بندی نمایندگان";
+    ViewData["IncentiveTab"] = "ranking";
+    var periodKey = Model.PeriodFromUtc.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+}
+<nav class="breadcrumb"><a href="/dealers">مدیریت نمایندگان</a><svg><use href="#i-chevron"/></svg><span>ارزیابی و رتبه‌بندی</span></nav>
+<header class="page-header"><div><span class="eyebrow">مرحله هفتم · Dealer Scorecard</span><h1>ارزیابی و رتبه‌بندی نمایندگان</h1><p>امتیاز وزنی: تحقق هدف ۴۰٪، وصول مطالبات ۲۵٪، رشد نسبت به دورهٔ قبل ۱۵٪ و کیفیت خدمات (SLA و رضایت) ۲۰٪. سطح: پلاتینی ≥۸۵، طلایی ≥۷۰، نقره‌ای ≥۵۰.</p></div>
+    @if (Model.CanRun)
+    {
+        <div class="page-actions"><form method="post" action="/dealers/ranking/run">@Html.AntiForgeryToken()<input type="hidden" name="period" value="@periodKey" /><button class="button button--primary" type="submit"><svg><use href="#i-target"/></svg> اجرای ارزیابی دوره</button></form></div>
+    }
+</header>
+<partial name="_Nav" />
+<section class="panel table-panel">
+    <div class="panel-heading"><div><strong>رتبه‌بندی دوره</strong><small>@(Model.EvaluatedAtUtc is { } at ? $"آخرین اجرا: {at:yyyy/MM/dd HH:mm} (UTC)؛ هر اجرا کل نمایندگان دامنه را با هم رتبه‌بندی می‌کند." : "هنوز ارزیابی برای این دوره اجرا نشده است.")</small></div></div>
+    @if (Model.Items.Count > 0)
+    {
+    <div class="table-wrap"><table id="rankingTable"><thead><tr><th>رتبه</th><th>نماینده</th><th>شعبه</th><th>تحقق هدف</th><th>وصول</th><th>رشد</th><th>خدمات</th><th>امتیاز کل</th><th>سطح</th></tr></thead><tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr data-dealer="@item.DealerCode">
+            <td><strong>@item.Rank</strong><small> از @item.RankedDealerCount</small></td>
+            <td><a class="entity-cell entity-link" href="/dealers/@item.DealerId"><span class="entity-avatar">@item.DealerName[..1]</span><span><strong>@item.DealerName</strong><small>@item.DealerCode</small></span></a></td>
+            <td>@item.BranchId</td>
+            <td>@item.AchievementScore.ToString("0.#")</td><td>@item.CollectionScore.ToString("0.#")</td><td>@item.GrowthScore.ToString("0.#")</td><td>@item.ServiceScore.ToString("0.#")</td>
+            <td><strong>@item.TotalScore.ToString("0.#")</strong><progress max="100" value="@item.TotalScore" aria-label="امتیاز کل"></progress></td>
+            <td><span class="badge @item.Tier.Badge()"><span></span>@item.Tier.Label()</span></td>
+        </tr>
+    }
+    </tbody></table></div>
+    }
+</section>

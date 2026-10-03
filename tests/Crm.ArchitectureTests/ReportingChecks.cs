@@ -82,7 +82,7 @@ internal static class ReportingChecks
         var oldSales = result.Kpis.Single(x => x.Definition.Key == "dealerSales").Value;
         store.Write(data =>
         {
-            var seed = data.DealerPerformanceSnapshots.Single();
+            var seed = data.DealerPerformanceSnapshots.Single(x => x.Id == Guid.Parse("a6000000-0000-4000-8000-000000000001"));
             data.DealerPerformanceSnapshots.Add(new DealerPerformanceSnapshot(Guid.NewGuid(), seed.CompanyId, seed.BranchId, seed.TerritoryId,
                 seed.DealerId, seed.PeriodFromUtc, seed.PeriodToUtc, seed.NetSales, seed.OrderCount, seed.Source, now));
             data.DealerPerformanceSnapshots.Add(new DealerPerformanceSnapshot(Guid.NewGuid(), seed.CompanyId, seed.BranchId == "B01" ? "B03" : "B01", seed.TerritoryId,

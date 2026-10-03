@@ -854,3 +854,11 @@ a { color: inherit; text-decoration: none; }
 .role-permissions .consent-row input[type="checkbox"] { width: 16px; height: 16px; min-height: 0; flex: 0 0 auto; padding: 0; }
 .role-permissions .consent-row span { direction: ltr; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .role-permissions .page-actions { margin-top: 16px; }
+
+/* Phase 7: dealer incentives */
+.incentive-period { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 16px; }
+.incentive-period .field { min-width: 180px; }
+.incentive-issues { padding-inline-start: 24px; }
+.commission-decision { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; gap: 4px 12px; min-width: 150px; }
+.commission-decision input { grid-column: 1 / -1; min-width: 0; width: 100%; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 8px; font: inherit; }
+#rankingTable progress { display: block; width: 72px; height: 6px; margin-top: 4px; }

@@ -8,7 +8,11 @@
 }
 <header class="page-header">
     <div><span class="eyebrow">اولویت ۸ · Channel Governance</span><h1>مدیریت نمایندگان</h1><p>پرونده، قرارداد، Territory، هدف، عملکرد و مانده مالی نمایندگان با Scope مستقل</p></div>
+    <div class="page-actions">
+    @if (companyId is not null && Access.Get(User.CrmUserId())?.PermissionsFor(companyId).Contains("Dealer.Commission.Read") == true) { <a class="button button--ghost" href="/dealers/commissions">کمیسیون</a> }
+    @if (companyId is not null && Access.Get(User.CrmUserId())?.PermissionsFor(companyId).Contains("Dealer.Evaluation.Read") == true) { <a class="button button--ghost" href="/dealers/ranking">رتبه‌بندی</a> }
     @if (canCreate) { <button class="button button--primary" type="button" hx-get="/dealers/create" hx-target="#drawerBody" hx-swap="innerHTML" data-open-drawer="true">نماینده جدید</button> }
+    </div>
 </header>
 <section class="metric-grid dealer-metrics">
     <article class="metric-card"><span>نماینده فعال</span><strong>@Model.ActiveCount</strong><small>دارای قرارداد و Territory معتبر</small></article>

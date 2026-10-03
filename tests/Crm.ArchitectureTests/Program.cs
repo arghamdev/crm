@@ -393,8 +393,10 @@ Check(overriddenSeedOrder.Order.Status == OrderRequestStatus.CreditApproved &&
     "Finance must be able to issue an expiring, auditable override for a credit hold.");
 
 var seededDealer = dealerService.GetWorkspace(channelManagerId, companyOne, pipelineNow);
-Check(seededDealer.Items.Count == 1 && seededDealer.ActiveCount == 1 && seededDealer.Items[0].CustomerCount == 2,
-    "Channel workspace must expose the active pilot dealer, its governed contract and customer portfolio.");
+seededDealer = seededDealer with { Items = seededDealer.Items.OrderBy(x => x.DealerId).ToList() };
+Check(seededDealer.Items.Count == 3 && seededDealer.ActiveCount == 3 && seededDealer.Items[0].DealerId == "P-D01" &&
+      seededDealer.Items[0].CustomerCount == 2,
+    "Channel workspace must expose the active pilot dealer (plus the two ranking sample dealers), its governed contract and customer portfolio.");
 var exactDealerScope = dealerService.GetWorkspace(dealerUserId, companyOne, pipelineNow);
 Check(exactDealerScope.Items.Count == 1 && exactDealerScope.Items[0].DealerId == "P-D01" &&
       dealerService.Get(dealerUserId, companyOne, exactDealerScope.Items[0].Id, pipelineNow)!.CanEdit is false,
@@ -600,6 +602,7 @@ ServiceDeskChecks.Run(Check);
 SecurityHardeningChecks.Run(Check);
 DataIntegrityChecks.Run(Check);
 RoleAdministrationChecks.Run(Check);
+DealerIncentiveChecks.Run(Check);
 
 if (failures.Count > 0)
 {

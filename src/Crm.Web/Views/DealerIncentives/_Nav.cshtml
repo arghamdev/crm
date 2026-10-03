@@ -1,0 +1,10 @@
+@{ var active = ViewData["IncentiveTab"] as string; var periodKey = ((DateTimeOffset)ViewBag.Period).ToString("yyyy-MM", CultureInfo.InvariantCulture); }
+<form class="toolbar pipeline-filter incentive-period" method="get" action="@(active == "ranking" ? "/dealers/ranking" : "/dealers/commissions")">
+    <label class="field"><span>دورهٔ ماهانه (میلادی)</span><input type="month" name="period" value="@periodKey" dir="ltr" /></label>
+    <button class="button button--ghost button--xs" type="submit">نمایش دوره</button>
+    <a class="link-button" href="/dealers/commissions?period=@periodKey">کمیسیون</a>
+    <a class="link-button" href="/dealers/ranking?period=@periodKey">رتبه‌بندی</a>
+</form>
+@if (TempData["IncentiveMessage"] is string message) { <div class="identity-form-note" role="status">@message</div> }
+@if (TempData["IncentiveError"] is string error) { <div class="validation-summary" role="alert">@error</div> }
+@if (TempData["IncentiveIssues"] is string issues) { <ul class="identity-form-note incentive-issues">@foreach (var line in issues.Split('\n')) { <li>@line</li> }</ul> }

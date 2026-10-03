@@ -20,7 +20,7 @@ public sealed class RoleAdministrationService(ICrmDataStore store, IAccessSnapsh
     private static readonly IReadOnlyDictionary<string, string> ModuleLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["Administration"] = "مدیریت سامانه", ["Customer"] = "مشتری", ["Lead"] = "سرنخ", ["Opportunity"] = "فرصت فروش",
-        ["Quote"] = "پیشنهاد قیمت", ["Order"] = "سفارش", ["Dealer"] = "نمایندگان", ["Portal"] = "پرتال نماینده",
+        ["Quote"] = "پیشنهاد قیمت", ["Order"] = "سفارش", ["Dealer"] = "نمایندگان و کمیسیون", ["Portal"] = "پرتال نماینده",
         ["Mobile"] = "موبایل", ["Reporting"] = "گزارش", ["Dashboard"] = "داشبورد", ["WorkQueue"] = "کارتابل", ["Service"] = "خدمات و SLA"
     };
 
