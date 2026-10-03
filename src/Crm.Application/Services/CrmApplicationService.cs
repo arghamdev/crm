@@ -107,10 +107,10 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 command.City, command.Owner, organization.CompanyId, scope.Id, scope.Name, organization.TerritoryId,
                 command.Segment, 1_000_000_000m, command.Kind, command.NationalId, command.PrimaryPhone, command.PrimaryEmail);
             data.Customers.Add(customer);
-            data.CustomerOwnershipHistory.Add(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId,
+            data.Append<Crm.Domain.Customers.CustomerOwnershipHistory>(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId,
                 customer.Id, customer.BranchId, customer.TerritoryId, customer.Owner, DateTimeOffset.UtcNow,
                 "ایجاد مشتری", currentUserId));
-            data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+            data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
                 CustomerTimelineType.Created, "مشتری ایجاد شد", command.DuplicateReason ?? "ثبت اولیه",
                 DateTimeOffset.UtcNow, "CRM", null, currentUserId));
             if (!string.IsNullOrWhiteSpace(command.PrimaryPhone) || !string.IsNullOrWhiteSpace(command.PrimaryEmail))
@@ -146,7 +146,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 command.Source, command.Owner ?? string.Empty, organization.CompanyId, scope.Id, command.TerritoryId ?? organization.TerritoryId,
                 ownerUserId: ownerUserId, phone: command.Phone, email: command.Email);
             data.Leads.Add(lead);
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, null, lead.Status, "ثبت سرنخ", currentUserId, DateTimeOffset.UtcNow));
             return Map(lead, snapshot);
         });
@@ -165,14 +165,14 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             {
                 var from = lead.Status;
                 lead.MarkContacted(now, "تکمیل تبدیل سرنخ", now.AddDays(1), "تماس پیش از تبدیل");
-                data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+                data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                     lead.TerritoryId, lead.Id, from, lead.Status, "تماس پیش از تبدیل", currentUserId, now));
             }
             if (lead.Status == LeadStatus.Contacted)
             {
                 var from = lead.Status;
                 lead.Qualify(Math.Max(75, lead.Score), "احراز صلاحیت پیش از تبدیل");
-                data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+                data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                     lead.TerritoryId, lead.Id, from, lead.Status, "احراز صلاحیت پیش از تبدیل", currentUserId, now));
             }
             if (lead.Status != LeadStatus.Qualified)
@@ -187,10 +187,10 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                     lead.Owner, lead.CompanyId, lead.BranchId, branch.Name, lead.TerritoryId, "تبدیل سرنخ", 0,
                     primaryPhone: lead.Phone ?? lead.Contact, primaryEmail: lead.Email, dataSource: "Lead Conversion");
                 data.Customers.Add(customer);
-                data.CustomerOwnershipHistory.Add(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId,
+                data.Append<Crm.Domain.Customers.CustomerOwnershipHistory>(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId,
                     customer.Id, customer.BranchId, customer.TerritoryId, customer.Owner, DateTimeOffset.UtcNow,
                     "تبدیل سرنخ", currentUserId));
-                data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+                data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
                     CustomerTimelineType.Created, "مشتری از سرنخ ساخته شد", lead.Code, DateTimeOffset.UtcNow,
                     "CRM", lead.Code, currentUserId));
             }
@@ -200,7 +200,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             opportunity.Update(opportunity.Title, opportunity.Value, opportunity.ExpectedCloseAtUtc, opportunity.Source,
                 null, OpportunityRiskLevel.Medium, "جلسه کشف نیاز", now.AddDays(2));
             data.Opportunities.Add(opportunity);
-            data.OpportunityStageHistory.Add(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
+            data.Append<Crm.Domain.Sales.OpportunityStageHistory>(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
                 opportunity.BranchId, opportunity.TerritoryId, opportunity.Id, null, opportunity.Stage,
                 opportunity.Probability, "تبدیل سرنخ", currentUserId, now));
             data.OpportunityActivities.Add(new OpportunityActivity(Guid.NewGuid(), opportunity.CompanyId,
@@ -209,9 +209,9 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 opportunity.NextAction, opportunity.NextActionAtUtc));
             var qualified = lead.Status;
             lead.Convert(customer.Id, opportunity.Id, now);
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, qualified, lead.Status, "تبدیل به مشتری و فرصت", currentUserId, now));
-            data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+            data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
                 CustomerTimelineType.LeadConverted, "سرنخ به فرصت تبدیل شد", opportunity.Code, now,
                 "CRM", lead.Code, currentUserId));
             return Map(opportunity);

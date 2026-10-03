@@ -80,6 +80,23 @@ public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
             return rows;
         }
 
+        public List<T> Find<T>(System.Linq.Expressions.Expression<Func<T, bool>> predicate) where T : class
+        {
+            var set = db.Set<T>();
+            if (!tracking) return set.AsNoTracking().Where(predicate).ToList();
+            var rows = set.Where(predicate).ToList();
+            // Rows appended earlier in this command are not in the database yet; include them so lookups stay consistent.
+            var matches = predicate.Compile();
+            rows.AddRange(set.Local.Where(x => db.Entry(x).State == EntityState.Added && matches(x) && !rows.Contains(x)));
+            return rows;
+        }
+
+        public void Append<T>(T entity) where T : class
+        {
+            if (!tracking) throw new InvalidOperationException("Append is only valid inside a write.");
+            db.Set<T>().Add(entity);
+        }
+
         public void ApplyPendingChanges(CrmDataSet data)
         {
             foreach (var apply in _pending) apply(data);

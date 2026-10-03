@@ -9,7 +9,8 @@ public sealed class IdentityApplicationService(
     ICrmDataStore store,
     IAccessSnapshotService access,
     IdentityRuntimeOptions options,
-    ILoginAttemptGuard? loginGuard = null) : IIdentityApplicationService
+    ILoginAttemptGuard? loginGuard = null,
+    ICrmQuerySource? querySource = null) : IIdentityApplicationService
 {
     private static readonly Dictionary<string, (string Label, IReadOnlySet<string> ScopeTypes)> Roles =
         new(StringComparer.OrdinalIgnoreCase)
@@ -22,19 +23,39 @@ public sealed class IdentityApplicationService(
         };
 
     public IReadOnlyList<UserDto> GetUsers() => store.Read(data =>
-        data.Users.OrderBy(x => x.DisplayName).Select(x => MapUser(data, x, DateTimeOffset.UtcNow)).ToList());
-
-    public UserDetailsDto? GetUser(Guid id) => store.Read(data =>
     {
-        var user = data.Users.SingleOrDefault(x => x.Id == id);
-        if (user is null) return null;
-        return new UserDetailsDto(
-            MapUser(data, user, DateTimeOffset.UtcNow),
-            data.UserRoleAssignments.Where(x => x.CrmUserId == id).OrderByDescending(x => x.ValidFromUtc).Select(MapRole).ToList(),
-            data.UserSessions.Where(x => x.CrmUserId == id).OrderByDescending(x => x.IssuedAtUtc).Select(MapSession).ToList(),
-            data.ExternalIdentities.Where(x => x.CrmUserId == id).OrderByDescending(x => x.LinkedAtUtc).Select(MapIdentity).ToList(),
-            data.SecurityAuditEvents.Where(x => x.TargetUserId == id || x.ActorUserId == id).OrderByDescending(x => x.OccurredAtUtc).Take(30).Select(MapAudit).ToList());
+        var now = DateTimeOffset.UtcNow;
+        var assignments = data.UserRoleAssignments.ToLookup(x => x.CrmUserId);
+        var identities = data.ExternalIdentities.Where(x => x.IsActive).Select(x => x.CrmUserId).ToHashSet();
+        // Only live sessions are needed for the count; the session table keeps every historical login.
+        var sessions = data.Find<UserSession>(x => x.RevokedAtUtc == null && x.AbsoluteExpiresAtUtc > now).ToLookup(x => x.CrmUserId);
+        return data.Users.OrderBy(x => x.DisplayName)
+            .Select(x => MapUser(x, now, assignments[x.Id], identities.Contains(x.Id), sessions[x.Id])).ToList();
     });
+
+    public UserDetailsDto? GetUser(Guid id) => GetUserAsync(id).GetAwaiter().GetResult();
+
+    public async Task<UserDetailsDto?> GetUserAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var details = store.Read(data =>
+        {
+            var user = data.Find<CrmUser>(x => x.Id == id).SingleOrDefault();
+            if (user is null) return null;
+            return new UserDetailsDto(
+                MapUser(data, user, DateTimeOffset.UtcNow),
+                data.Find<UserRoleAssignment>(x => x.CrmUserId == id).OrderByDescending(x => x.ValidFromUtc).Select(MapRole).ToList(),
+                data.Find<UserSession>(x => x.CrmUserId == id).OrderByDescending(x => x.IssuedAtUtc).Take(50).Select(MapSession).ToList(),
+                data.Find<ExternalIdentity>(x => x.CrmUserId == id).OrderByDescending(x => x.LinkedAtUtc).Select(MapIdentity).ToList(),
+                []);
+        });
+        if (details is null) return null;
+        // The audit log is the largest table; only the latest page is read, ordered and limited in the database.
+        var source = querySource ?? store as ICrmQuerySource;
+        var audit = source is null ? [] : await source.ToListAsync(source.Query<SecurityAuditEvent>()
+            .Where(x => x.TargetUserId == id || x.ActorUserId == id)
+            .OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.Id).Take(30), cancellationToken);
+        return details with { AuditEvents = audit.Select(MapAudit).ToList() };
+    }
 
     public UserDto CreatePendingUser(CreatePendingUserCommand command, Guid actorUserId, IdentityRequestContext context) => store.Write(data =>
     {
@@ -59,7 +80,7 @@ public sealed class IdentityApplicationService(
         EnsureCurrentVersion(user, expectedSecurityVersion);
         if (user.Id == actorUserId && status != UserStatus.Active)
             throw new InvalidOperationException("You cannot suspend your own active account.");
-        if (status == UserStatus.Active && !data.ExternalIdentities.Any(x => x.CrmUserId == id && x.IsActive))
+        if (status == UserStatus.Active && !data.Find<ExternalIdentity>(x => x.CrmUserId == id).Any(x => x.IsActive))
             throw new InvalidOperationException("User activation requires a linked external identity.");
         switch (status)
         {
@@ -69,7 +90,7 @@ public sealed class IdentityApplicationService(
             default: throw new InvalidOperationException("Unsupported status transition.");
         }
         if (status != UserStatus.Active)
-            foreach (var session in data.UserSessions.Where(x => x.CrmUserId == id && x.RevokedAtUtc is null))
+            foreach (var session in data.Find<UserSession>(x => x.CrmUserId == id && x.RevokedAtUtc == null))
                 session.Revoke(context.NowUtc, $"User status changed to {status}.");
         access.Invalidate(id);
         AddAudit(data, context, "UserStatusChanged", "Success", actorUserId, id, null, status.ToString());
@@ -116,7 +137,7 @@ public sealed class IdentityApplicationService(
 
     public void RevokeSession(Guid userId, Guid sessionId, Guid actorUserId, IdentityRequestContext context) => store.Write(data =>
     {
-        var session = data.UserSessions.Single(x => x.Id == sessionId && x.CrmUserId == userId);
+        var session = data.Find<UserSession>(x => x.Id == sessionId && x.CrmUserId == userId).Single();
         session.Revoke(context.NowUtc, "Revoked by administrator.");
         AddAudit(data, context, "SessionRevoked", "Success", actorUserId, userId, sessionId, "Administrator action.");
         return true;
@@ -124,7 +145,7 @@ public sealed class IdentityApplicationService(
 
     public int RevokeOtherSessions(Guid userId, Guid currentSessionId, IdentityRequestContext context) => store.Write(data =>
     {
-        var sessions = data.UserSessions.Where(x => x.CrmUserId == userId && x.Id != currentSessionId && x.RevokedAtUtc is null).ToList();
+        var sessions = data.Find<UserSession>(x => x.CrmUserId == userId && x.Id != currentSessionId && x.RevokedAtUtc == null);
         foreach (var session in sessions) session.Revoke(context.NowUtc, "Signed out from another session.");
         AddAudit(data, context, "OtherSessionsRevoked", "Success", userId, userId, currentSessionId, $"Count={sessions.Count}");
         return sessions.Count;
@@ -188,8 +209,8 @@ public sealed class IdentityApplicationService(
 
     public SessionValidationResult ValidateSession(Guid sessionId, Guid userId, long securityVersion, IdentityRequestContext context) => store.Write(data =>
     {
-        var user = data.Users.SingleOrDefault(x => x.Id == userId);
-        var session = data.UserSessions.SingleOrDefault(x => x.Id == sessionId && x.CrmUserId == userId);
+        var user = data.Find<CrmUser>(x => x.Id == userId).SingleOrDefault();
+        var session = data.Find<UserSession>(x => x.Id == sessionId && x.CrmUserId == userId).SingleOrDefault();
         if (user is null || !user.IsActiveAt(context.NowUtc))
         {
             AddAudit(data, context, "SessionValidation", "Failure", userId, userId, sessionId, "UserInactive");
@@ -223,13 +244,14 @@ public sealed class IdentityApplicationService(
 
     private SignInResult CreateSession(CrmDataSet data, CrmUser user, IdentityRequestContext context, string provider)
     {
-        var effectiveAssignments = data.UserRoleAssignments
-            .Where(x => x.CrmUserId == user.Id && x.IsEffective(context.NowUtc) &&
+        var effectiveAssignments = data.Find<UserRoleAssignment>(x => x.CrmUserId == user.Id)
+            .Where(x => x.IsEffective(context.NowUtc) &&
                 !x.RoleKey.Equals("CompanyMember", StringComparison.OrdinalIgnoreCase)).ToList();
         var companyIds = effectiveAssignments.Select(x => x.CompanyId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (companyIds.Count == 0)
             return FailedInside(data, SignInFailureReason.UserInactive, "دامنه عملیاتی فعال برای کاربر تعریف نشده است.", context, user.Id, "Missing operational company scope.");
-        var active = data.UserSessions.Where(x => x.CrmUserId == user.Id && x.IsValid(context.NowUtc, user.SecurityVersion))
+        var active = data.Find<UserSession>(x => x.CrmUserId == user.Id && x.RevokedAtUtc == null)
+            .Where(x => x.IsValid(context.NowUtc, user.SecurityVersion))
             .OrderBy(x => x.LastSeenAtUtc).ToList();
         while (active.Count >= options.MaxConcurrentSessions)
         {
@@ -250,7 +272,7 @@ public sealed class IdentityApplicationService(
             session.SelectOrganizationContext(companyId, !hasCompanyWide && branches.Count == 1 ? branches[0] : null,
                 !hasCompanyWide && territories.Count == 1 ? territories[0] : null);
         }
-        data.UserSessions.Add(session);
+        data.Append(session);
         user.RecordSuccessfulLogin(context.NowUtc);
         AddAudit(data, context, "SignIn", "Success", user.Id, user.Id, session.Id, provider);
         return new SignInResult(true, SignInFailureReason.None, "ورود موفق بود.", MapUser(data, user, context.NowUtc),
@@ -282,21 +304,27 @@ public sealed class IdentityApplicationService(
 
     private static void RevokeSessions(CrmDataSet data, Guid userId, DateTimeOffset nowUtc, string reason)
     {
-        foreach (var session in data.UserSessions.Where(x => x.CrmUserId == userId && x.RevokedAtUtc is null)) session.Revoke(nowUtc, reason);
+        foreach (var session in data.Find<UserSession>(x => x.CrmUserId == userId && x.RevokedAtUtc == null)) session.Revoke(nowUtc, reason);
     }
 
     private static void AddAudit(CrmDataSet data, IdentityRequestContext context, string eventType, string outcome,
-        Guid? actorId, Guid? targetId, Guid? sessionId, string reason) => data.SecurityAuditEvents.Add(
+        Guid? actorId, Guid? targetId, Guid? sessionId, string reason) => data.Append(
         new SecurityAuditEvent(Guid.NewGuid(), context.NowUtc, eventType, outcome, actorId, targetId, sessionId,
             context.CorrelationId, reason, context.IpHash, context.UserAgentSummary));
 
-    private static UserDto MapUser(CrmDataSet data, CrmUser user, DateTimeOffset nowUtc)
+    private static UserDto MapUser(CrmDataSet data, CrmUser user, DateTimeOffset nowUtc) => MapUser(user, nowUtc,
+        data.Find<UserRoleAssignment>(x => x.CrmUserId == user.Id),
+        data.Find<ExternalIdentity>(x => x.CrmUserId == user.Id).Any(x => x.IsActive),
+        data.Find<UserSession>(x => x.CrmUserId == user.Id && x.RevokedAtUtc == null));
+
+    private static UserDto MapUser(CrmUser user, DateTimeOffset nowUtc, IEnumerable<UserRoleAssignment> userAssignments,
+        bool hasActiveIdentity, IEnumerable<UserSession> unrevokedSessions)
     {
-        var assignments = data.UserRoleAssignments.Where(x => x.CrmUserId == user.Id && x.IsEffective(nowUtc)).ToList();
+        var assignments = userAssignments.Where(x => x.IsEffective(nowUtc)).ToList();
         return new UserDto(user.Id, user.DisplayName, user.UserName, user.NormalizedEmail, user.EmployeeNumber,
             assignments.Select(x => x.RoleLabel).Distinct().ToList(), assignments.Select(x => x.ScopeLabel).Distinct().ToList(),
-            user.Status, user.SecurityVersion, data.ExternalIdentities.Any(x => x.CrmUserId == user.Id && x.IsActive),
-            data.UserSessions.Count(x => x.CrmUserId == user.Id && x.IsValid(nowUtc, user.SecurityVersion)), user.LastLoginAtUtc);
+            user.Status, user.SecurityVersion, hasActiveIdentity,
+            unrevokedSessions.Count(x => x.IsValid(nowUtc, user.SecurityVersion)), user.LastLoginAtUtc);
     }
 
     private static UserSessionDto MapSession(UserSession x) => new(x.Id, x.IssuedAtUtc, x.LastSeenAtUtc, x.IdleExpiresAtUtc,

@@ -95,9 +95,9 @@ public sealed class AccountController(IIdentityApplicationService identity, ICon
     public IActionResult SignedOut() => View();
 
     [HttpGet("/account/security")]
-    public IActionResult Security()
+    public async Task<IActionResult> Security(CancellationToken cancellationToken)
     {
-        var model = identity.GetUser(User.CrmUserId());
+        var model = await identity.GetUserAsync(User.CrmUserId(), cancellationToken);
         return model is null ? NotFound() : View(model);
     }
 

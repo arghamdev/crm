@@ -99,7 +99,7 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
             var item = data.ServiceCases.SingleOrDefault(x => x.Id == id && CanSee(snapshot, currentUserId, organization, x));
             if (item is null) return null;
             var customers = CustomerNames(data, organization.CompanyId);
-            var history = data.ServiceCaseHistory.Where(x => x.CaseId == item.Id).OrderByDescending(x => x.OccurredAtUtc)
+            var history = data.Find<Crm.Domain.Service.ServiceCaseHistory>(x => x.CaseId == item.Id).OrderByDescending(x => x.OccurredAtUtc)
                 .Select(x => new ServiceCaseHistoryDto(x.Id, x.FromStatus, x.ToStatus, x.Action, x.Note,
                     ActorName(data, x.ActorUserId), x.OccurredAtUtc)).ToList();
             var canTriage = HasPermission(snapshot, organization.CompanyId, "Service.Triage");
@@ -143,7 +143,7 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
                 command.Channel, command.Priority, currentUserId, nowUtc);
             data.ServiceCases.Add(item);
             History(data, item, null, "ثبت پرونده", $"کانال {command.Channel}، اولویت {command.Priority}", currentUserId, nowUtc);
-            data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+            data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
                 CustomerTimelineType.ServiceCase, $"ثبت پرونده خدمات {item.Code}", item.Subject, nowUtc, "Service",
                 item.Code, currentUserId));
             return Map(item, CustomerNames(data, organization.CompanyId), nowUtc);
@@ -197,7 +197,7 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
                     label = "حل پرونده";
                     item.Resolve(command.RootCause ?? string.Empty, command.CorrectiveAction ?? string.Empty,
                         command.Resolution ?? string.Empty, nowUtc);
-                    data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), item.CompanyId, item.CustomerId,
+                    data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), item.CompanyId, item.CustomerId,
                         CustomerTimelineType.ServiceCase, $"حل پرونده خدمات {item.Code}", item.Resolution ?? string.Empty,
                         nowUtc, "Service", item.Code, currentUserId));
                     break;
@@ -282,7 +282,7 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
          item.OwnerUserId == userId || item.CreatedByUserId == userId);
 
     private static void History(CrmDataSet data, ServiceCase item, ServiceCaseStatus? from, string action, string note, Guid? actor, DateTimeOffset nowUtc) =>
-        data.ServiceCaseHistory.Add(new ServiceCaseHistory(Guid.NewGuid(), item.Id, item.CompanyId, item.BranchId, item.TerritoryId,
+        data.Append<Crm.Domain.Service.ServiceCaseHistory>(new ServiceCaseHistory(Guid.NewGuid(), item.Id, item.CompanyId, item.BranchId, item.TerritoryId,
             from, item.Status, action, note, actor, nowUtc));
 
     private static string NextCode(CrmDataSet data, DateTimeOffset nowUtc) =>

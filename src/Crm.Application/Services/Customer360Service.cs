@@ -22,9 +22,9 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
                 data.CustomerContacts.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.IsPrimary).ThenBy(x => x.FullName).Select(x => Map(x, snapshot)).ToList(),
                 data.CustomerAddresses.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.IsPrimary).ThenBy(x => x.Title).Select(Map).ToList(),
                 includeRelatedActivity
-                    ? data.CustomerTimelineEvents.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.OccurredAtUtc).Take(50).Select(Map).ToList()
+                    ? data.Find<Crm.Domain.Customers.CustomerTimelineEvent>(x => x.CustomerId == customer.Id).Where(x => Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.OccurredAtUtc).Take(50).Select(Map).ToList()
                     : [],
-                data.CustomerOwnershipHistory.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.ValidFromUtc).Select(Map).ToList(),
+                data.Find<Crm.Domain.Customers.CustomerOwnershipHistory>(x => x.CustomerId == customer.Id).Where(x => Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.ValidFromUtc).Select(Map).ToList(),
                 includeRelatedActivity ? data.Leads.Where(x => x.CustomerId == customer.Id &&
                     InContext(snapshot, organization, "Lead.Read", x) && CanManageSalesRecord(data, snapshot, currentUserId,
                         organization.CompanyId, x.OwnerUserId, x.Owner)).Select(x => MapLead(x, snapshot)).ToList() : [],
@@ -123,9 +123,9 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             {
                 if (string.IsNullOrWhiteSpace(command.OwnershipChangeReason))
                     throw new InvalidOperationException("دلیل تغییر مالکیت/دامنه الزامی است.");
-                var current = data.CustomerOwnershipHistory.SingleOrDefault(x => x.CustomerId == customer.Id && x.ValidToUtc is null);
+                var current = data.Find<Crm.Domain.Customers.CustomerOwnershipHistory>(x => x.CustomerId == customer.Id && x.ValidToUtc == null).SingleOrDefault();
                 current?.Close(nowUtc);
-                data.CustomerOwnershipHistory.Add(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId, customer.Id,
+                data.Append<Crm.Domain.Customers.CustomerOwnershipHistory>(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId, customer.Id,
                     scope.BranchId, scope.TerritoryId, owner, nowUtc, command.OwnershipChangeReason, currentUserId));
             }
             customer.UpdateMasterData(command.Name, command.City, owner, scope.BranchId, scope.BranchName,
@@ -405,7 +405,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
     }
 
     private static void AddTimeline(CrmDataSet data, Customer customer, CustomerTimelineType type, string title,
-        string description, DateTimeOffset nowUtc, Guid actorUserId) => data.CustomerTimelineEvents.Add(
+        string description, DateTimeOffset nowUtc, Guid actorUserId) => data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(
         new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id, type, title, description,
             nowUtc, "CRM", null, actorUserId));
 

@@ -15,6 +15,12 @@ namespace Crm.Application.Abstractions;
 public interface ICrmDataSetSource
 {
     List<T> Load<T>() where T : class;
+
+    /// <summary>Loads only the rows matching <paramref name="predicate"/> (tracked in a write) without loading the table.</summary>
+    List<T> Find<T>(System.Linq.Expressions.Expression<Func<T, bool>> predicate) where T : class;
+
+    /// <summary>Schedules an insert without loading the table (append-only logs and child records).</summary>
+    void Append<T>(T entity) where T : class;
 }
 
 public sealed class CrmDataSet
@@ -35,6 +41,26 @@ public sealed class CrmDataSet
     public IReadOnlyCollection<Type> LoadedTypes => _sets.Keys;
 
     public bool IsLoaded<T>() => _sets.ContainsKey(typeof(T));
+
+    /// <summary>
+    /// Returns the rows matching <paramref name="predicate"/>. For a persistent store this queries only those rows
+    /// instead of loading the table, so use it for point lookups and per-parent children (sessions, history, audit).
+    /// The predicate must be translatable (property comparisons only); apply domain methods to the result.
+    /// </summary>
+    public List<T> Find<T>(System.Linq.Expressions.Expression<Func<T, bool>> predicate) where T : class =>
+        _source is null || _sets.ContainsKey(typeof(T))
+            ? Set<T>().Where(predicate.Compile()).ToList()
+            : _source.Find(predicate);
+
+    /// <summary>
+    /// Adds a new row without loading its table. If the table was already loaded in this unit of work the row is
+    /// added to that list as well, so later enumeration in the same command sees it.
+    /// </summary>
+    public void Append<T>(T entity) where T : class
+    {
+        if (_source is null || _sets.ContainsKey(typeof(T))) Set<T>().Add(entity);
+        else _source.Append(entity);
+    }
 
     /// <summary>Typed access to a table's list, used by generic infrastructure such as the in-memory query source.</summary>
     public List<T> Table<T>() where T : class => Set<T>();

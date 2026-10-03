@@ -227,7 +227,7 @@ public sealed class QuoteApplicationService(
         return new QuoteDetailsDto(Map(quote),
             data.QuoteLines.Where(x => x.QuoteId == quote.Id).OrderBy(x => x.ProductCode).Select(Map).ToArray(),
             decisions.Select(x => Map(data, x)).ToArray(),
-            data.QuoteStatusHistory.Where(x => x.QuoteId == quote.Id).OrderByDescending(x => x.ChangedAtUtc).Select(x => Map(data, x)).ToArray(),
+            data.Find<Crm.Domain.Commercial.QuoteStatusHistory>(x => x.QuoteId == quote.Id).OrderByDescending(x => x.ChangedAtUtc).Select(x => Map(data, x)).ToArray(),
             pending, canManage && quote.Status == QuoteStatus.Draft && HasPermission(snapshot, quote.CompanyId, "Quote.Update"),
             canManage && quote.Status == QuoteStatus.Draft && HasPermission(snapshot, quote.CompanyId, "Quote.Submit"),
             quote.Status == QuoteStatus.PendingApproval && pending.Any(x => CanApprove(snapshot, quote.CompanyId, x)),
@@ -281,7 +281,7 @@ public sealed class QuoteApplicationService(
     }
 
     private static void AddHistory(CrmDataSet data, Quote quote, QuoteStatus? from, QuoteStatus to,
-        string reason, Guid userId, DateTimeOffset nowUtc) => data.QuoteStatusHistory.Add(new QuoteStatusHistory(
+        string reason, Guid userId, DateTimeOffset nowUtc) => data.Append<Crm.Domain.Commercial.QuoteStatusHistory>(new QuoteStatusHistory(
             Guid.NewGuid(), quote.CompanyId, quote.BranchId, quote.TerritoryId, quote.Id, from, to,
             string.IsNullOrWhiteSpace(reason) ? "تغییر وضعیت" : reason, userId, nowUtc));
 

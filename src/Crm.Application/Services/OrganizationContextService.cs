@@ -15,7 +15,7 @@ public sealed class OrganizationContextService(
         if (snapshot is null) return [];
         return store.Read(data =>
         {
-            var selected = data.UserSessions.SingleOrDefault(x => x.Id == sessionId && x.CrmUserId == userId)?.SelectedCompanyId;
+            var selected = data.Find<UserSession>(x => x.Id == sessionId && x.CrmUserId == userId).SingleOrDefault()?.SelectedCompanyId;
             var permitted = snapshot.CompanyPermissionSets.Where(x => x.Permissions.Count > 0)
                 .Select(x => x.CompanyId).ToHashSet(StringComparer.OrdinalIgnoreCase);
             return data.Companies
@@ -41,7 +41,7 @@ public sealed class OrganizationContextService(
         return store.Read(data =>
         {
             var preview = Optional(companyId) ??
-                data.UserSessions.SingleOrDefault(x => x.Id == sessionId && x.CrmUserId == userId)?.SelectedCompanyId ??
+                data.Find<UserSession>(x => x.Id == sessionId && x.CrmUserId == userId).SingleOrDefault()?.SelectedCompanyId ??
                 data.Companies.Where(x => x.Status == OrganizationStatus.Active && snapshot.PermissionsFor(x.CompanyId).Count > 0)
                     .OrderBy(x => x.Name).Select(x => x.CompanyId).FirstOrDefault();
             return BuildContext(data, snapshot, userId, sessionId, preview);
@@ -59,7 +59,7 @@ public sealed class OrganizationContextService(
             return new OrganizationContextSelectionResult(false, "دسترسی فعال برای انتخاب محیط کاری پیدا نشد.", null);
         return store.Write(data =>
         {
-        var session = data.UserSessions.SingleOrDefault(x => x.Id == sessionId && x.CrmUserId == userId);
+        var session = data.Find<UserSession>(x => x.Id == sessionId && x.CrmUserId == userId).SingleOrDefault();
         if (session is null || session.RevokedAtUtc is not null)
             return new OrganizationContextSelectionResult(false, "نشست معتبر برای انتخاب محیط کاری پیدا نشد.", null);
 
@@ -93,7 +93,7 @@ public sealed class OrganizationContextService(
 
         var previous = $"{session.SelectedCompanyId ?? "-"}/{session.SelectedBranchId ?? "*"}/{session.SelectedTerritoryId ?? "*"}";
         session.SelectOrganizationContext(company.CompanyId, branchId, territoryId);
-        data.SecurityAuditEvents.Add(new SecurityAuditEvent(Guid.NewGuid(), requestContext.NowUtc,
+        data.Append<Crm.Domain.Identity.SecurityAuditEvent>(new SecurityAuditEvent(Guid.NewGuid(), requestContext.NowUtc,
             "UserContext.CompanyChanged", "Success", userId, userId, sessionId, requestContext.CorrelationId,
             $"{previous}->{company.CompanyId}/{branchId ?? "*"}/{territoryId ?? "*"}",
             requestContext.IpHash, requestContext.UserAgentSummary));
@@ -102,7 +102,7 @@ public sealed class OrganizationContextService(
 
         OrganizationContextSelectionResult Failed(string message)
         {
-            data.SecurityAuditEvents.Add(new SecurityAuditEvent(Guid.NewGuid(), requestContext.NowUtc,
+            data.Append<Crm.Domain.Identity.SecurityAuditEvent>(new SecurityAuditEvent(Guid.NewGuid(), requestContext.NowUtc,
                 "UserContext.CompanyChanged", "Failure", userId, userId, sessionId, requestContext.CorrelationId,
                 message, requestContext.IpHash, requestContext.UserAgentSummary));
             return new OrganizationContextSelectionResult(false, message, BuildContext(data, snapshot, userId, sessionId));
@@ -117,7 +117,7 @@ public sealed class OrganizationContextService(
         Guid sessionId,
         string? previewCompanyId = null)
     {
-        var session = data.UserSessions.SingleOrDefault(x => x.Id == sessionId && x.CrmUserId == userId);
+        var session = data.Find<UserSession>(x => x.Id == sessionId && x.CrmUserId == userId).SingleOrDefault();
         var selectedCompanyId = previewCompanyId ?? session?.SelectedCompanyId;
         var permittedCompanyIds = snapshot.CompanyPermissionSets.Where(x => x.Permissions.Count > 0)
             .Select(x => x.CompanyId).ToHashSet(StringComparer.OrdinalIgnoreCase);

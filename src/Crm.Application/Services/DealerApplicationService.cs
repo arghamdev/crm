@@ -484,7 +484,7 @@ public sealed class DealerApplicationService(
                     x.IsActive, canReadFinancial ? customer.Balance : null, x.EndedByUserId,
                     x.EndedByUserId.HasValue ? UserName(data, x.EndedByUserId.Value) : null, x.EndReason, x.Version);
             }).ToArray();
-        var history = data.DealerStatusHistory.Where(x => x.DealerId == dealer.Id).OrderByDescending(x => x.ChangedAtUtc)
+        var history = data.Find<Crm.Domain.Channel.DealerStatusHistory>(x => x.DealerId == dealer.Id).OrderByDescending(x => x.ChangedAtUtc)
             .Select(x => new DealerStatusHistoryDto(x.Id, x.FromStatus, x.ToStatus, x.Reason,
                 x.ChangedByUserId, UserName(data, x.ChangedByUserId), x.ChangedAtUtc)).ToArray();
         var financial = canReadFinancial ? LatestFinancial(data, dealer, nowUtc) : null;
@@ -617,7 +617,7 @@ public sealed class DealerApplicationService(
         snapshot.PermissionsFor(companyId).Contains(permission);
 
     private static void AddHistory(CrmDataSet data, Dealer dealer, DealerStatus? from, DealerStatus to,
-        string reason, Guid actorUserId, DateTimeOffset nowUtc) => data.DealerStatusHistory.Add(
+        string reason, Guid actorUserId, DateTimeOffset nowUtc) => data.Append<Crm.Domain.Channel.DealerStatusHistory>(
             new DealerStatusHistory(Guid.NewGuid(), dealer.CompanyId, dealer.BranchId, dealer.TerritoryId,
                 dealer.Id, from, to, reason, actorUserId, nowUtc));
 

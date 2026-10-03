@@ -25,7 +25,7 @@ public sealed class OrganizationAdminService(
                 data.Territories.Where(x => Same(x.CompanyId, companyId)).OrderBy(x => x.Dimension).ThenBy(x => x.Name)
                     .Select(x => new TerritoryDto(x.Id, x.TerritoryId, x.Code, x.Name, x.Dimension, x.ValidFromUtc,
                         x.ValidToUtc, x.Status, x.IsEffective(nowUtc), x.Version)).ToList(),
-                data.OrganizationChanges.Where(x => Same(x.CompanyId, companyId)).OrderByDescending(x => x.OccurredAtUtc).Take(40)
+                data.Find<Crm.Domain.Organization.OrganizationChange>(x => x.CompanyId == companyId).OrderByDescending(x => x.OccurredAtUtc).Take(40)
                     .Select(x => new OrganizationChangeDto(x.Id, x.EntityType, x.EntityBusinessId, x.Action,
                         x.Summary, x.ActorUserId, x.OccurredAtUtc, x.CorrelationId, x.BeforeValue, x.AfterValue)).ToList());
         });
@@ -278,7 +278,7 @@ public sealed class OrganizationAdminService(
 
     private static void AddChange(CrmDataSet data, string companyId, string entityType, string businessId,
         string action, string summary, Guid actorUserId, IdentityRequestContext context, string before, string after) =>
-        data.OrganizationChanges.Add(new OrganizationChange(Guid.NewGuid(), companyId, entityType, businessId,
+        data.Append<Crm.Domain.Organization.OrganizationChange>(new OrganizationChange(Guid.NewGuid(), companyId, entityType, businessId,
             action, summary, actorUserId, context.NowUtc, context.CorrelationId, before, after));
 
     private static OrganizationCompanyDto MapCompany(Company x) =>

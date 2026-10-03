@@ -90,7 +90,7 @@ public sealed class RoleAdministrationService(ICrmDataStore store, IAccessSnapsh
 
             var users = data.UserRoleAssignments.Where(x => Same(x.RoleKey, role.RoleKey) && x.IsEffective(context.NowUtc))
                 .Select(x => x.CrmUserId).Distinct().ToList();
-            data.SecurityAuditEvents.Add(new SecurityAuditEvent(Guid.NewGuid(), context.NowUtc, "RolePermissionsChanged", "Success",
+            data.Append<Crm.Domain.Identity.SecurityAuditEvent>(new SecurityAuditEvent(Guid.NewGuid(), context.NowUtc, "RolePermissionsChanged", "Success",
                 actorUserId, null, null, context.CorrelationId,
                 Truncate($"{role.RoleKey}: +[{string.Join(",", added)}] -[{string.Join(",", removed.Select(x => x.Permission))}]; {command.Reason!.Trim()}", 1000),
                 context.IpHash, context.UserAgentSummary));

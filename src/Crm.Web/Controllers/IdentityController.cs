@@ -49,9 +49,9 @@ public sealed class IdentityController(
     }
 
     [HttpGet("/identity/users/{id:guid}")]
-    public IActionResult Details(Guid id)
+    public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {
-        var model = identity.GetUser(id);
+        var model = await identity.GetUserAsync(id, cancellationToken);
         ViewBag.Organization = organization.GetCurrent(User.CrmUserId(), User.CrmSessionId());
         return model is null ? NotFound() : View(model);
     }

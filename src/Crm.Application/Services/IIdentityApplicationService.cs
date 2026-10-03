@@ -7,6 +7,7 @@ public interface IIdentityApplicationService
 {
     IReadOnlyList<UserDto> GetUsers();
     UserDetailsDto? GetUser(Guid id);
+    Task<UserDetailsDto?> GetUserAsync(Guid id, CancellationToken cancellationToken = default);
     UserDto CreatePendingUser(CreatePendingUserCommand command, Guid actorUserId, IdentityRequestContext context);
     UserDto ChangeStatus(Guid id, UserStatus status, long expectedSecurityVersion, Guid actorUserId, IdentityRequestContext context);
     RoleAssignmentDto AssignRole(Guid id, AssignRoleCommand command, Guid actorUserId, IdentityRequestContext context);

@@ -84,7 +84,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             if (lead is null) return null;
             var canManage = CanManageRecord(data, snapshot, currentUserId, organization.CompanyId, lead.OwnerUserId, lead.Owner);
             var isOpen = !ClosedLeadStatuses.Contains(lead.Status);
-            return new LeadDetailsDto(Map(lead, now, snapshot), data.LeadStatusHistory.Where(x => x.LeadId == lead.Id)
+            return new LeadDetailsDto(Map(lead, now, snapshot), data.Find<Crm.Domain.Sales.LeadStatusHistory>(x => x.LeadId == lead.Id)
                 .OrderByDescending(x => x.ChangedAtUtc).Select(x => Map(data, x)).ToList(),
                 EligibleOwners(data, organization.CompanyId, lead.BranchId, now),
                 isOpen && canManage && HasPermission(snapshot, organization.CompanyId, "Lead.Assign"),
@@ -124,11 +124,11 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
                 phone: command.Phone, email: command.Email, firstContactDueAtUtc: nowUtc.AddHours(4));
             lead.ApplyScore(ScoreLead(command));
             data.Leads.Add(lead);
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, null, LeadStatus.New, "ثبت سرنخ", currentUserId, nowUtc));
             var from = lead.Status;
             lead.Assign(owner.UserId, owner.DisplayName, nowUtc, nowUtc.AddHours(4), "تخصیص اولیه");
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, "تخصیص اولیه", currentUserId, nowUtc));
             return Map(lead, nowUtc, snapshot);
         });
@@ -145,7 +145,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             var owner = RequiredOwner(data, organization.CompanyId, lead.BranchId, command.OwnerUserId, nowUtc);
             var from = lead.Status;
             lead.Assign(owner.UserId, owner.DisplayName, nowUtc, command.FirstContactDueAtUtc, command.Reason);
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, command.Reason, currentUserId, nowUtc));
             return Map(lead, nowUtc, snapshot);
         });
@@ -181,7 +181,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
                 default:
                     throw new InvalidOperationException("انتقال وضعیت انتخاب‌شده از این فرم مجاز نیست.");
             }
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, command.Reason, currentUserId, nowUtc));
             return Map(lead, nowUtc, snapshot);
         });
@@ -205,7 +205,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             opportunity.Update(command.OpportunityTitle, command.Value, command.ExpectedCloseAtUtc, lead.Source,
                 null, OpportunityRiskLevel.Medium, "جلسه کشف نیاز", nowUtc.AddDays(2));
             data.Opportunities.Add(opportunity);
-            data.OpportunityStageHistory.Add(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
+            data.Append<Crm.Domain.Sales.OpportunityStageHistory>(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
                 opportunity.BranchId, opportunity.TerritoryId, opportunity.Id, null, opportunity.Stage,
                 opportunity.Probability, "تبدیل سرنخ", currentUserId, nowUtc));
             data.OpportunityActivities.Add(new OpportunityActivity(Guid.NewGuid(), opportunity.CompanyId,
@@ -214,9 +214,9 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
                 opportunity.NextAction, opportunity.NextActionAtUtc));
             var from = lead.Status;
             lead.Convert(customer.Id, opportunity.Id, nowUtc);
-            data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, "تبدیل به مشتری و فرصت", currentUserId, nowUtc));
-            data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+            data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
                 CustomerTimelineType.LeadConverted, "سرنخ به فرصت تبدیل شد", opportunity.Code,
                 nowUtc, "CRM", lead.Code, currentUserId));
             return Map(opportunity);
@@ -260,7 +260,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             if (opportunity is null) return null;
             var canManage = CanManageRecord(data, snapshot, currentUserId, organization.CompanyId, opportunity.OwnerUserId, opportunity.Owner);
             var isOpen = opportunity.Stage is not (OpportunityStage.Won or OpportunityStage.Lost);
-            return new OpportunityDetailsDto(Map(opportunity), data.OpportunityStageHistory.Where(x => x.OpportunityId == id)
+            return new OpportunityDetailsDto(Map(opportunity), data.Find<Crm.Domain.Sales.OpportunityStageHistory>(x => x.OpportunityId == id)
                 .OrderByDescending(x => x.ChangedAtUtc).Select(x => Map(data, x)).ToList(),
                 data.OpportunityActivities.Where(x => x.OpportunityId == id).OrderByDescending(x => x.OccurredAtUtc)
                     .Select(x => Map(data, x)).ToList(), EligibleOwners(data, organization.CompanyId, opportunity.BranchId, DateTimeOffset.UtcNow),
@@ -289,7 +289,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             opportunity.Update(command.Title, command.Value, command.ExpectedCloseAtUtc, command.Source,
                 command.Competitor, command.RiskLevel, command.NextAction, command.NextActionAtUtc);
             data.Opportunities.Add(opportunity);
-            data.OpportunityStageHistory.Add(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
+            data.Append<Crm.Domain.Sales.OpportunityStageHistory>(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
                 opportunity.BranchId, opportunity.TerritoryId, opportunity.Id, null, opportunity.Stage,
                 opportunity.Probability, "ایجاد فرصت", currentUserId, nowUtc));
             return Map(opportunity);
@@ -342,10 +342,10 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
                 throw new InvalidOperationException("ثبت Won فقط پس از پذیرش یک پیشنهاد معتبر مرتبط مجاز است.");
             var from = opportunity.Stage;
             opportunity.MoveTo(command.TargetStage, command.Reason, nowUtc);
-            data.OpportunityStageHistory.Add(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
+            data.Append<Crm.Domain.Sales.OpportunityStageHistory>(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
                 opportunity.BranchId, opportunity.TerritoryId, opportunity.Id, from, opportunity.Stage,
                 opportunity.Probability, command.Reason, currentUserId, nowUtc));
-            data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), opportunity.CompanyId,
+            data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), opportunity.CompanyId,
                 opportunity.CustomerId, CustomerTimelineType.OpportunityChanged, "مرحله فرصت تغییر کرد",
                 $"{from} → {opportunity.Stage}: {command.Reason}", nowUtc, "CRM", opportunity.Code, currentUserId));
             return Map(opportunity);
@@ -391,9 +391,9 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             lead.Owner, lead.CompanyId, lead.BranchId, branch.Name, lead.TerritoryId, "تبدیل سرنخ", 0,
             primaryPhone: lead.Phone, primaryEmail: lead.Email, dataSource: "Lead Conversion");
         data.Customers.Add(customer);
-        data.CustomerOwnershipHistory.Add(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId, customer.Id,
+        data.Append<Crm.Domain.Customers.CustomerOwnershipHistory>(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId, customer.Id,
             customer.BranchId, customer.TerritoryId, customer.Owner, nowUtc, "تبدیل سرنخ", actorUserId));
-        data.CustomerTimelineEvents.Add(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+        data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
             CustomerTimelineType.Created, "مشتری از سرنخ ساخته شد", lead.Code, nowUtc, "CRM", lead.Code, actorUserId));
         if (!string.IsNullOrWhiteSpace(lead.Contact) || !string.IsNullOrWhiteSpace(lead.Phone) || !string.IsNullOrWhiteSpace(lead.Email))
             data.CustomerContacts.Add(new CustomerContact(Guid.NewGuid(), customer.CompanyId, customer.Id,

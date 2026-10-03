@@ -186,7 +186,7 @@ public sealed class OrderApplicationService(
                 message.CorrelationId, order.CustomerId, order.NetAmount, order.CurrencyCode,
                 command.SimulatedOutcome), nowUtc);
             order.ApplySubmissionResult(result.Outcome, result.ExternalReference, result.Detail, nowUtc);
-            data.OrderIntegrationAttempts.Add(new OrderIntegrationAttempt(Guid.NewGuid(), order.CompanyId,
+            data.Append<Crm.Domain.Commercial.OrderIntegrationAttempt>(new OrderIntegrationAttempt(Guid.NewGuid(), order.CompanyId,
                 order.BranchId, order.TerritoryId, message.Id, order.Id, attemptNumber, result.Outcome,
                 result.Detail, result.ExternalReference, nowUtc));
             switch (result.Outcome)
@@ -251,9 +251,9 @@ public sealed class OrderApplicationService(
             order.InvoiceNumber, order.PaymentReference, integration is null ? null : Map(integration),
             data.OrderCreditDecisions.Where(x => x.OrderRequestId == order.Id).OrderByDescending(x => x.DecidedAtUtc)
                 .Select(x => Map(data, x)).ToArray(),
-            data.OrderStatusHistory.Where(x => x.OrderRequestId == order.Id).OrderByDescending(x => x.ChangedAtUtc)
+            data.Find<Crm.Domain.Commercial.OrderStatusHistory>(x => x.OrderRequestId == order.Id).OrderByDescending(x => x.ChangedAtUtc)
                 .Select(x => Map(data, x)).ToArray(),
-            data.OrderIntegrationAttempts.Where(x => x.OrderRequestId == order.Id).OrderByDescending(x => x.AttemptNumber)
+            data.Find<Crm.Domain.Commercial.OrderIntegrationAttempt>(x => x.OrderRequestId == order.Id).OrderByDescending(x => x.AttemptNumber)
                 .Select(Map).ToArray(),
             canManage && order.Status is OrderRequestStatus.Draft or OrderRequestStatus.CreditHold &&
                 HasPermission(snapshot, order.CompanyId, "Order.CreditCheck"),
@@ -277,7 +277,7 @@ public sealed class OrderApplicationService(
 
     private static void AddHistory(CrmDataSet data, OrderRequest order, OrderRequestStatus? from,
         OrderRequestStatus to, string reason, string source, Guid userId, DateTimeOffset nowUtc) =>
-        data.OrderStatusHistory.Add(new OrderStatusHistory(Guid.NewGuid(), order.CompanyId, order.BranchId,
+        data.Append<Crm.Domain.Commercial.OrderStatusHistory>(new OrderStatusHistory(Guid.NewGuid(), order.CompanyId, order.BranchId,
             order.TerritoryId, order.Id, from, to, string.IsNullOrWhiteSpace(reason) ? "تغییر وضعیت" : reason,
             source, userId, nowUtc));
 

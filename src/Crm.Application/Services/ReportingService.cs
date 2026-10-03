@@ -269,7 +269,7 @@ public sealed class ReportingService(ICrmDataStore store, IAccessSnapshotService
     private static void Audit(CrmDataSet data, Guid actor, OrganizationSelection org, ReportingDashboard report,
         DateTimeOffset now, string correlation, string format, string metric, int count)
     {
-        data.SecurityAuditEvents.Add(new SecurityAuditEvent(Guid.NewGuid(), now, "Reporting.Export", "Succeeded", actor, null, null,
+        data.Append<Crm.Domain.Identity.SecurityAuditEvent>(new SecurityAuditEvent(Guid.NewGuid(), now, "Reporting.Export", "Succeeded", actor, null, null,
             correlation, $"Company={org.CompanyId};SessionBranch={org.BranchId};SessionTerritory={org.TerritoryId};From={report.Filter.From:yyyy-MM-dd};To={report.Filter.To:yyyy-MM-dd};Region={report.Filter.RegionId};Branch={report.Filter.BranchId};Territory={report.Filter.TerritoryId};Format={format};Metric={metric};Rows={count};Schema={SchemaVersion}", "", ""));
     }
 }

@@ -48,7 +48,7 @@ public sealed class SelfServiceService(ICrmDataStore store, IAccessSnapshotServi
     private static string Hash(object value) => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value)));
     private static string LeadKey(string subject) => Hash(string.Join(" ",subject.Normalize(NormalizationForm.FormKC).Replace('ي','ی').Replace('ك','ک').Split((char[]?)null,StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant());
     private static void Version(long actual, long expected) { if (actual != expected) throw new SelfServiceConflictException("رکورد تغییر کرده است؛ صفحه را تازه کنید و دوباره بررسی کنید."); }
-    private static void Audit(CrmDataSet d, Guid actor, string action, Guid id, DateTimeOffset now) => d.SecurityAuditEvents.Add(
+    private static void Audit(CrmDataSet d, Guid actor, string action, Guid id, DateTimeOffset now) => d.Append<Crm.Domain.Identity.SecurityAuditEvent>(
         new(Guid.NewGuid(), now, action, "Succeeded", actor, null, null, id.ToString("N"), $"record:{id:N}", "", ""));
     private static PortalRequestDto Map(CrmDataSet d, PortalRequest r) => new(r.Id, "PR-" + r.Id.ToString("N")[..8], r.DealerId,
         d.Dealers.First(x => x.Id == r.DealerId).TradeName, r.Kind, r.Status, r.Subject, r.Description, r.PublicReply,
@@ -221,7 +221,7 @@ public sealed class SelfServiceService(ICrmDataStore store, IAccessSnapshotServi
             Version(v.Version, command.ExpectedVersion); var occurred = command.OccurredAtUtc ?? now;
             if (occurred < now.AddHours(-8) || occurred > now.AddMinutes(5)) throw new SelfServiceConflictException("زمان عملیات منقضی یا نامعتبر است؛ بازدید را آنلاین بررسی کنید.");
             v.Transition(command.Status, occurred, now, outcome, command.LocationConsent, command.Latitude, command.Longitude);
-            if (command.Status==VisitStatus.Completed) d.CustomerTimelineEvents.Add(new(Guid.NewGuid(),org.CompanyId,v.CustomerId,
+            if (command.Status==VisitStatus.Completed) d.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new(Guid.NewGuid(),org.CompanyId,v.CustomerId,
                 CustomerTimelineType.VisitCompleted,"بازدید انجام شد",outcome,occurred,"MobileCRM",v.Id.ToString("N"),userId));
             return Receipt(d, userId, command.OperationId, fingerprint, v, now);
         });

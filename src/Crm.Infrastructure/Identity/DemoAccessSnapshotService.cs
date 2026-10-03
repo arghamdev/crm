@@ -25,11 +25,11 @@ public sealed class DemoAccessSnapshotService(
 
         var snapshot = store.Read(data =>
         {
-            var user = data.Users.SingleOrDefault(x => x.Id == userId && x.IsActiveAt(now));
+            var user = data.Find<Crm.Domain.Identity.CrmUser>(x => x.Id == userId).SingleOrDefault(x => x.IsActiveAt(now));
             if (user is null) return null;
-            var assignments = data.UserRoleAssignments.Where(x => x.CrmUserId == userId && x.IsEffective(now)).ToList();
-            var roleKeys = assignments.Select(x => x.RoleKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var grantsByRole = data.RolePermissionGrants.Where(x => roleKeys.Contains(x.RoleKey))
+            var assignments = data.Find<Crm.Domain.Identity.UserRoleAssignment>(x => x.CrmUserId == userId).Where(x => x.IsEffective(now)).ToList();
+            var roleKeys = assignments.Select(x => x.RoleKey).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var grantsByRole = data.Find<Crm.Domain.Identity.RolePermissionGrant>(x => roleKeys.Contains(x.RoleKey))
                 .GroupBy(x => x.RoleKey, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => (IReadOnlySet<string>)g.Select(x => x.Permission).ToHashSet(StringComparer.OrdinalIgnoreCase),
                     StringComparer.OrdinalIgnoreCase);
