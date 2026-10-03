@@ -604,6 +604,7 @@ DataIntegrityChecks.Run(Check);
 RoleAdministrationChecks.Run(Check);
 DealerIncentiveChecks.Run(Check);
 CustomerProfileChecks.Run(Check);
+PortalServiceChecks.Run(Check);
 
 if (failures.Count > 0)
 {

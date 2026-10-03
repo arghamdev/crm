@@ -25,6 +25,9 @@ public sealed class ReportingService(ICrmDataStore store, IAccessSnapshotService
         new KpiDefinition("collection", "نسبت وصول فاکتورهای دوره", "درصد", "۱۰۰ × وصول تجمعی ÷ مبلغ فاکتورهای همان cohort", "Accounting Demo", "تاریخ فاکتور در بازه؛ وصول تا زمان Snapshot", "مدیر مالی", "وصول در تاریخ پرداخت نیست؛ برگشت و اعتبارنامه نیازمند Adapter واقعی"),
         new KpiDefinition("overdue", "مانده سررسیدشده دوره", "ریال", "Σ (فاکتور − وصول) برای سررسید قبل از اکنون", "Accounting Demo", "تاریخ فاکتور در بازه؛ وضعیت فعلی", "مدیر مالی", "با مانده نماینده جمع نمی‌شود؛ فقط IRR"),
         new KpiDefinition("dealerAchievement", "تحقق هدف نمایندگان", "درصد", "۱۰۰ × Σ فروش خالص ÷ Σ هدفِ دوره دقیقاً یکسان", "ERP/BI + CRM Target", "آخرین دوره مشترک داخل بازه؛ آخرین Snapshot هر نماینده", "مدیر کانال", "دوره‌های متفاوت یا هدف مفقود از نسبت حذف و علامت‌گذاری می‌شوند"),
+        new KpiDefinition("serviceOpen", "پرونده‌های خدمات باز", "پرونده", "تعداد پرونده باز (غیر حل‌شده/بسته)", "CRM Service", "تصویر فعلی؛ مستقل از بازه", "مدیر خدمات", "شامل پرونده‌های متوقف در انتظار مشتری"),
+        new KpiDefinition("serviceSla", "رعایت SLA حل پرونده", "درصد", "۱۰۰ × پرونده با حل در مهلت ÷ پرونده‌های حل‌شده یا نقض‌شده", "CRM Service", "پرونده‌های ثبت‌شده در بازه؛ وضعیت فعلی", "مدیر خدمات", "پرونده باز در مهلت در مخرج نیست؛ ساعت تقویمی، نه کاری"),
+        new KpiDefinition("serviceCsat", "رضایت مشتری از خدمات", "درصد", "۱۰۰ × Σ امتیاز ÷ (۵ × تعداد پرونده دارای امتیاز)", "CRM Service", "پرونده‌های ثبت‌شده در بازه که امتیاز دارند", "مدیر خدمات", "فقط پرونده‌های بسته‌شده امتیاز دارند"),
         new KpiDefinition("dealerSales", "فروش خالص نمایندگان", "ریال", "Σ آخرین Snapshot فروش برای هر نماینده", "ERP/BI Dealer", "آخرین دوره مشترک داخل بازه؛ آخرین Snapshot هر نماینده", "مدیر کانال", "با فروش مستقیم جمع نمی‌شود؛ نماینده فاقد همان دوره علامت‌گذاری می‌شود")
     });
 
@@ -166,7 +169,7 @@ public sealed class ReportingService(ICrmDataStore store, IAccessSnapshotService
         void Add(string metric, string id, string code, string name, IOrganizationScoped row, string state,
             decimal numerator, decimal denominator, DateTimeOffset? at, string source, string url) =>
             facts.Add(new(metric, id, code, name, row.CompanyId, row.BranchId, row.TerritoryId, state,
-                numerator, denominator, metric is "conversion" or "quality" ? "N/A" : "IRR", at, source, url));
+                numerator, denominator, metric is "conversion" or "quality" or "serviceOpen" or "serviceSla" or "serviceCsat" ? "N/A" : "IRR", at, source, url));
         if (Permission("Opportunity.Read"))
         {
             enabled.UnionWith(new[] { "pipeline", "forecast", "won" });
@@ -223,6 +226,22 @@ public sealed class ReportingService(ICrmDataStore store, IAccessSnapshotService
             }
         }
         else warnings.Add("اطلاعات وصول و سررسید بدون مجوز مالی گزارش، نمایش یا صادر نمی‌شود.");
+        if (Permission("Service.Read"))
+        {
+            enabled.UnionWith(new[] { "serviceOpen", "serviceSla", "serviceCsat" });
+            foreach (var item in data.ServiceCases.Where(x => Allowed(x, "Service.Read")))
+            {
+                var url = $"/service/{item.Id}";
+                if (item.Status is not (Crm.Domain.Service.ServiceCaseStatus.Resolved or Crm.Domain.Service.ServiceCaseStatus.Closed))
+                    Add("serviceOpen", item.Id.ToString(), item.Code, item.Subject, item, item.Status.ToString(), 1, 0, now, "CRM live", url);
+                if (!InPeriod(item.OpenedAtUtc)) continue;
+                var sla = item.ResolutionSla(now);
+                if (sla is Crm.Domain.Service.ServiceSlaState.Met or Crm.Domain.Service.ServiceSlaState.Breached)
+                    Add("serviceSla", item.Id.ToString(), item.Code, item.Subject, item, sla.ToString(), sla == Crm.Domain.Service.ServiceSlaState.Met ? 1 : 0, 1, now, "CRM live", url);
+                if (item.SatisfactionScore is { } score)
+                    Add("serviceCsat", item.Id.ToString(), item.Code, item.Subject, item, $"{score}/5", score, 5, now, "CRM live", url);
+            }
+        }
         var missingDealerPeriods = 0;
         if (Permission("Dealer.Read"))
         {

@@ -138,14 +138,8 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
             if (customer.Status == CustomerStatus.Inactive) throw new InvalidOperationException("برای مشتری غیرفعال نمی‌توان پرونده ثبت کرد.");
             if (!snapshot.AllowsRecord(customer.CompanyId, "Service.Create", customer.BranchId, customer.TerritoryId))
                 throw new UnauthorizedAccessException("ثبت پرونده برای شعبه این مشتری مجاز نیست.");
-            var item = new ServiceCase(Guid.NewGuid(), NextCode(data, nowUtc), command.Subject, command.Description ?? string.Empty,
-                customer.Id, customer.CompanyId, customer.BranchId, customer.TerritoryId, command.Category,
-                command.Channel, command.Priority, currentUserId, nowUtc);
-            data.ServiceCases.Add(item);
-            History(data, item, null, "ثبت پرونده", $"کانال {command.Channel}، اولویت {command.Priority}", currentUserId, nowUtc);
-            data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
-                CustomerTimelineType.ServiceCase, $"ثبت پرونده خدمات {item.Code}", item.Subject, nowUtc, "Service",
-                item.Code, currentUserId));
+            var item = Open(data, customer, command.Subject, command.Description ?? string.Empty, command.Category, command.Channel,
+                command.Priority, currentUserId, nowUtc, $"کانال {command.Channel}، اولویت {command.Priority}");
             return Map(item, CustomerNames(data, organization.CompanyId), nowUtc);
         });
     }
@@ -280,6 +274,19 @@ public sealed class ServiceCaseService(ICrmDataStore store, IAccessSnapshotServi
         InContext(snapshot, organization, "Service.Read", item) &&
         (HasPermission(snapshot, organization.CompanyId, "Service.Triage") || HasPermission(snapshot, organization.CompanyId, "Service.ReadAll") ||
          item.OwnerUserId == userId || item.CreatedByUserId == userId);
+
+    /// <summary>Opens a case with its first history row and a Customer 360 timeline entry (also used by portal complaint intake).</summary>
+    internal static ServiceCase Open(CrmDataSet data, Customer customer, string subject, string description, ServiceCaseCategory category,
+        ServiceCaseChannel channel, ServiceCasePriority priority, Guid actorUserId, DateTimeOffset nowUtc, string note)
+    {
+        var item = new ServiceCase(Guid.NewGuid(), NextCode(data, nowUtc), subject, description, customer.Id, customer.CompanyId,
+            customer.BranchId, customer.TerritoryId, category, channel, priority, actorUserId, nowUtc);
+        data.ServiceCases.Add(item);
+        History(data, item, null, "ثبت پرونده", note, actorUserId, nowUtc);
+        data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
+            CustomerTimelineType.ServiceCase, $"ثبت پرونده خدمات {item.Code}", item.Subject, nowUtc, "Service", item.Code, actorUserId));
+        return item;
+    }
 
     private static void History(CrmDataSet data, ServiceCase item, ServiceCaseStatus? from, string action, string note, Guid? actor, DateTimeOffset nowUtc) =>
         data.Append<Crm.Domain.Service.ServiceCaseHistory>(new ServiceCaseHistory(Guid.NewGuid(), item.Id, item.CompanyId, item.BranchId, item.TerritoryId,

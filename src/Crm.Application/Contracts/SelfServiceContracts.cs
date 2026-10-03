@@ -11,7 +11,8 @@ public sealed record PortalRequestDto(Guid Id, string Code, Guid DealerId, strin
     PortalRequestStatus Status, string Subject, string Description, string PublicReply, string? ProductCode,
     decimal Quantity, decimal UnitPrice, string? Source, DateTimeOffset? PriceAtUtc, long Version,
     DateTimeOffset CreatedAtUtc, Guid? LinkedRecordId, DateTimeOffset? ProtectedUntilUtc, string? OrderStatus,
-    Guid CreatedByUserId, Guid? CustomerId, string? Email, Guid? TargetUserId);
+    Guid CreatedByUserId, Guid? CustomerId, string? Email, Guid? TargetUserId,
+    string? ServiceCaseCode = null, string? CustomerName = null);
 public sealed record PortalDashboardDto(Guid DealerId, string DealerName, bool CanSubmit,
     decimal? Balance, decimal? Overdue, string? FinanceSource, DateTimeOffset? FinanceAtUtc,
     decimal? Target, decimal? Actual, IReadOnlyList<DealerCustomerOptionDto> Customers,
@@ -21,9 +22,10 @@ public sealed record SubmitPortalRequestCommand(Guid OperationId, PortalRequestK
     string Description, Guid? CustomerId = null, string? ProductCode = null, decimal Quantity = 0,
     string? Email = null, Guid? TargetUserId = null);
 public sealed record ReviewPortalRequestCommand(long ExpectedVersion, PortalRequestStatus Status,
-    string Reply, Guid? LinkedOrderId = null);
+    string Reply, Guid? LinkedOrderId = null, Guid? CustomerId = null);
 public sealed record PortalRequestFormDto(PortalDashboardDto Dashboard, SubmitPortalRequestCommand Command);
-public sealed record PortalReviewDto(PortalRequestDto Request, bool CanAcceptLead, bool CanManageAccounts);
+public sealed record PortalReviewDto(PortalRequestDto Request, bool CanAcceptLead, bool CanManageAccounts,
+    IReadOnlyList<DealerCustomerOptionDto>? DealerCustomers = null);
 public sealed record CreateVisitCommand(Guid OperationId, Guid CustomerId, DateTime PlannedAtUtc, string Purpose);
 public sealed record VisitActionCommand(Guid OperationId, long ExpectedVersion, VisitStatus Status,
     string Outcome, DateTimeOffset? OccurredAtUtc = null, bool LocationConsent = false,

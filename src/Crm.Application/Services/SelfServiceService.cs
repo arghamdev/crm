@@ -55,7 +55,10 @@ public sealed class SelfServiceService(ICrmDataStore store, IAccessSnapshotServi
         r.ProductCode, r.Quantity, r.UnitPrice, r.Source, r.PriceAtUtc, r.Version, r.CreatedAtUtc, r.LinkedRecordId,
         r.ProtectedUntilUtc, r.Kind == PortalRequestKind.Order && r.LinkedRecordId is { } order ?
             d.OrderRequests.FirstOrDefault(x => x.Id == order && x.CompanyId == r.CompanyId && x.CustomerId == r.CustomerId)?.Status.ToString() : null,
-        r.CreatedByUserId, r.CustomerId, r.Email, r.TargetUserId);
+        r.CreatedByUserId, r.CustomerId, r.Email, r.TargetUserId,
+        r.Kind is PortalRequestKind.Complaint or PortalRequestKind.Claim && r.LinkedRecordId is { } caseId ?
+            d.ServiceCases.FirstOrDefault(x => x.Id == caseId && x.CompanyId == r.CompanyId)?.Code : null,
+        r.CustomerId is { } customerId ? d.Customers.FirstOrDefault(x => x.Id == customerId && x.CompanyId == r.CompanyId)?.Name : null);
 
     public PortalDashboardDto Portal(Guid userId, OrganizationSelection org, DateTimeOffset now)
     {
@@ -93,10 +96,14 @@ public sealed class SelfServiceService(ICrmDataStore store, IAccessSnapshotServi
                 product = source.Products(org.CompanyId, dealer.DealerId, now).FirstOrDefault(x => x.Code == c.ProductCode) ?? throw new ArgumentException("کالای مجاز انتخاب کنید.");
                 if (c.Quantity <= 0 || c.Quantity > 10000 || decimal.Round(c.Quantity,3)!=c.Quantity) throw new ArgumentException("تعداد مثبت، حداکثر ۱۰۰۰۰ و با حداکثر سه رقم اعشار باشد.");
             }
+            // A complaint or damage claim may name one of the dealer's customers; it becomes the service case's customer.
+            var complaintCustomer = c.Kind is PortalRequestKind.Complaint or PortalRequestKind.Claim && c.CustomerId is { } concerned
+                ? Customers(d, dealer, now).FirstOrDefault(x => x.Id == concerned && Context(x, org))?.Id ?? throw new UnauthorizedAccessException()
+                : (Guid?)null;
             if (c.Kind == PortalRequestKind.AccessInvite && (!MailAddress.TryCreate(c.Email, out var mail) || mail.Address != c.Email)) throw new ArgumentException("ایمیل معتبر وارد کنید.");
             if (c.Kind == PortalRequestKind.AccessRevoke && (c.TargetUserId is not { } target || target == userId || !DealerAccount(d, target, dealer, now))) throw new UnauthorizedAccessException();
             var r = new PortalRequest(Guid.NewGuid(), org.CompanyId, dealer.BranchId, dealer.TerritoryId, dealer.Id, userId, c.OperationId, fingerprint, c.Kind, c.Subject, c.Description,
-                product is null ? null : c.CustomerId, product?.Code, product is null ? 0 : c.Quantity, product?.UnitPrice ?? 0, product?.Source, product?.SynchronizedAtUtc,
+                product is null ? complaintCustomer : c.CustomerId, product?.Code, product is null ? 0 : c.Quantity, product?.UnitPrice ?? 0, product?.Source, product?.SynchronizedAtUtc,
                 c.Kind == PortalRequestKind.AccessInvite ? c.Email : null, c.Kind == PortalRequestKind.AccessRevoke ? c.TargetUserId : null);
             d.PortalRequests.Add(r); Audit(d, userId, "Portal.Submitted", r.Id, now); return Map(d, r);
         });
@@ -118,7 +125,13 @@ public sealed class SelfServiceService(ICrmDataStore store, IAccessSnapshotServi
         d.PortalRequests.FirstOrDefault(x => x.Id == id && Permit(a, "Portal.Review", x, org)) ?? throw new KeyNotFoundException();
     public PortalReviewDto ReviewForm(Guid userId, OrganizationSelection org, Guid id, DateTimeOffset now)
     {
-        var a = Access(userId); return store.Read(d => { var r = Reviewed(d, a, org, id); return new PortalReviewDto(Map(d, r), Permit(a, "Lead.Create", r, org), Permit(a, "Administration.Manage", r, org)); });
+        var a = Access(userId); return store.Read(d => {
+            var r = Reviewed(d, a, org, id);
+            var dealer = d.Dealers.First(x => x.Id == r.DealerId && x.CompanyId == org.CompanyId);
+            var customers = r.Kind is PortalRequestKind.Complaint or PortalRequestKind.Claim && r.CustomerId is null
+                ? Customers(d, dealer, now).Select(x => new DealerCustomerOptionDto(x.Id, x.Code, x.Name, x.BranchId)).ToList() : null;
+            return new PortalReviewDto(Map(d, r), Permit(a, "Lead.Create", r, org), Permit(a, "Administration.Manage", r, org), customers);
+        });
     }
     public PortalRequestDto Review(Guid userId, OrganizationSelection org, Guid id, ReviewPortalRequestCommand command, DateTimeOffset now)
     {
@@ -146,6 +159,18 @@ public sealed class SelfServiceService(ICrmDataStore store, IAccessSnapshotServi
                     if (order is null || !Customers(d, dealer, now).Any(x => x.Id == r.CustomerId)) throw new UnauthorizedAccessException();
                     if (d.PortalRequests.Any(x => x.Id != id && x.LinkedRecordId == orderId && x.Kind == PortalRequestKind.Order)) throw new SelfServiceConflictException("سفارش قبلاً به یک درخواست متصل است.");
                     linked = orderId;
+                }
+                if (r.Kind is PortalRequestKind.Complaint or PortalRequestKind.Claim) {
+                    // Accepting a complaint/claim opens a service case (portal channel) that follows the normal SLA and triage.
+                    var customerId = r.CustomerId ?? command.CustomerId ?? throw new ArgumentException("برای ثبت پرونده خدمات، مشتری مربوط را انتخاب کنید.");
+                    var customer = Customers(d, dealer, now).FirstOrDefault(x => x.Id == customerId) ?? throw new UnauthorizedAccessException();
+                    var claim = r.Kind == PortalRequestKind.Claim;
+                    var item = ServiceCaseService.Open(d, customer, r.Subject, r.Description,
+                        claim ? Crm.Domain.Service.ServiceCaseCategory.ProductDefect : Crm.Domain.Service.ServiceCaseCategory.Complaint,
+                        Crm.Domain.Service.ServiceCaseChannel.Portal,
+                        claim ? Crm.Domain.Service.ServiceCasePriority.High : Crm.Domain.Service.ServiceCasePriority.Medium,
+                        userId, now, $"ارجاع از پرتال نماینده {dealer.TradeName} (PR-{r.Id.ToString("N")[..8]})");
+                    linked = item.Id;
                 }
                 if (r.Kind is PortalRequestKind.AccessInvite or PortalRequestKind.AccessRevoke) {
                     if (!Permit(a, "Administration.Manage", r, org)) throw new UnauthorizedAccessException();

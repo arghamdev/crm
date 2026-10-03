@@ -2,7 +2,8 @@
 @{ ViewData["Title"]="بررسی درخواست"; var r=Model.Request; }
 <header class="page-header"><div><h1>@r.Subject</h1><p>@r.DealerName · @r.Kind.Label() · @r.Status.Label()</p></div><a href="/partner-requests" class="button">بازگشت</a></header>
 <section class="panel self-panel"><p>@r.Description</p><p>پاسخ ثبت‌شده: @r.PublicReply</p>
-@if(r.CustomerId is not null) { <p>مشتری سفارش: <bdi>@r.CustomerId</bdi> · @r.ProductCode × @r.Quantity · @r.UnitPrice.ToString("N0") ریال</p> }
+@if(r.CustomerId is not null && r.Kind == PortalRequestKind.Order) { <p>مشتری سفارش: @(r.CustomerName ?? r.CustomerId.ToString()) · @r.ProductCode × @r.Quantity · @r.UnitPrice.ToString("N0") ریال</p> }
+@if(r.Kind is PortalRequestKind.Complaint or PortalRequestKind.Claim) { <p>مشتری مربوط: @(r.CustomerName ?? "مشخص نشده") · تأیید نهایی، پرونده خدمات (کانال پرتال) با SLA ایجاد می‌کند.@if (r.ServiceCaseCode is not null) { <text> پرونده: </text><a href="/service/@r.LinkedRecordId" dir="ltr">@r.ServiceCaseCode</a> }</p> }
 @if(r.Email is not null) { <p>ایمیل حساب درخواستی: <bdi>@r.Email</bdi></p> }
 @if(r.TargetUserId is not null) { <p>شناسهٔ حساب برای لغو: @r.TargetUserId</p> }
 <div id="selfServiceErrors" aria-live="polite"></div>
@@ -10,7 +11,8 @@
 <form class="self-form" method="post" action="/partner-requests/@r.Id" hx-post="/partner-requests/@r.Id" hx-target="#selfServiceErrors">@Html.AntiForgeryToken()
 <input type="hidden" name="ExpectedVersion" value="@r.Version"/>
 <label>تصمیم<select name="Status"><option value="InReview">در حال بررسی</option><option value="Accepted">تأیید نهایی</option><option value="Rejected">رد با دلیل</option></select></label>
-<label>شناسهٔ سفارش ایجادشده (برای تأیید سفارش)<input name="LinkedOrderId" dir="ltr" placeholder="GUID"/></label>
+@if(r.Kind == PortalRequestKind.Order) { <label>شناسهٔ سفارش ایجادشده (برای تأیید سفارش)<input name="LinkedOrderId" dir="ltr" placeholder="GUID"/></label> }
+@if(Model.DealerCustomers is { } customers) { <label>مشتری پرونده خدمات<select name="CustomerId"><option value="">انتخاب مشتری</option>@foreach (var c in customers) { <option value="@c.Id">@c.Code · @c.Name</option> }</select></label> }
 <label class="self-wide">پاسخ برای نماینده<textarea name="Reply" required maxlength="2000" rows="4"></textarea></label>
 <p class="self-wide">تأیید سفارش به سفارش مجاز همین مشتری نیاز دارد. تأیید سرنخ، ثبت را با حفاظت ۳۰روزه ایجاد می‌کند. دعوت و لغو کاربر فقط با مجوز مدیریت دسترسی انجام می‌شود.</p>
 @if(!Model.CanManageAccounts && r.Kind is PortalRequestKind.AccessInvite or PortalRequestKind.AccessRevoke) { <p>شما می‌توانید بررسی یا رد کنید؛ تأیید این نوع درخواست نیازمند مدیر دسترسی است.</p> }

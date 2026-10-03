@@ -17,7 +17,7 @@ else {
  <label>نوع درخواست<select name="Kind">@foreach(var kind in Enum.GetValues<PortalRequestKind>()) { <option value="@kind">@kind.Label()</option> }</select></label>
  <label>عنوان / نام کاربر جدید<input name="Subject" required maxlength="160"/></label>
  <label class="self-wide">شرح و اطلاعات تماس برای پیگیری<textarea name="Description" required maxlength="2000" rows="3"></textarea></label>
- <label>مشتری (برای سفارش)<select name="CustomerId"><option value="">انتخاب مشتری</option>@foreach(var c in Model.Customers) { <option value="@c.Id">@c.Code · @c.Name</option> }</select></label>
+ <label>مشتری (برای سفارش، شکایت یا ادعای خسارت)<select name="CustomerId"><option value="">انتخاب مشتری</option>@foreach(var c in Model.Customers) { <option value="@c.Id">@c.Code · @c.Name</option> }</select></label>
  <label>کالا (برای سفارش)<select name="ProductCode"><option value="">انتخاب کالا</option>@foreach(var p in Model.Products) { <option value="@p.Code">@p.Name</option> }</select></label>
  <label>تعداد (برای سفارش)<input name="Quantity" type="number" value="1" min="0.001" max="10000" step="0.001"/></label>
  <label>ایمیل (برای کاربر جدید)<input name="Email" type="email" maxlength="256" dir="ltr"/></label>
@@ -31,6 +31,7 @@ else {
  @if(r.ProductCode is not null) { <p>@r.ProductCode × @r.Quantity · قیمت ثبت‌شده: @r.UnitPrice.ToString("N0") ریال</p> }
  @if(!string.IsNullOrEmpty(r.PublicReply)) { <p class="self-reply">پاسخ: @r.PublicReply</p> }
  @if(r.OrderStatus is not null) { <p>وضعیت سفارش متصل: @r.OrderStatus</p> }
+ @if(r.ServiceCaseCode is not null) { <p>پرونده خدمات ثبت‌شده: <bdi dir="ltr">@r.ServiceCaseCode</bdi>@(r.CustomerName is null ? "" : $" · {r.CustomerName}")</p> }
  @if(r.ProtectedUntilUtc is not null) { <p>حفاظت ثبت سرنخ تا @r.ProtectedUntilUtc?.ToString("u")</p> }
  @if(r.CreatedByUserId==User.CrmUserId() && r.Status is PortalRequestStatus.Submitted or PortalRequestStatus.InReview) {
  <form method="post" action="/portal/requests/@r.Id/cancel" hx-post="/portal/requests/@r.Id/cancel" hx-target="#selfServiceErrors">@Html.AntiForgeryToken()<input name="expectedVersion" type="hidden" value="@r.Version"/><button type="submit" class="button">لغو درخواست</button></form> }
