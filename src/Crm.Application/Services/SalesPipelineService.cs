@@ -32,7 +32,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
                     (x.Phone?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
             }
             var items = source.OrderBy(x => LeadSort(x, now)).ThenByDescending(x => x.CreatedAtUtc)
-                .Select(x => Map(x, now)).ToList();
+                .Select(x => Map(x, now, snapshot)).ToList();
             var visibleOpen = data.Leads.Where(x => !ClosedLeadStatuses.Contains(x.Status) &&
                 CanAccessSalesRecord(data, snapshot, currentUserId, organization, "Lead.Read", x, x.OwnerUserId, x.Owner)).ToList();
             return new LeadListDto(items, query?.Trim(), status, includeClosed,
@@ -53,7 +53,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             if (lead is null) return null;
             var canManage = CanManageRecord(data, snapshot, currentUserId, organization.CompanyId, lead.OwnerUserId, lead.Owner);
             var isOpen = !ClosedLeadStatuses.Contains(lead.Status);
-            return new LeadDetailsDto(Map(lead, now), data.LeadStatusHistory.Where(x => x.LeadId == lead.Id)
+            return new LeadDetailsDto(Map(lead, now, snapshot), data.LeadStatusHistory.Where(x => x.LeadId == lead.Id)
                 .OrderByDescending(x => x.ChangedAtUtc).Select(x => Map(data, x)).ToList(),
                 EligibleOwners(data, organization.CompanyId, lead.BranchId, now),
                 isOpen && canManage && HasPermission(snapshot, organization.CompanyId, "Lead.Assign"),
@@ -99,7 +99,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             lead.Assign(owner.UserId, owner.DisplayName, nowUtc, nowUtc.AddHours(4), "تخصیص اولیه");
             data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, "تخصیص اولیه", currentUserId, nowUtc));
-            return Map(lead, nowUtc);
+            return Map(lead, nowUtc, snapshot);
         });
     }
 
@@ -116,7 +116,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             lead.Assign(owner.UserId, owner.DisplayName, nowUtc, command.FirstContactDueAtUtc, command.Reason);
             data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, command.Reason, currentUserId, nowUtc));
-            return Map(lead, nowUtc);
+            return Map(lead, nowUtc, snapshot);
         });
     }
 
@@ -152,7 +152,7 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             }
             data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, from, lead.Status, command.Reason, currentUserId, nowUtc));
-            return Map(lead, nowUtc);
+            return Map(lead, nowUtc, snapshot);
         });
     }
 
@@ -477,10 +477,10 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
     private static int LeadSort(Lead x, DateTimeOffset nowUtc) => Sla(x, nowUtc) switch
         { LeadSlaState.Overdue => 0, LeadSlaState.DueSoon => 1, LeadSlaState.OnTrack => 2, _ => 3 };
 
-    private static LeadDto Map(Lead x, DateTimeOffset nowUtc) => new(x.Id, x.Code, x.Name, x.Contact, x.Source,
+    private static LeadDto Map(Lead x, DateTimeOffset nowUtc, AccessSnapshot snapshot) => new LeadDto(x.Id, x.Code, x.Name, x.Contact, x.Source,
         x.Owner, x.CompanyId, x.BranchId, x.TerritoryId, x.Score, x.Status, x.CustomerId, x.OwnerUserId,
         x.Phone, x.Email, x.AssignedAtUtc, x.FirstContactDueAtUtc, x.FirstContactAtUtc, x.LastActivityAtUtc,
-        x.NextAction, x.NextActionAtUtc, x.StatusReason, x.ConvertedOpportunityId, x.Version, Sla(x, nowUtc));
+        x.NextAction, x.NextActionAtUtc, x.StatusReason, x.ConvertedOpportunityId, x.Version, Sla(x, nowUtc)).Mask(snapshot);
     private static OpportunityDto Map(Opportunity x) => new(x.Id, x.Code, x.Title, x.Customer, x.Value, x.Owner,
         x.CompanyId, x.BranchId, x.TerritoryId, x.Stage, x.Probability, x.CustomerId, x.OwnerUserId,
         x.OriginLeadId, x.ExpectedCloseAtUtc, x.Source, x.NextAction, x.NextActionAtUtc, x.LastActivityAtUtc,

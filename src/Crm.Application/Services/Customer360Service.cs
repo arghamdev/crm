@@ -18,8 +18,8 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             if (customer is null) return null;
             var issues = CustomerDataQualityRules.Issues(data, customer);
             return new Customer360Dto(
-                MapCustomer(customer, CustomerDataQualityRules.Score(issues)),
-                data.CustomerContacts.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.IsPrimary).ThenBy(x => x.FullName).Select(Map).ToList(),
+                MapCustomer(customer, CustomerDataQualityRules.Score(issues), snapshot),
+                data.CustomerContacts.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.IsPrimary).ThenBy(x => x.FullName).Select(x => Map(x, snapshot)).ToList(),
                 data.CustomerAddresses.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.IsPrimary).ThenBy(x => x.Title).Select(Map).ToList(),
                 includeRelatedActivity
                     ? data.CustomerTimelineEvents.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.OccurredAtUtc).Take(50).Select(Map).ToList()
@@ -27,7 +27,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
                 data.CustomerOwnershipHistory.Where(x => x.CustomerId == customer.Id && Same(x.CompanyId, customer.CompanyId)).OrderByDescending(x => x.ValidFromUtc).Select(Map).ToList(),
                 includeRelatedActivity ? data.Leads.Where(x => x.CustomerId == customer.Id &&
                     InContext(snapshot, organization, "Lead.Read", x) && CanManageSalesRecord(data, snapshot, currentUserId,
-                        organization.CompanyId, x.OwnerUserId, x.Owner)).Select(x => MapLead(x)).ToList() : [],
+                        organization.CompanyId, x.OwnerUserId, x.Owner)).Select(x => MapLead(x, snapshot)).ToList() : [],
                 includeRelatedActivity ? data.Opportunities.Where(x => x.CustomerId == customer.Id &&
                     InContext(snapshot, organization, "Opportunity.Read", x) && CanManageSalesRecord(data, snapshot, currentUserId,
                         organization.CompanyId, x.OwnerUserId, x.Owner)).Select(MapOpportunity).ToList() : [],
@@ -64,6 +64,10 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         {
             var customer = data.Customers.SingleOrDefault(x => x.Id == customerId && InContext(snapshot, organization, "Customer.Update", x));
             if (customer is null || customer.Status == CustomerStatus.Inactive) return null;
+            // The edit form posts identifiers back; a masked value would overwrite the real one, so editing requires full access.
+            if (!snapshot.PermissionsFor(organization.CompanyId).Contains(FieldMasking.NationalIdPermission) ||
+                !snapshot.PermissionsFor(organization.CompanyId).Contains(FieldMasking.ContactPermission))
+                throw new UnauthorizedAccessException("ویرایش مشتری به مجوز مشاهدهٔ شناسه و اطلاعات تماس نیاز دارد.");
             var branches = data.OrganizationUnits.Where(x => Same(x.CompanyId, organization.CompanyId) && x.Type == OrganizationUnitType.Branch &&
                     x.Status == OrganizationStatus.Active && snapshot.AllowsRecord(organization.CompanyId, "Customer.Update", x.UnitId, organization.TerritoryId))
                 .OrderBy(x => x.Name).Select(x => new OrganizationUnitOptionDto(x.UnitId, x.Code, x.Name, x.Type.ToString(), Same(x.UnitId, customer.BranchId))).ToList();
@@ -96,6 +100,9 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
     public void Update(Guid currentUserId, OrganizationSelection organization, Guid customerId, UpdateCustomerCommand command, DateTimeOffset nowUtc)
     {
         var snapshot = RequiredSnapshot(currentUserId);
+        if (!snapshot.PermissionsFor(organization.CompanyId).Contains(FieldMasking.NationalIdPermission) ||
+            !snapshot.PermissionsFor(organization.CompanyId).Contains(FieldMasking.ContactPermission))
+            throw new UnauthorizedAccessException("ویرایش مشتری به مجوز مشاهدهٔ شناسه و اطلاعات تماس نیاز دارد.");
         store.Write(data =>
         {
             var customer = RequiredCustomer(data, snapshot, organization, customerId, "Customer.Update");
@@ -221,7 +228,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             if (data.CustomerAddresses.Any(x => x.CustomerId == survivor.Id && x.IsPrimary && x.IsActive) &&
                 data.CustomerAddresses.Any(x => x.CustomerId == merged.Id && x.IsPrimary && x.IsActive))
                 warnings.Add("آدرس اصلی رکورد ادغام‌شونده به آدرس عادی تبدیل می‌شود و در Unmerge بازگردانی خواهد شد.");
-            return new CustomerMergePreviewDto(candidate.Id, MapCustomer(survivor, 0), MapCustomer(merged, 0),
+            return new CustomerMergePreviewDto(candidate.Id, MapCustomer(survivor, 0, snapshot), MapCustomer(merged, 0, snapshot),
                 data.CustomerContacts.Count(x => x.CustomerId == merged.Id),
                 data.CustomerAddresses.Count(x => x.CustomerId == merged.Id),
                 data.Leads.Count(x => x.CustomerId == merged.Id),
@@ -358,7 +365,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         var snapshot = RequiredSnapshot(currentUserId);
         return store.Read(data => data.Customers.Where(x => InContext(snapshot, organization, "Customer.Read", x))
             .Select(customer => new CustomerDataQualityRowDto(MapCustomer(customer,
-                CustomerDataQualityRules.Score(CustomerDataQualityRules.Issues(data, customer))), CustomerDataQualityRules.Issues(data, customer)))
+                CustomerDataQualityRules.Score(CustomerDataQualityRules.Issues(data, customer)), snapshot), CustomerDataQualityRules.Issues(data, customer)))
             .OrderBy(x => x.Customer.DataQualityScore).ToList());
     }
 
@@ -430,17 +437,18 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             customer.LastSynchronizedAtUtc is null ? "نامشخص" : customer.LastSynchronizedAtUtc < DateTimeOffset.UtcNow.AddDays(-2) ? "قدیمی" : "به‌روز")
     ];
 
-    private static CustomerDto MapCustomer(Customer x, int qualityScore) => new(x.Id, x.Code, x.Name, x.City, x.Owner,
+    private static CustomerDto MapCustomer(Customer x, int qualityScore, AccessSnapshot snapshot) => new CustomerDto(x.Id, x.Code, x.Name, x.City, x.Owner,
         x.CompanyId, x.Branch, x.BranchId, x.TerritoryId, x.Segment, x.Status, x.Balance, x.CreditLimit,
-        x.Kind, x.NationalId, x.PrimaryPhone, x.PrimaryEmail, x.DataSource, x.LastSynchronizedAtUtc, x.Version, qualityScore);
-    private static CustomerContactDto Map(CustomerContact x) => new(x.Id, x.FullName, x.Role, x.Phone, x.Email, x.IsPrimary, x.ConsentStatus, x.IsActive, x.Version);
+        x.Kind, x.NationalId, x.PrimaryPhone, x.PrimaryEmail, x.DataSource, x.LastSynchronizedAtUtc, x.Version, qualityScore).Mask(snapshot);
+    private static CustomerContactDto Map(CustomerContact x, AccessSnapshot snapshot) =>
+        new CustomerContactDto(x.Id, x.FullName, x.Role, x.Phone, x.Email, x.IsPrimary, x.ConsentStatus, x.IsActive, x.Version).Mask(snapshot, x.CompanyId);
     private static CustomerAddressDto Map(CustomerAddress x) => new(x.Id, x.Type, x.Title, x.Province, x.City, x.AddressLine, x.PostalCode, x.IsPrimary, x.IsActive, x.Version);
     private static CustomerTimelineDto Map(CustomerTimelineEvent x) => new(x.Id, x.Type, x.Title, x.Description, x.OccurredAtUtc, x.Source, x.SourceReference, x.ActorUserId);
     private static CustomerOwnershipDto Map(CustomerOwnershipHistory x) => new(x.Id, x.BranchId, x.TerritoryId, x.Owner, x.ValidFromUtc, x.ValidToUtc, x.Reason, x.ChangedByUserId);
-    private static LeadDto MapLead(Lead x) => new(x.Id, x.Code, x.Name, x.Contact, x.Source, x.Owner,
+    private static LeadDto MapLead(Lead x, AccessSnapshot snapshot) => new LeadDto(x.Id, x.Code, x.Name, x.Contact, x.Source, x.Owner,
         x.CompanyId, x.BranchId, x.TerritoryId, x.Score, x.Status, x.CustomerId, x.OwnerUserId, x.Phone,
         x.Email, x.AssignedAtUtc, x.FirstContactDueAtUtc, x.FirstContactAtUtc, x.LastActivityAtUtc,
-        x.NextAction, x.NextActionAtUtc, x.StatusReason, x.ConvertedOpportunityId, x.Version);
+        x.NextAction, x.NextActionAtUtc, x.StatusReason, x.ConvertedOpportunityId, x.Version).Mask(snapshot);
     private static OpportunityDto MapOpportunity(Opportunity x) => new(x.Id, x.Code, x.Title, x.Customer,
         x.Value, x.Owner, x.CompanyId, x.BranchId, x.TerritoryId, x.Stage, x.Probability, x.CustomerId,
         x.OwnerUserId, x.OriginLeadId, x.ExpectedCloseAtUtc, x.Source, x.NextAction, x.NextActionAtUtc,

@@ -57,7 +57,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 result = customerQueries.Search(new CustomerQuerySpec(organization.CompanyId, organization.BranchId,
                     organization.TerritoryId, companyWide, branches, territories, query?.Trim(), actualPage, pageSize));
             var items = result.Items.Select(x => Map(x,
-                result.CustomerIdsWithActiveContacts.Contains(x.Id), result.CustomerIdsWithActiveAddresses.Contains(x.Id))).ToList();
+                result.CustomerIdsWithActiveContacts.Contains(x.Id), result.CustomerIdsWithActiveAddresses.Contains(x.Id), snapshot)).ToList();
             return new PagedResult<CustomerDto>(items, actualPage, pageSize, result.TotalCount, query?.Trim());
         }
         return store.Read(data =>
@@ -71,10 +71,10 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             }
             var ordered = result.OrderByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id);
             var total = ordered.Count();
-            var items = ordered.Skip((page - 1) * pageSize).Take(pageSize).Select(x => Map(data, x)).ToList();
+            var items = ordered.Skip((page - 1) * pageSize).Take(pageSize).Select(x => Map(data, x, snapshot)).ToList();
             var actualPage = total == 0 ? 1 : Math.Min(page, (int)Math.Ceiling(total / (double)pageSize));
             if (actualPage != page)
-                items = ordered.Skip((actualPage - 1) * pageSize).Take(pageSize).Select(x => Map(data, x)).ToList();
+                items = ordered.Skip((actualPage - 1) * pageSize).Take(pageSize).Select(x => Map(data, x, snapshot)).ToList();
             return new PagedResult<CustomerDto>(items, actualPage, pageSize, total, query?.Trim());
         });
     }
@@ -84,7 +84,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
         var snapshot = RequiredSnapshot(currentUserId);
         return store.Read(data => data.Customers
             .Where(x => x.Id == id && InContext(snapshot, organization, "Customer.Read", x))
-            .Select(x => Map(data, x)).SingleOrDefault());
+            .Select(x => Map(data, x, snapshot)).SingleOrDefault());
     }
 
     public CustomerDto CreateCustomer(Guid currentUserId, OrganizationSelection organization, CreateCustomerCommand command)
@@ -119,7 +119,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             foreach (var match in matches)
                 data.CustomerDuplicateCandidates.Add(new CustomerDuplicateCandidate(Guid.NewGuid(), customer.CompanyId,
                     customer.Id, match.Customer.Id, match.Score, match.Reasons, DateTimeOffset.UtcNow));
-            return Map(data, customer);
+            return Map(data, customer, snapshot);
         });
     }
 
@@ -129,7 +129,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
         return store.Read(data => data.Leads
             .Where(x => x.Status != LeadStatus.Converted && InContext(snapshot, organization, "Lead.Read", x) &&
                 CanManageSalesRecord(data, snapshot, currentUserId, organization.CompanyId, x.OwnerUserId, x.Owner))
-            .OrderByDescending(x => x.CreatedAtUtc).Select(Map).ToList());
+            .OrderByDescending(x => x.CreatedAtUtc).Select(x => Map(x, snapshot)).ToList());
     }
 
     public LeadDto CreateLead(Guid currentUserId, OrganizationSelection organization, CreateLeadCommand command)
@@ -148,7 +148,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             data.Leads.Add(lead);
             data.LeadStatusHistory.Add(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, null, lead.Status, "ثبت سرنخ", currentUserId, DateTimeOffset.UtcNow));
-            return Map(lead);
+            return Map(lead, snapshot);
         });
     }
 
@@ -245,7 +245,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
         var snapshot = RequiredSnapshot(currentUserId);
         return store.Read(data => data.Quotes
             .Where(x => InContext(snapshot, organization, "Quote.Read", x))
-            .OrderByDescending(x => x.CreatedAtUtc).Select(Map).ToList());
+            .OrderByDescending(x => x.CreatedAtUtc).Select(x => Map(x, snapshot)).ToList());
     }
 
     public QuoteDto CreateQuote(Guid currentUserId, OrganizationSelection organization, CreateQuoteCommand command)
@@ -273,7 +273,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 opportunity.Title, opportunity.Id, command.Amount, command.DiscountPercent, command.MarginPercent,
                 organization.CompanyId, scope.Id, organization.TerritoryId);
             data.Quotes.Add(quote);
-            return Map(quote);
+            return Map(quote, snapshot);
         });
     }
 
@@ -285,7 +285,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             var quote = data.Quotes.SingleOrDefault(x => x.Id == id && InContext(snapshot, organization, "Quote.Approve", x)) ??
                 throw new UnauthorizedAccessException("Quote is outside the current organization context.");
             if (approved) quote.Approve(); else quote.Reject();
-            return Map(quote);
+            return Map(quote, snapshot);
         });
     }
 
@@ -335,32 +335,32 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
         return (branch.UnitId, branch.Name);
     }
 
-    private static CustomerDto Map(CrmDataSet data, Customer x)
+    private static CustomerDto Map(CrmDataSet data, Customer x, AccessSnapshot snapshot)
     {
         var issues = CustomerDataQualityRules.Issues(data, x);
         return new CustomerDto(x.Id, x.Code, x.Name, x.City, x.Owner, x.CompanyId, x.Branch,
             x.BranchId, x.TerritoryId, x.Segment, x.Status, x.Balance, x.CreditLimit, x.Kind,
             x.NationalId, x.PrimaryPhone, x.PrimaryEmail, x.DataSource, x.LastSynchronizedAtUtc,
-            x.Version, CustomerDataQualityRules.Score(issues));
+            x.Version, CustomerDataQualityRules.Score(issues)).Mask(snapshot);
     }
-    private static CustomerDto Map(Customer x, bool hasActiveContact, bool hasActiveAddress)
+    private static CustomerDto Map(Customer x, bool hasActiveContact, bool hasActiveAddress, AccessSnapshot snapshot)
     {
         var issues = CustomerDataQualityRules.Issues(x, hasActiveContact, hasActiveAddress);
         return new CustomerDto(x.Id, x.Code, x.Name, x.City, x.Owner, x.CompanyId, x.Branch,
             x.BranchId, x.TerritoryId, x.Segment, x.Status, x.Balance, x.CreditLimit, x.Kind,
             x.NationalId, x.PrimaryPhone, x.PrimaryEmail, x.DataSource, x.LastSynchronizedAtUtc,
-            x.Version, CustomerDataQualityRules.Score(issues));
+            x.Version, CustomerDataQualityRules.Score(issues)).Mask(snapshot);
     }
-    private static LeadDto Map(Lead x) => new(x.Id, x.Code, x.Name, x.Contact, x.Source, x.Owner, x.CompanyId,
+    private static LeadDto Map(Lead x, AccessSnapshot snapshot) => new LeadDto(x.Id, x.Code, x.Name, x.Contact, x.Source, x.Owner, x.CompanyId,
         x.BranchId, x.TerritoryId, x.Score, x.Status, x.CustomerId, x.OwnerUserId, x.Phone, x.Email,
         x.AssignedAtUtc, x.FirstContactDueAtUtc, x.FirstContactAtUtc, x.LastActivityAtUtc, x.NextAction,
-        x.NextActionAtUtc, x.StatusReason, x.ConvertedOpportunityId, x.Version);
+        x.NextActionAtUtc, x.StatusReason, x.ConvertedOpportunityId, x.Version).Mask(snapshot);
     private static OpportunityDto Map(Opportunity x) => new(x.Id, x.Code, x.Title, x.Customer, x.Value, x.Owner,
         x.CompanyId, x.BranchId, x.TerritoryId, x.Stage, x.Probability, x.CustomerId, x.OwnerUserId,
         x.OriginLeadId, x.ExpectedCloseAtUtc, x.Source, x.NextAction, x.NextActionAtUtc, x.LastActivityAtUtc,
         x.Competitor, x.RiskLevel, x.OutcomeReason, x.ClosedAtUtc, x.Version);
-    private static QuoteDto Map(Quote x) => new(x.Id, x.Code, x.Customer, x.Opportunity, x.Amount, x.DiscountPercent,
-        x.MarginPercent, x.CompanyId, x.BranchId, x.TerritoryId, x.Status, x.NetAmount, x.CustomerId, x.OpportunityId);
+    private static QuoteDto Map(Quote x, AccessSnapshot snapshot) => new QuoteDto(x.Id, x.Code, x.Customer, x.Opportunity, x.Amount, x.DiscountPercent,
+        x.MarginPercent, x.CompanyId, x.BranchId, x.TerritoryId, x.Status, x.NetAmount, x.CustomerId, x.OpportunityId).Mask(snapshot);
     private static WorkItemDto Map(CrmWorkItem x) => new(x.Id, x.Title, x.Priority, x.DueAtUtc, x.IsDone);
     private static void Ensure(string value, string name)
     {

@@ -19,7 +19,7 @@ public sealed class QuoteApplicationService(
         return store.Read(data =>
         {
             var items = data.Quotes.Where(x => CanAccess(data, snapshot, currentUserId, organization, "Quote.Read", x))
-                .OrderByDescending(x => x.CreatedAtUtc).Select(Map).ToArray();
+                .OrderByDescending(x => x.CreatedAtUtc).Select(x => Map(x).Mask(snapshot)).ToArray();
             return new QuoteWorkspaceDto(items,
                 items.Where(x => x.Status is not (QuoteStatus.Accepted or QuoteStatus.Rejected or QuoteStatus.Expired))
                     .Sum(x => x.NetAmount),
@@ -234,7 +234,7 @@ public sealed class QuoteApplicationService(
             canManage && quote.Status == QuoteStatus.Approved && quote.ValidUntilUtc > nowUtc && HasPermission(snapshot, quote.CompanyId, "Quote.Send"),
             canManage && quote.Status == QuoteStatus.Sent && HasPermission(snapshot, quote.CompanyId, "Quote.Accept"),
             canManage && quote.Status is not (QuoteStatus.Draft or QuoteStatus.PendingApproval or QuoteStatus.Accepted) &&
-                HasPermission(snapshot, quote.CompanyId, "Quote.Update"));
+                HasPermission(snapshot, quote.CompanyId, "Quote.Update")).Mask(snapshot);
     }
 
     private ProductPriceSnapshot RequiredPrice(string companyId, string productCode, string currencyCode) =>

@@ -14,7 +14,7 @@ public sealed record DashboardDto(
 
 public sealed record CustomerDto(Guid Id, string Code, string Name, string City, string Owner, string CompanyId, string Branch, string BranchId, string? TerritoryId, string Segment, CustomerStatus Status, decimal Balance, decimal CreditLimit,
     CustomerKind Kind = CustomerKind.Legal, string? NationalId = null, string? PrimaryPhone = null, string? PrimaryEmail = null,
-    string DataSource = "CRM", DateTimeOffset? LastSynchronizedAtUtc = null, long Version = 1, int DataQualityScore = 0);
+    string DataSource = "CRM", DateTimeOffset? LastSynchronizedAtUtc = null, long Version = 1, int DataQualityScore = 0, bool FinancialMasked = false);
 public sealed record LeadDto(Guid Id, string Code, string Name, string Contact, string Source, string Owner, string CompanyId, string BranchId, string? TerritoryId, int Score, LeadStatus Status, Guid? CustomerId = null,
     Guid? OwnerUserId = null, string? Phone = null, string? Email = null, DateTimeOffset? AssignedAtUtc = null,
     DateTimeOffset? FirstContactDueAtUtc = null, DateTimeOffset? FirstContactAtUtc = null, DateTimeOffset? LastActivityAtUtc = null,
@@ -25,7 +25,7 @@ public sealed record OpportunityDto(Guid Id, string Code, string Title, string C
     string? NextAction = null, DateTimeOffset? NextActionAtUtc = null, DateTimeOffset? LastActivityAtUtc = null,
     string? Competitor = null, OpportunityRiskLevel RiskLevel = OpportunityRiskLevel.Medium,
     string? OutcomeReason = null, DateTimeOffset? ClosedAtUtc = null, long Version = 1);
-public sealed record QuoteDto(Guid Id, string Code, string Customer, string Opportunity, decimal Amount, decimal DiscountPercent, decimal MarginPercent, string CompanyId, string BranchId, string? TerritoryId, QuoteStatus Status, decimal NetAmount, Guid CustomerId = default, Guid? OpportunityId = null);
+public sealed record QuoteDto(Guid Id, string Code, string Customer, string Opportunity, decimal Amount, decimal DiscountPercent, decimal MarginPercent, string CompanyId, string BranchId, string? TerritoryId, QuoteStatus Status, decimal NetAmount, Guid CustomerId = default, Guid? OpportunityId = null, bool MarginMasked = false);
 public sealed record WorkItemDto(Guid Id, string Title, string Priority, DateTimeOffset DueAtUtc, bool IsDone);
 public sealed record CreateCustomerCommand(string Name, string City, string Owner, string BranchId, string Segment,
     CustomerKind Kind = CustomerKind.Legal, string? NationalId = null, string? PrimaryPhone = null, string? PrimaryEmail = null,

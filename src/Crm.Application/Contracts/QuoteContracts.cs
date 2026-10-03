@@ -7,7 +7,7 @@ public sealed record ProductPriceDto(string Code, string Name, string Unit, stri
 
 public sealed record QuoteLineDto(Guid Id, string ProductCode, string ProductName, string Unit, decimal Quantity,
     decimal ListUnitPrice, decimal DiscountPercent, decimal GrossAmount, decimal DiscountAmount,
-    decimal NetAmount, decimal MarginPercent, string PriceSource, DateTimeOffset PriceEffectiveAtUtc);
+    decimal NetAmount, decimal MarginPercent, string PriceSource, DateTimeOffset PriceEffectiveAtUtc, bool MarginMasked = false);
 
 public sealed record QuoteApprovalDecisionDto(Guid Id, QuoteApprovalRole Role, QuoteDecision Decision,
     string Comment, Guid DecidedByUserId, string DecidedBy, DateTimeOffset DecidedAtUtc);
@@ -18,7 +18,8 @@ public sealed record QuoteStatusHistoryDto(Guid Id, QuoteStatus? FromStatus, Quo
 public sealed record QuoteSummaryDto(Guid Id, string Code, int Revision, string Customer, string Opportunity,
     Guid CustomerId, Guid? OpportunityId, Guid? OwnerUserId, string CompanyId, string BranchId, string? TerritoryId,
     string CurrencyCode, DateTimeOffset ValidUntilUtc, decimal GrossAmount, decimal DiscountAmount, decimal NetAmount,
-    decimal DiscountPercent, decimal MarginPercent, QuoteApprovalLevel ApprovalLevel, QuoteStatus Status, long Version);
+    decimal DiscountPercent, decimal MarginPercent, QuoteApprovalLevel ApprovalLevel, QuoteStatus Status, long Version,
+    bool MarginMasked = false);
 
 public sealed record QuoteDetailsDto(QuoteSummaryDto Quote, IReadOnlyList<QuoteLineDto> Lines,
     IReadOnlyList<QuoteApprovalDecisionDto> Decisions, IReadOnlyList<QuoteStatusHistoryDto> History,

@@ -16,6 +16,7 @@ public sealed class DemoAccessSnapshotService(
                 "Portal.Review", "Mobile.Visit.Read", "Mobile.Visit.Write",
                 "Reporting.Read", "Reporting.Export", "Reporting.BiExport",
                 "Dashboard.Read", "Customer.Read", "Customer.Create", "Customer.Update", "Customer.MergeReview",
+                "Customer.Contact.Read", "Customer.NationalId.Read", "Customer.Financial.Read", "Quote.Margin.Read",
                 "Lead.Read", "Lead.Create", "Lead.Assign", "Lead.Update", "Lead.Convert",
                 "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Assign", "Opportunity.Close", "Opportunity.Advance",
                 "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Approve",
@@ -29,6 +30,7 @@ public sealed class DemoAccessSnapshotService(
                 "Mobile.Visit.Read", "Mobile.Visit.Write",
                 "Reporting.Read", "Reporting.Export",
                 "Dashboard.Read", "Customer.Read", "Customer.Create", "Customer.Update",
+                "Customer.Contact.Read", "Customer.NationalId.Read", "Customer.Financial.Read", "Quote.Margin.Read",
                 "Lead.Read", "Lead.Create", "Lead.Assign", "Lead.Update", "Lead.Convert",
                 "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Assign", "Opportunity.Close", "Opportunity.Advance",
                 "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Approve",
@@ -39,7 +41,7 @@ public sealed class DemoAccessSnapshotService(
             ["SalesExpert"] = Set(
                 "Mobile.Visit.Read", "Mobile.Visit.Write",
                 "Reporting.Read",
-                "Dashboard.Read", "Customer.Read", "Customer.Create",
+                "Dashboard.Read", "Customer.Read", "Customer.Create", "Customer.Contact.Read",
                 "Lead.Read", "Lead.Create", "Lead.Update", "Lead.Convert",
                 "Opportunity.Read", "Opportunity.Create", "Opportunity.Update", "Opportunity.Advance",
                 "Quote.Read", "Quote.Create", "Quote.Update", "Quote.Submit", "Quote.Send",
@@ -49,6 +51,7 @@ public sealed class DemoAccessSnapshotService(
             ["FinanceManager"] = Set(
                 "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
                 "Dashboard.Read", "Customer.Read", "Opportunity.Read", "Quote.Read",
+                "Customer.Contact.Read", "Customer.NationalId.Read", "Customer.Financial.Read", "Quote.Margin.Read",
                 "Quote.Approve.Finance", "Order.Read", "Order.CreditOverride",
                 "Dealer.Read", "Dealer.Financial.Read", "WorkQueue.Read", "WorkQueue.Complete"),
             ["ChannelManager"] = Set(
@@ -60,9 +63,10 @@ public sealed class DemoAccessSnapshotService(
                 "Dealer.Performance.Sync", "WorkQueue.Read", "WorkQueue.Complete"),
             ["Executive"] = Set("Dashboard.Read", "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
                 "Customer.Read", "Lead.Read", "Opportunity.Read", "Quote.Read", "Order.Read", "Dealer.Read", "Dealer.Financial.Read",
+                "Customer.Financial.Read", "Quote.Margin.Read",
                 "Service.Read", "Service.ReadAll", "WorkQueue.Read"),
             ["ServiceAgent"] = Set(
-                "Dashboard.Read", "Customer.Read", "Service.Read", "Service.Create", "Service.Update",
+                "Dashboard.Read", "Customer.Read", "Customer.Contact.Read", "Service.Read", "Service.Create", "Service.Update",
                 "WorkQueue.Read", "WorkQueue.Complete"),
             ["DealerUser"] = Set(
                 "Portal.Read", "Portal.Submit",
@@ -120,7 +124,7 @@ public sealed class DemoAccessSnapshotService(
 
     public void Invalidate(Guid userId) => cache.Remove(Key(userId));
 
-    private static string Key(Guid userId) => $"crm:access:v3:{userId:N}";
+    private static string Key(Guid userId) => $"crm:access:v4:{userId:N}";
     private static IReadOnlySet<string> Set(params string[] values) => new HashSet<string>(values, StringComparer.OrdinalIgnoreCase);
     private static IEnumerable<string> PermissionsFor(string roleKey) =>
         RolePermissions.TryGetValue(roleKey, out var values) ? values : Array.Empty<string>();

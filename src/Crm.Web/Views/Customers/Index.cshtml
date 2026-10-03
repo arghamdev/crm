@@ -11,7 +11,7 @@
 <section class="mini-stats">
     <div><span class="mini-icon"><svg><use href="#i-users"/></svg></span><p><small>کل مشتریان</small><strong>@Model.TotalCount</strong></p></div>
     <div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>فعال در این صفحه</small><strong>@active</strong></p></div>
-    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-file"/></svg></span><p><small>مانده این صفحه</small><strong>@($"{Model.Items.Sum(x => x.Balance) / 1_000_000_000m:N1} میلیارد")</strong></p></div>
+    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-file"/></svg></span><p><small>مانده این صفحه</small><strong>@(Model.Items.Any(x => x.FinancialMasked) ? "محرمانه" : $"{Model.Items.Sum(x => x.Balance) / 1_000_000_000m:N1} میلیارد")</strong></p></div>
 </section>
 <section class="panel table-panel">
     <div class="toolbar">

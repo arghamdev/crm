@@ -22,7 +22,10 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews(options =>
-    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+{
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    options.Filters.Add<UnauthorizedAccessExceptionFilter>();
+});
 builder.Services.AddHealthChecks();
 builder.Services.AddHttpContextAccessor();
 
