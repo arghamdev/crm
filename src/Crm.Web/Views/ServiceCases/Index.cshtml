@@ -7,9 +7,9 @@
     @if (Model.CanCreate) { <a class="button button--primary" href="/service/create" hx-get="/service/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg> پرونده جدید</a> }</div></header>
 <section class="mini-stats">
     <div><span class="mini-icon"><svg><use href="#i-inbox"/></svg></span><p><small>پرونده باز</small><strong>@Model.OpenCount</strong></p></div>
-    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>نقض SLA / در خطر</small><strong>@Model.BreachedCount / @Model.AtRiskCount</strong></p></div>
+    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-clock"/></svg></span><p><small>وضعیت SLA پرونده‌های باز</small><strong>@Model.BreachedCount نقض · @Model.AtRiskCount در خطر</strong></p></div>
     <div><span class="mini-icon"><svg><use href="#i-bell"/></svg></span><p><small>ارجاع‌شده</small><strong>@Model.EscalatedCount</strong></p></div>
-    <div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>رعایت SLA حل / رضایت</small><strong>@(Model.ResolutionSlaComplianceRate?.ToString("0.#") ?? "—")٪ / @(Model.AverageSatisfaction?.ToString("0.0") ?? "—")</strong></p></div>
+    <div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>رعایت SLA حل · میانگین رضایت</small><strong>@(Model.ResolutionSlaComplianceRate is { } rate ? rate.ToString("0.#") + "٪" : "—") · @(Model.AverageSatisfaction?.ToString("0.0") ?? "—") از ۵</strong></p></div>
 </section>
 <section class="panel table-panel">
     <form id="serviceFilters" class="toolbar pipeline-filter" method="get" action="/service" hx-get="/service/table" hx-target="#serviceTable" hx-trigger="submit, change delay:200ms">
