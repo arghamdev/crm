@@ -27,6 +27,7 @@ public static class CrmDatabaseInitializer
         db.AddRange(seed.Customers);
         db.AddRange(seed.CustomerContacts);
         db.AddRange(seed.CustomerAddresses);
+        db.AddRange(seed.CustomerProfiles);
         db.AddRange(seed.CustomerTimelineEvents);
         db.AddRange(seed.CustomerOwnershipHistory);
         db.AddRange(seed.CustomerDuplicateCandidates);

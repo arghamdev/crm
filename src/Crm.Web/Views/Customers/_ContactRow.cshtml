@@ -1,0 +1,23 @@
+@model ContactRowModel
+@{
+    var c = Model.Contact;
+    var prefix = $"Contacts[{Model.Key}]";
+    var errors = $"Contacts[{Model.Position}]";
+    void Error(string name) { if (Model.Position >= 0) { @Html.ValidationMessage(errors + "." + name, null, new { @class = "field-error" }) } }
+}
+<fieldset class="contact-row" data-row>
+    <input type="hidden" name="Contacts.Index" value="@Model.Key" />
+    <div class="form-grid form-grid--4">
+        <label class="field"><span>عنوان</span><select name="@(prefix).Title"><option value="">—</option>@foreach (var title in CustomerFormRules.Titles) { <option selected="@(title == c.Title)">@title</option> }</select>@{ Error("Title"); }</label>
+        <label class="field"><span>نام</span><input name="@(prefix).FirstName" value="@c.FirstName" placeholder="نام" maxlength="100" />@{ Error("FirstName"); }</label>
+        <label class="field"><span>نام خانوادگی</span><input name="@(prefix).LastName" value="@c.LastName" placeholder="نام خانوادگی" maxlength="100" />@{ Error("LastName"); }</label>
+        <label class="field"><span>سمت</span><input name="@(prefix).Position" value="@c.Position" placeholder="سمت" maxlength="80" />@{ Error("Position"); }</label>
+        <label class="field"><span>تلفن همراه</span><input name="@(prefix).Mobile" value="@c.Mobile" placeholder="09xxxxxxxxx" dir="ltr" inputmode="tel" maxlength="20" />@{ Error("Mobile"); }</label>
+        <label class="field"><span>تلفن ثابت</span><input name="@(prefix).Phone" value="@c.Phone" placeholder="021xxxxxxxx" dir="ltr" inputmode="tel" maxlength="20" />@{ Error("Phone"); }</label>
+        <label class="field"><span>داخلی</span><input name="@(prefix).Extension" value="@c.Extension" placeholder="داخلی" dir="ltr" inputmode="numeric" maxlength="8" />@{ Error("Extension"); }</label>
+        <label class="field"><span>ایمیل</span><input name="@(prefix).Email" value="@c.Email" type="email" placeholder="ایمیل" dir="ltr" maxlength="256" />@{ Error("Email"); }</label>
+        <label class="field span-2"><span>توضیحات</span><input name="@(prefix).Notes" value="@c.Notes" placeholder="توضیحات" maxlength="1000" />@{ Error("Notes"); }</label>
+        <label class="consent-row"><input type="checkbox" name="@(prefix).IsPrimary" value="true" checked="@c.IsPrimary" /><span>رابط اصلی</span></label>
+        <div class="contact-row__actions"><button class="link-button link-button--danger" type="button" data-remove-row>حذف این رابط</button></div>
+    </div>
+</fieldset>

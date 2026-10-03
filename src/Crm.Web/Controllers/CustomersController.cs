@@ -1,6 +1,7 @@
 using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
 using Crm.Application.Services;
+using Crm.Web.Presentation;
 using Crm.Web.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,22 +44,53 @@ public sealed class CustomersController(
     }
 
     [HttpGet("/customers/duplicate-check")]
-    public IActionResult DuplicateCheck(string name, string city, string? nationalId, string? primaryPhone, string? primaryEmail) =>
-        PartialView("_DuplicateCheck", customer360.CheckDuplicates(current.CrmUserId, current.RequiredOrganization(),
+    public IActionResult DuplicateCheck(string name, string city, string? nationalId, string? primaryPhone, string? primaryEmail,
+        [FromQuery(Name = "Kind")] Crm.Domain.Customers.CustomerKind? kind = null,
+        [FromQuery(Name = "Profile.LegalNationalId")] string? legalNationalId = null,
+        [FromQuery(Name = "Profile.NationalCode")] string? nationalCode = null,
+        [FromQuery(Name = "Profile.Phone1")] string? phone1 = null,
+        [FromQuery(Name = "Profile.Mobile1")] string? mobile1 = null)
+    {
+        // The full form posts kind-specific identifier fields; the short form posts NationalId/PrimaryPhone directly.
+        nationalId ??= Crm.Domain.Common.PersianText.Digits(kind == Crm.Domain.Customers.CustomerKind.Individual ? nationalCode : legalNationalId);
+        primaryPhone ??= Crm.Domain.Common.PersianText.Digits(phone1) ?? Crm.Domain.Common.IranianIdentifiers.NormalizeMobile(mobile1);
+        return PartialView("_DuplicateCheck", customer360.CheckDuplicates(current.CrmUserId, current.RequiredOrganization(),
             name ?? string.Empty, city ?? string.Empty, nationalId, primaryPhone, primaryEmail));
+    }
+
+    [HttpGet("/customers/cities")]
+    public IActionResult Cities([FromQuery(Name = "Profile.Province")] string? province) =>
+        Content(string.Concat(IranDivisions.CitiesOf(province).Select(x => $"<option value=\"{System.Net.WebUtility.HtmlEncode(x)}\"></option>")),
+            "text/html; charset=utf-8");
+
+    [Authorize(Policy = "perm:Customer.Create")]
+    [HttpGet("/customers/contact-row")]
+    public IActionResult ContactRow() => PartialView("_ContactRow", new ContactRowModel(Guid.NewGuid().ToString("N")[..8], -1, new ContactPersonInput()));
+
+    [HttpGet("/customers/{id:guid}/logo")]
+    public IActionResult Logo(Guid id)
+    {
+        var logo = customer360.GetLogo(current.CrmUserId, current.RequiredOrganization(), id);
+        if (logo is null) return NotFound();
+        Response.Headers.CacheControl = "private, max-age=300";
+        return File(logo.Content, logo.ContentType);
+    }
 
     [Authorize(Policy = "perm:Customer.Create")]
     [HttpGet("/customers/create")]
     public IActionResult Create()
     {
         var branchId = PrepareBranches();
-        return PartialView("_Form", new CreateCustomerCommand("", "تهران", "سارا احمدی", branchId, "استاندارد"));
+        return PartialView("_Form", new CreateCustomerCommand("", "تهران", "سارا احمدی", branchId, "استاندارد",
+            Profile: new CustomerProfileInput(ActivityType: "سایر موارد", Position: "نامشخص", Province: "تهران"), Contacts: [new ContactPersonInput()]));
     }
 
     [Authorize(Policy = "perm:Customer.Create")]
     [HttpPost("/customers/create")]
-    public IActionResult Create(CreateCustomerCommand command)
+    [RequestSizeLimit(2 * 1024 * 1024)]
+    public async Task<IActionResult> Create(CreateCustomerCommand command, IFormFile? logo)
     {
+        var upload = await ReadLogo(logo);
         if (string.IsNullOrWhiteSpace(command.Name)) ModelState.AddModelError(nameof(command.Name), "نام مشتری الزامی است.");
         if (string.IsNullOrWhiteSpace(command.Owner)) ModelState.AddModelError(nameof(command.Owner), "مالک حساب الزامی است.");
         if (string.IsNullOrWhiteSpace(command.BranchId)) ModelState.AddModelError(nameof(command.BranchId), "شعبه الزامی است.");
@@ -70,7 +102,7 @@ public sealed class CustomersController(
         }
         try
         {
-            crm.CreateCustomer(current.CrmUserId, current.RequiredOrganization(), command);
+            crm.CreateCustomer(current.CrmUserId, current.RequiredOrganization(), command, upload);
         }
         catch (UnauthorizedAccessException)
         {
@@ -78,7 +110,7 @@ public sealed class CustomersController(
         }
         catch (InvalidOperationException exception)
         {
-            ModelState.AddModelError(string.Empty, exception.Message);
+            AddErrors(exception);
             PrepareBranches();
             Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
             return PartialView("_Form", command);
@@ -101,17 +133,19 @@ public sealed class CustomersController(
 
     [Authorize(Policy = "perm:Customer.Update")]
     [HttpPost("/customers/{id:guid}/edit")]
-    public IActionResult Edit(Guid id, UpdateCustomerCommand command)
+    [RequestSizeLimit(2 * 1024 * 1024)]
+    public async Task<IActionResult> Edit(Guid id, UpdateCustomerCommand command, IFormFile? logo, bool removeLogo = false)
     {
+        var upload = await ReadLogo(logo);
         ValidateCustomer(command.Name, command.Owner, command.BranchId);
         if (ModelState.IsValid)
         {
             try
             {
-                customer360.Update(current.CrmUserId, current.RequiredOrganization(), id, command, DateTimeOffset.UtcNow);
+                customer360.Update(current.CrmUserId, current.RequiredOrganization(), id, command, DateTimeOffset.UtcNow, upload, removeLogo);
                 return CustomerChanged(id, "اطلاعات مشتری به‌روزرسانی شد.");
             }
-            catch (InvalidOperationException exception) { ModelState.AddModelError(string.Empty, exception.Message); }
+            catch (InvalidOperationException exception) { AddErrors(exception); }
             catch (KeyNotFoundException) { return NotFound(); }
             catch (UnauthorizedAccessException) { return Forbid(); }
         }
@@ -129,42 +163,95 @@ public sealed class CustomersController(
             NationalId = command.NationalId,
             PrimaryPhone = command.PrimaryPhone,
             PrimaryEmail = command.PrimaryEmail,
-            ExpectedVersion = command.ExpectedVersion
+            ExpectedVersion = command.ExpectedVersion,
+            Profile = command.Profile ?? source.Profile
         });
     }
 
     [Authorize(Policy = "perm:Customer.Update")]
     [HttpGet("/customers/{id:guid}/contacts/create")]
-    public IActionResult CreateContact(Guid id)
-    {
-        if (customer360.GetEdit(current.CrmUserId, current.RequiredOrganization(), id) is null) return NotFound();
-        ViewBag.CustomerId = id;
-        return PartialView("_ContactForm", new AddCustomerContactCommand("", "", "", "", false, Crm.Domain.Customers.ContactConsentStatus.Unknown));
-    }
+    public IActionResult CreateContact(Guid id) => ContactForm(id, null);
+
+    [Authorize(Policy = "perm:Customer.Update")]
+    [HttpGet("/customers/{id:guid}/contacts/{contactId:guid}/edit")]
+    public IActionResult EditContact(Guid id, Guid contactId) => ContactForm(id, contactId);
 
     [Authorize(Policy = "perm:Customer.Update")]
     [HttpPost("/customers/{id:guid}/contacts/create")]
-    public IActionResult CreateContact(Guid id, AddCustomerContactCommand command)
+    public IActionResult CreateContact(Guid id, SaveContactPersonCommand command) => SaveContact(id, null, command, "رابط مشتری افزوده شد.");
+
+    [Authorize(Policy = "perm:Customer.Update")]
+    [HttpPost("/customers/{id:guid}/contacts/{contactId:guid}/edit")]
+    public IActionResult EditContact(Guid id, Guid contactId, SaveContactPersonCommand command) => SaveContact(id, contactId, command, "رابط مشتری ویرایش شد.");
+
+    [Authorize(Policy = "perm:Customer.Update")]
+    [HttpPost("/customers/{id:guid}/contacts/{contactId:guid}/deactivate")]
+    public IActionResult DeactivateContact(Guid id, Guid contactId, long expectedVersion)
     {
-        if (!ModelState.IsValid)
-        {
-            ViewBag.CustomerId = id;
-            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
-            return PartialView("_ContactForm", command);
-        }
         try
         {
-            customer360.AddContact(current.CrmUserId, current.RequiredOrganization(), id, command, DateTimeOffset.UtcNow);
-            return CustomerChanged(id, "شخص تماس افزوده شد.");
-        }
-        catch (InvalidOperationException exception)
-        {
-            ModelState.AddModelError(string.Empty, exception.Message);
-            ViewBag.CustomerId = id;
-            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
-            return PartialView("_ContactForm", command);
+            customer360.DeactivateContact(current.CrmUserId, current.RequiredOrganization(), id, contactId, expectedVersion, DateTimeOffset.UtcNow);
+            return CustomerChanged(id, "رابط مشتری غیرفعال شد.");
         }
         catch (KeyNotFoundException) { return NotFound(); }
+        catch (InvalidOperationException exception) { return OperationError(exception.Message); }
+    }
+
+    private IActionResult ContactForm(Guid id, Guid? contactId)
+    {
+        var model = customer360.GetContactForm(current.CrmUserId, current.RequiredOrganization(), id, contactId);
+        return model is null ? NotFound() : PartialView("_ContactForm", model);
+    }
+
+    private IActionResult SaveContact(Guid id, Guid? contactId, SaveContactPersonCommand command, string message)
+    {
+        command = command with { Contact = command.Contact ?? new ContactPersonInput() };
+        try
+        {
+            customer360.SaveContactPerson(current.CrmUserId, current.RequiredOrganization(), id, contactId, command, DateTimeOffset.UtcNow);
+            return CustomerChanged(id, message);
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (InvalidOperationException exception)
+        {
+            AddErrors(exception, "Contacts[0].", "Contact.");
+            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            return PartialView("_ContactForm", new CustomerContactFormDto(id, contactId, command.Contact ?? new ContactPersonInput(),
+                command.ConsentStatus, command.ExpectedVersion));
+        }
+    }
+
+    /// <summary>Field-level errors of the customer form go next to their inputs; anything else into the summary.</summary>
+    private void AddErrors(InvalidOperationException exception, string? fromPrefix = null, string? toPrefix = null)
+    {
+        if (exception is not CustomerValidationException validation)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            return;
+        }
+        ModelState.AddModelError(string.Empty, validation.Message);
+        foreach (var (field, message) in validation.Errors)
+            ModelState.AddModelError(fromPrefix is not null && field.StartsWith(fromPrefix, StringComparison.Ordinal)
+                ? toPrefix + field[fromPrefix.Length..] : field, message);
+    }
+
+    private async Task<CustomerLogoUpload?> ReadLogo(IFormFile? file)
+    {
+        if (file is null || file.Length == 0) return null;
+        if (file.Length > Crm.Domain.Customers.CustomerLogo.MaxBytes)
+        {
+            ModelState.AddModelError("logo", "حجم تصویر باید حداکثر ۵۱۲ کیلوبایت باشد.");
+            return null;
+        }
+        using var buffer = new MemoryStream();
+        await file.CopyToAsync(buffer);
+        var bytes = buffer.ToArray();
+        if (Crm.Domain.Customers.CustomerLogo.Detect(bytes) is null)
+        {
+            ModelState.AddModelError("logo", "فقط تصویر PNG، JPEG یا WebP پذیرفته می‌شود.");
+            return null;
+        }
+        return new CustomerLogoUpload(bytes);
     }
 
     [Authorize(Policy = "perm:Customer.Update")]

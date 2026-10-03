@@ -177,10 +177,15 @@ internal static class SampleData
         var nakhl = Guid.Parse("20000000-0000-4000-8000-000000000003");
         var mahan = Guid.Parse("20000000-0000-4000-8000-000000000004");
         data.CustomerContacts.AddRange([
-            new CustomerContact(Guid.Parse("21000000-0000-4000-8000-000000000001"), "C01", sepehr, "علی رستگار", "مدیر تدارکات", "09121234567", "A.ROSTEGAR@SEPEHR.TEST", true, ContactConsentStatus.Granted),
+            new CustomerContact(Guid.Parse("21000000-0000-4000-8000-000000000001"), "C01", sepehr, "علی رستگار", "مدیر تدارکات", "02188776655", "A.ROSTEGAR@SEPEHR.TEST", true, ContactConsentStatus.Granted,
+                new ContactPersonDetails("آقای", "علی", "رستگار", "09121234567", "214", "هماهنگی خرید فصلی")),
             new CustomerContact(Guid.Parse("21000000-0000-4000-8000-000000000002"), "C01", sepehr, "مینا کاظمی", "مالی", "09123334455", "FINANCE@SEPEHR.TEST", false, ContactConsentStatus.Unknown),
             new CustomerContact(Guid.Parse("21000000-0000-4000-8000-000000000003"), "C01", arya, "رضا محمودی", "مدیر فروش", "09131112233", "R.MAHMOUDI@ARYA.TEST", true, ContactConsentStatus.Granted)
         ]);
+        data.CustomerProfiles.Add(new CustomerProfile(sepehr, "C01", CustomerKind.Legal, new CustomerProfileData(
+            "تولیدی", "آقای", "علی", "رستگار", "مدیر خرید", "09121234567", null, "02188776655", "02188776656", "تهران",
+            "مشتری کلیدی خط تولید کنسرو", "شرکت صنایع غذایی سپهر (سهامی خاص)", "411111111111", "123456", null, null, null,
+            "۵۱ تا ۲۰۰ نفر", "1101-481", new DateOnly(2019, 5, 31), null, "BR-01-481", "نمایشگاه", "https://sepehr.test")));
         data.CustomerAddresses.AddRange([
             new CustomerAddress(Guid.Parse("22000000-0000-4000-8000-000000000001"), "C01", sepehr, CustomerAddressType.Registered, "دفتر مرکزی", "تهران", "تهران", "خیابان ولیعصر، پلاک ۱۲۰", "1599911111", true),
             new CustomerAddress(Guid.Parse("22000000-0000-4000-8000-000000000002"), "C01", sepehr, CustomerAddressType.Shipping, "انبار", "البرز", "کرج", "شهرک صنعتی بهارستان", "3187612345", false),

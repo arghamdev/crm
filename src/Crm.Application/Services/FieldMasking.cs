@@ -39,7 +39,7 @@ public static class FieldMasking
     public static CustomerContactDto Mask(this CustomerContactDto value, AccessSnapshot snapshot, string companyId)
     {
         if (snapshot.PermissionsFor(companyId).Contains(ContactPermission)) return value;
-        return value with { Phone = MaskPhone(value.Phone), Email = MaskEmail(value.Email) };
+        return value with { Phone = MaskPhone(value.Phone), Mobile = MaskPhone(value.Mobile), Email = MaskEmail(value.Email) };
     }
 
     public static QuoteSummaryDto Mask(this QuoteSummaryDto value, AccessSnapshot snapshot) =>

@@ -23,6 +23,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+    public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
+    public DbSet<CustomerLogo> CustomerLogos => Set<CustomerLogo>();
     public DbSet<CustomerTimelineEvent> CustomerTimelineEvents => Set<CustomerTimelineEvent>();
     public DbSet<CustomerOwnershipHistory> CustomerOwnershipHistory => Set<CustomerOwnershipHistory>();
     public DbSet<CustomerDuplicateCandidate> CustomerDuplicateCandidates => Set<CustomerDuplicateCandidate>();
@@ -73,6 +75,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         ConfigureCustomer(modelBuilder.Entity<Customer>());
         ConfigureCustomerContact(modelBuilder.Entity<CustomerContact>());
         ConfigureCustomerAddress(modelBuilder.Entity<CustomerAddress>());
+        ConfigureCustomerProfile(modelBuilder);
         ConfigureCustomerTimeline(modelBuilder.Entity<CustomerTimelineEvent>());
         ConfigureCustomerOwnership(modelBuilder.Entity<CustomerOwnershipHistory>());
         ConfigureCustomerDuplicate(modelBuilder.Entity<CustomerDuplicateCandidate>());
@@ -199,9 +202,62 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         entity.Property(x => x.Phone).HasMaxLength(40);
         entity.Property(x => x.Email).HasMaxLength(256);
         entity.Property(x => x.ConsentStatus).HasConversion<string>().HasMaxLength(24);
+        entity.Property(x => x.Title).HasMaxLength(40);
+        entity.Property(x => x.FirstName).HasMaxLength(100);
+        entity.Property(x => x.LastName).HasMaxLength(100);
+        entity.Property(x => x.Mobile).HasMaxLength(20);
+        entity.Property(x => x.Extension).HasMaxLength(10);
+        entity.Property(x => x.Notes).HasMaxLength(1000);
         entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.IsActive });
+        entity.HasIndex(x => new { x.CompanyId, x.Mobile });
         entity.HasIndex(x => new { x.CompanyId, x.Phone });
         entity.HasIndex(x => new { x.CompanyId, x.Email });
+    }
+
+    private static void ConfigureCustomerProfile(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<CustomerProfile>(entity =>
+        {
+            ConfigureEntity(entity, "CustomerProfiles", "crm");
+            entity.Ignore(x => x.CustomerId);
+            entity.Ignore(x => x.PersonName);
+            entity.Ignore(x => x.Data);
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ActivityType).HasMaxLength(80);
+            entity.Property(x => x.Title).HasMaxLength(40);
+            entity.Property(x => x.FirstName).HasMaxLength(100);
+            entity.Property(x => x.LastName).HasMaxLength(100);
+            entity.Property(x => x.Position).HasMaxLength(80);
+            entity.Property(x => x.Mobile1).HasMaxLength(20);
+            entity.Property(x => x.Mobile2).HasMaxLength(20);
+            entity.Property(x => x.Phone1).HasMaxLength(20);
+            entity.Property(x => x.Phone2).HasMaxLength(20);
+            entity.Property(x => x.Province).HasMaxLength(60);
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.Property(x => x.LegalName).HasMaxLength(200);
+            entity.Property(x => x.EconomicCode).HasMaxLength(14);
+            entity.Property(x => x.RegistrationNumber).HasMaxLength(20);
+            entity.Property(x => x.RepresentativeNationalCode).HasMaxLength(10);
+            entity.Property(x => x.BirthCertificateNumber).HasMaxLength(20);
+            entity.Property(x => x.EmployeeCount).HasMaxLength(40);
+            entity.Property(x => x.AccountingCode).HasMaxLength(40);
+            entity.Property(x => x.SoftwarePurchase).HasMaxLength(200);
+            entity.Property(x => x.BranchSubscriptionCode).HasMaxLength(40);
+            entity.Property(x => x.ReferralSource).HasMaxLength(120);
+            entity.Property(x => x.Website).HasMaxLength(200);
+            entity.Property(x => x.LogoContentType).HasMaxLength(40);
+            entity.HasIndex(x => new { x.CompanyId, x.Mobile1 });
+            entity.HasIndex(x => new { x.CompanyId, x.AccountingCode });
+            entity.HasOne<Customer>().WithOne().HasForeignKey<CustomerProfile>(x => x.Id).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<CustomerLogo>(entity =>
+        {
+            ConfigureEntity(entity, "CustomerLogos", "crm");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Content).HasColumnType("varbinary(max)").IsRequired();
+            entity.HasOne<Customer>().WithOne().HasForeignKey<CustomerLogo>(x => x.Id).OnDelete(DeleteBehavior.NoAction);
+        });
     }
 
     private static void ConfigureCustomerAddress(EntityTypeBuilder<CustomerAddress> entity)

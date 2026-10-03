@@ -35,6 +35,7 @@ internal static partial class TestRunner
         var managerCookie = await Login(manager, "sales.manager", "Demo@1405");
         await CheckManagerAccess(manager);
         await CheckCustomer360(manager);
+        await CheckCustomerForm(manager);
         await CheckSalesPipeline(manager);
         await CheckQuoteGovernance(manager);
         await CheckOrderVisibility(manager);
@@ -248,7 +249,7 @@ internal static partial class TestRunner
             var html = await details.Content.ReadAsStringAsync();
             CheckHtml(details.StatusCode == HttpStatusCode.OK &&
                   HtmlContains(html, "نمای ۳۶۰ مشتری") &&
-                  HtmlContains(html, "اشخاص تماس") &&
+                  HtmlContains(html, "رابط‌های مشتری") &&
                   HtmlContains(html, "Timeline یکپارچه"),
                 "Customer details must render the aggregated Customer 360 view.", "customer-360", html);
         }
@@ -331,12 +332,16 @@ internal static partial class TestRunner
         using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["__RequestVerificationToken"] = token,
-            ["FullName"] = "تماس تست وب",
-            ["Role"] = "خرید",
-            ["Phone"] = "09121111111",
-            ["Email"] = string.Empty,
-            ["IsPrimary"] = "false",
-            ["ConsentStatus"] = "Unknown"
+            ["Contact.Title"] = "خانم",
+            ["Contact.FirstName"] = "نگار",
+            ["Contact.LastName"] = "تست وب",
+            ["Contact.Position"] = "خرید",
+            ["Contact.Mobile"] = "۰۹۱۲۱۱۱۱۱۱۱",
+            ["Contact.Extension"] = "۱۲",
+            ["Contact.Email"] = string.Empty,
+            ["Contact.IsPrimary"] = "false",
+            ["ConsentStatus"] = "Unknown",
+            ["ExpectedVersion"] = "0"
         });
         using var response = await client.PostAsync($"/customers/{customerId}/contacts/create", content);
         Check(response.StatusCode == HttpStatusCode.Redirect && response.Headers.Location?.OriginalString == $"/customers/{customerId}",

@@ -1,22 +1,59 @@
 @model CreateCustomerCommand
-@{ var branches = ViewBag.Branches as IReadOnlyList<OrganizationUnitOptionDto> ?? Array.Empty<OrganizationUnitOptionDto>(); }
-<form class="drawer-form" method="post" action="/customers/create" hx-post="/customers/create" hx-target="#drawerBody" hx-swap="innerHTML">
+@{
+    var branches = ViewBag.Branches as IReadOnlyList<OrganizationUnitOptionDto> ?? Array.Empty<OrganizationUnitOptionDto>();
+    var profile = Model.Profile ?? new CustomerProfileInput();
+    var contacts = Model.Contacts is { Count: > 0 } list ? list : [new ContactPersonInput()];
+    var contactsHaveErrors = ViewData.ModelState.Keys.Any(x => x.StartsWith("Contacts", StringComparison.Ordinal) && ViewData.ModelState[x]!.Errors.Count > 0);
+}
+<form class="drawer-form customer-form" method="post" action="/customers/create" enctype="multipart/form-data"
+      hx-post="/customers/create" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <section class="form-section"><h3>مشخصات مشتری</h3><div class="form-grid">
-        <label class="field"><span>نوع مشتری *</span><select asp-for="Kind"><option value="Legal">حقوقی</option><option value="Individual">حقیقی</option></select></label>
-        <label class="field"><span>شناسه ملی/ثبت</span><input asp-for="NationalId" inputmode="numeric" hx-get="/customers/duplicate-check" hx-trigger="blur changed" hx-target="#duplicateCheck" hx-include="closest form"/></label>
-        <label class="field field--full"><span>نام مشتری *</span><input asp-for="Name" autocomplete="organization" /><span asp-validation-for="Name" class="field-error"></span></label>
-        <label class="field"><span>شهر</span><input asp-for="City" /></label>
-        <label class="field"><span>مالک حساب</span><select asp-for="Owner"><option>سارا احمدی</option><option>مهدی نادری</option><option>محمد رضایی</option><option>نرگس یوسفی</option></select></label>
-        <label class="field"><span>شعبه *</span><select asp-for="BranchId">@foreach (var branch in branches) { <option value="@branch.Id">@branch.Name — @branch.Code</option> }</select><span asp-validation-for="BranchId" class="field-error"></span></label>
-        <label class="field"><span>بخش‌بندی</span><select asp-for="Segment"><option>استاندارد</option><option>رشد</option><option>کلیدی</option></select></label>
-        <label class="field"><span>تلفن اصلی</span><input asp-for="PrimaryPhone" inputmode="tel"/></label>
-        <label class="field"><span>ایمیل اصلی</span><input asp-for="PrimaryEmail" type="email"/></label>
-    </div></section>
-    <div id="duplicateCheck" class="duplicate-check" hx-get="/customers/duplicate-check" hx-trigger="change delay:500ms from:[name='Name'], change delay:500ms from:[name='City']" hx-include="closest form"></div>
-    <label class="consent-row"><input asp-for="AllowPotentialDuplicate"/><span>در صورت وجود شباهت غیرقطعی، ایجاد رکورد مستقل مجاز است.</span></label>
-    <label class="field field--full"><span>دلیل ایجاد رکورد مشابه</span><textarea asp-for="DuplicateReason" rows="2"></textarea></label>
-    <div class="identity-form-note">این فرم نمونه است. مشتری جدید با وضعیت «در حال بررسی» و سقف اعتبار آزمایشی ساخته می‌شود.</div>
+    <div class="form-tabs" role="tablist">
+        <input type="radio" id="tabCustomerInfo" name="customerFormTab" form="customerFormTabs" checked="@(!contactsHaveErrors)" /><label for="tabCustomerInfo">اطلاعات مشتری</label>
+        <input type="radio" id="tabContacts" name="customerFormTab" form="customerFormTabs" checked="@contactsHaveErrors" /><label for="tabContacts">اطلاعات رابط‌های مشتری</label>
+    </div>
+    <div class="tab-panel tab-panel--info">
+        <section class="customer-identity-box">
+            <label class="logo-picker" title="عکس یا لوگوی سازمان (PNG، JPEG یا WebP، حداکثر ۵۱۲ کیلوبایت)">
+                <span class="logo-picker__image"><svg><use href="#i-building"/></svg></span>
+                <span>عکس سازمان</span>
+                <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" data-file-label="logoFileName" /><span class="logo-picker__name" id="logoFileName">انتخاب تصویر…</span>
+                @Html.ValidationMessage("logo", null, new { @class = "field-error" })
+            </label>
+            <div class="customer-identity-box__fields">
+                <div class="kind-switch" role="radiogroup" aria-label="نوع مشتری">
+                    <label><input type="radio" name="Kind" value="Legal" checked="@(Model.Kind == CustomerKind.Legal)" /><span>حقوقی (شرکت/فروشگاه)</span></label>
+                    <label><input type="radio" name="Kind" value="Individual" checked="@(Model.Kind == CustomerKind.Individual)" /><span>حقیقی (شخص)</span></label>
+                </div>
+                <label class="field"><span>نام تجاری مشتری *</span><input asp-for="Name" autocomplete="organization" maxlength="200" /><span asp-validation-for="Name" class="field-error"></span></label>
+            </div>
+        </section>
+        <partial name="_ProfileFields" model="profile" view-data='new ViewDataDictionary(ViewData) { ["City"] = Model.City, ["Email"] = Model.PrimaryEmail }' />
+        <section class="form-section">
+            <h3>مالکیت و دسترسی</h3>
+            <div class="form-grid form-grid--4">
+                <label class="field"><span>مالک حساب</span><select asp-for="Owner"><option>سارا احمدی</option><option>مهدی نادری</option><option>محمد رضایی</option><option>نرگس یوسفی</option></select></label>
+                <label class="field"><span>شعبه *</span><select asp-for="BranchId">@foreach (var branch in branches) { <option value="@branch.Id">@branch.Name — @branch.Code</option> }</select><span asp-validation-for="BranchId" class="field-error"></span></label>
+                <label class="field"><span>بخش‌بندی</span><select asp-for="Segment"><option>استاندارد</option><option>رشد</option><option>کلیدی</option></select></label>
+            </div>
+            <p class="source-note">دسترسی به مشتری از شعبه، قلمرو و مالک حساب تعیین می‌شود (نقش‌ها و دامنه‌ها).</p>
+        </section>
+        <div id="duplicateCheck" class="duplicate-check" hx-get="/customers/duplicate-check" hx-trigger="change delay:500ms from:[name='Name'], change delay:500ms from:[name='City'], change delay:500ms from:[name='Profile.LegalNationalId'], change delay:500ms from:[name='Profile.NationalCode']" hx-include="closest form"></div>
+        <label class="consent-row"><input asp-for="AllowPotentialDuplicate"/><span>در صورت وجود شباهت غیرقطعی، ایجاد رکورد مستقل مجاز است.</span></label>
+        <label class="field field--full"><span>دلیل ایجاد رکورد مشابه</span><textarea asp-for="DuplicateReason" rows="2"></textarea></label>
+    </div>
+    <div class="tab-panel tab-panel--contacts">
+        <section class="form-section">
+            <h3>رابط‌های مشتری</h3>
+            <p class="source-note">ردیف‌های خالی نادیده گرفته می‌شوند. اگر رابطی وارد نشود، شخص بخش «اطلاعات حقیقی» رابط اصلی می‌شود.</p>
+            <div id="contactRows">
+                @for (var i = 0; i < contacts.Count; i++) { <partial name="_ContactRow" model="new ContactRowModel(i.ToString(System.Globalization.CultureInfo.InvariantCulture), i, contacts[i])" /> }
+            </div>
+            @Html.ValidationMessage("Contacts", null, new { @class = "field-error" })
+            <button class="button button--ghost" type="button" hx-get="/customers/contact-row" hx-target="#contactRows" hx-swap="beforeend"><svg><use href="#i-plus"/></svg> تعریف رابط مشتری</button>
+        </section>
+    </div>
+    <div class="identity-form-note">مشتری جدید با وضعیت «در حال بررسی» ثبت می‌شود. اعداد فارسی و تاریخ شمسی پذیرفته می‌شوند.</div>
     <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت مشتری</button></div>
 </form>

@@ -8,7 +8,13 @@ public interface ICustomer360Service
     CustomerEditDto? GetEdit(Guid currentUserId, OrganizationSelection organization, Guid customerId);
     CustomerDuplicateCheckDto CheckDuplicates(Guid currentUserId, OrganizationSelection organization,
         string name, string city, string? nationalId, string? phone, string? email, Guid? excludeCustomerId = null);
-    void Update(Guid currentUserId, OrganizationSelection organization, Guid customerId, UpdateCustomerCommand command, DateTimeOffset nowUtc);
+    void Update(Guid currentUserId, OrganizationSelection organization, Guid customerId, UpdateCustomerCommand command, DateTimeOffset nowUtc,
+        CustomerLogoUpload? logo = null, bool removeLogo = false);
+    CustomerContactFormDto? GetContactForm(Guid currentUserId, OrganizationSelection organization, Guid customerId, Guid? contactId);
+    void SaveContactPerson(Guid currentUserId, OrganizationSelection organization, Guid customerId, Guid? contactId,
+        SaveContactPersonCommand command, DateTimeOffset nowUtc);
+    void DeactivateContact(Guid currentUserId, OrganizationSelection organization, Guid customerId, Guid contactId, long expectedVersion, DateTimeOffset nowUtc);
+    CustomerLogoDto? GetLogo(Guid currentUserId, OrganizationSelection organization, Guid customerId);
     void AddContact(Guid currentUserId, OrganizationSelection organization, Guid customerId, AddCustomerContactCommand command, DateTimeOffset nowUtc);
     void AddAddress(Guid currentUserId, OrganizationSelection organization, Guid customerId, AddCustomerAddressCommand command, DateTimeOffset nowUtc);
     IReadOnlyList<DuplicateCandidateDto> GetDuplicateReviewQueue(Guid currentUserId, OrganizationSelection organization);

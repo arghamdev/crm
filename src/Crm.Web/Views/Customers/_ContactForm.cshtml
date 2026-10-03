@@ -1,4 +1,25 @@
-@model AddCustomerContactCommand
-@{ var customerId = (Guid)ViewBag.CustomerId; }
-<form class="drawer-form" method="post" action="/customers/@customerId/contacts/create" hx-post="/customers/@customerId/contacts/create" hx-target="#drawerBody" hx-swap="innerHTML">@Html.AntiForgeryToken()<div asp-validation-summary="ModelOnly" class="validation-summary"></div><section class="form-section"><h3>شخص تماس جدید</h3><div class="form-grid"><label class="field field--full"><span>نام و نام خانوادگی *</span><input asp-for="FullName"/></label><label class="field"><span>سمت/نقش</span><input asp-for="Role"/></label><label class="field"><span>تلفن</span><input asp-for="Phone"/></label><label class="field"><span>ایمیل</span><input asp-for="Email" type="email"/></label><label class="field"><span>رضایت ارتباطی</span><select asp-for="ConsentStatus"><option value="Unknown">نامشخص</option><option value="Granted">مجاز</option><option value="Revoked">لغوشده</option></select></label><label class="consent-row"><input asp-for="IsPrimary"/><span>تماس اصلی مشتری</span></label></div></section><div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">افزودن تماس</button></div></form>
-
+@model CustomerContactFormDto
+@{
+    var c = Model.Contact;
+    var action = Model.ContactId is { } contactId ? $"/customers/{Model.CustomerId}/contacts/{contactId}/edit" : $"/customers/{Model.CustomerId}/contacts/create";
+    void Error(string name) { @Html.ValidationMessage("Contact." + name, null, new { @class = "field-error" }) }
+}
+<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ExpectedVersion" value="@Model.ExpectedVersion" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>@(Model.ContactId is null ? "تعریف رابط مشتری" : "ویرایش رابط مشتری")</h3><div class="form-grid">
+        <label class="field"><span>عنوان</span><select name="Contact.Title"><option value="">—</option>@foreach (var title in CustomerFormRules.Titles) { <option selected="@(title == c.Title)">@title</option> }</select>@{ Error("Title"); }</label>
+        <label class="field"><span>نام</span><input name="Contact.FirstName" value="@c.FirstName" placeholder="نام" maxlength="100"/>@{ Error("FirstName"); }</label>
+        <label class="field"><span>نام خانوادگی *</span><input name="Contact.LastName" value="@c.LastName" placeholder="نام خانوادگی" maxlength="100"/>@{ Error("LastName"); }</label>
+        <label class="field"><span>سمت</span><input name="Contact.Position" value="@c.Position" placeholder="سمت" maxlength="80"/>@{ Error("Position"); }</label>
+        <label class="field"><span>تلفن همراه</span><input name="Contact.Mobile" value="@c.Mobile" placeholder="09xxxxxxxxx" dir="ltr" inputmode="tel" maxlength="20"/>@{ Error("Mobile"); }</label>
+        <label class="field"><span>تلفن ثابت</span><input name="Contact.Phone" value="@c.Phone" placeholder="021xxxxxxxx" dir="ltr" inputmode="tel" maxlength="20"/>@{ Error("Phone"); }</label>
+        <label class="field"><span>داخلی</span><input name="Contact.Extension" value="@c.Extension" placeholder="داخلی" dir="ltr" inputmode="numeric" maxlength="8"/>@{ Error("Extension"); }</label>
+        <label class="field"><span>ایمیل</span><input name="Contact.Email" value="@c.Email" type="email" placeholder="ایمیل" dir="ltr" maxlength="256"/>@{ Error("Email"); }</label>
+        <label class="field field--full"><span>توضیحات</span><textarea name="Contact.Notes" rows="2" maxlength="1000">@c.Notes</textarea>@{ Error("Notes"); }</label>
+        <label class="field"><span>رضایت ارتباطی</span><select name="ConsentStatus"><option value="Unknown" selected="@(Model.ConsentStatus == ContactConsentStatus.Unknown)">نامشخص</option><option value="Granted" selected="@(Model.ConsentStatus == ContactConsentStatus.Granted)">مجاز</option><option value="Revoked" selected="@(Model.ConsentStatus == ContactConsentStatus.Revoked)">لغوشده</option></select></label>
+        <label class="consent-row"><input type="checkbox" name="Contact.IsPrimary" value="true" checked="@c.IsPrimary"/><span>رابط اصلی مشتری</span></label>
+    </div></section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیره</button></div>
+</form>

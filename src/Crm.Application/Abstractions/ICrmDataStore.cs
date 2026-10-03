@@ -86,6 +86,8 @@ public sealed class CrmDataSet
     public List<Customer> Customers => Set<Customer>();
     public List<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public List<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+    public List<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
+    public List<CustomerLogo> CustomerLogos => Set<CustomerLogo>();
     public List<CustomerTimelineEvent> CustomerTimelineEvents => Set<CustomerTimelineEvent>();
     public List<CustomerOwnershipHistory> CustomerOwnershipHistory => Set<CustomerOwnershipHistory>();
     public List<CustomerDuplicateCandidate> CustomerDuplicateCandidates => Set<CustomerDuplicateCandidate>();

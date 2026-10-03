@@ -1,0 +1,59 @@
+@model CustomerProfileInput
+@*
+    Customer form fields shared by create and edit. Fields marked legal-only / individual-only are shown by the customer
+    type (CSS on the parent form), and the server applies the same rules (CustomerFormRules).
+*@
+@{
+    var city = ViewData["City"] as string;
+    var email = ViewData["Email"] as string;
+    var code = ViewData["Code"] as string;
+    void Error(string name) { @Html.ValidationMessage(name, null, new { @class = "field-error" }) }
+    void Text(string name, string label, string? value, string? css = null, bool ltr = false, string? placeholder = null, string? mode = null, int max = 200)
+    {
+        <label class="field @css"><span>@label</span><input name="Profile.@name" value="@value" placeholder="@(placeholder ?? label)" maxlength="@max" dir="@(ltr ? "ltr" : null)" inputmode="@mode" />@{ Error("Profile." + name); }</label>
+    }
+    void Select(string name, string label, string? value, IEnumerable<string> options, string? empty = "انتخاب…", string? css = null)
+    {
+        <label class="field @css"><span>@label</span><select name="Profile.@name">@if (empty is not null) { <!option value="">@empty</!option> }@foreach (var option in options) { <!option value="@option" selected="@(option == value)">@option</!option> }</select>@{ Error("Profile." + name); }</label>
+    }
+}
+<section class="form-section">
+    <h3>اطلاعات حقیقی <small class="legal-only">(نمایندهٔ شرکت)</small></h3>
+    <div class="form-grid form-grid--4">
+        @{ Select(nameof(Model.ActivityType), "نوع فعالیت سازمان", Model.ActivityType, CustomerFormRules.ActivityTypes); }
+        @{ Select(nameof(Model.Title), "عنوان", Model.Title, CustomerFormRules.Titles, "—"); }
+        <label class="field"><span>نام <b class="individual-only">*</b></span><input name="Profile.FirstName" value="@Model.FirstName" placeholder="نام" maxlength="100" autocomplete="given-name" />@{ Error("Profile.FirstName"); }</label>
+        <label class="field"><span>نام خانوادگی <b class="individual-only">*</b></span><input name="Profile.LastName" value="@Model.LastName" placeholder="نام خانوادگی" maxlength="100" autocomplete="family-name" />@{ Error("Profile.LastName"); }</label>
+        @{ Select(nameof(Model.Position), "سمت", Model.Position, CustomerFormRules.Positions, null); }
+        <label class="field"><span>کد مشتری</span><input value="@(code ?? "پس از ثبت، خودکار")" readonly dir="ltr" /></label>
+        @{ Text(nameof(Model.Mobile1), "همراه ۱", Model.Mobile1, ltr: true, placeholder: "09xxxxxxxxx", mode: "tel", max: 20); }
+        @{ Text(nameof(Model.Mobile2), "همراه ۲", Model.Mobile2, ltr: true, placeholder: "09xxxxxxxxx", mode: "tel", max: 20); }
+        @{ Text(nameof(Model.Phone1), "تلفن ثابت ۱", Model.Phone1, ltr: true, placeholder: "021xxxxxxxx", mode: "tel", max: 20); }
+        @{ Text(nameof(Model.Phone2), "تلفن ثابت ۲", Model.Phone2, ltr: true, placeholder: "021xxxxxxxx", mode: "tel", max: 20); }
+        <label class="field"><span>استان</span><select name="Profile.Province" hx-get="/customers/cities" hx-target="#cityOptions" hx-trigger="change" hx-swap="innerHTML"><option value="">انتخاب…</option>@foreach (var province in IranDivisions.Provinces) { <option value="@province" selected="@(province == Model.Province)">@province</option> }</select>@{ Error("Profile.Province"); }</label>
+        <label class="field"><span>شهر</span><input name="City" value="@city" list="cityOptions" placeholder="شهر" maxlength="100" autocomplete="off" /><datalist id="cityOptions">@foreach (var item in IranDivisions.CitiesOf(Model.Province)) { <option value="@item"></option> }</datalist></label>
+        @{ Text(nameof(Model.Address), "آدرس", Model.Address, "span-2", max: 1000); }
+        @{ Text(nameof(Model.PostalCode), "کد پستی", Model.PostalCode, ltr: true, placeholder: "۱۰ رقم", mode: "numeric", max: 12); }
+        @{ Text(nameof(Model.Notes), "توضیحات", Model.Notes, max: 2000); }
+    </div>
+</section>
+<section class="form-section form-section--supplementary">
+    <h3>اطلاعات تکمیلی</h3>
+    <div class="form-grid form-grid--4">
+        @{ Text(nameof(Model.LegalName), "نام شرکت / فروشگاه", Model.LegalName); }
+        @{ Text(nameof(Model.EconomicCode), "کد اقتصادی", Model.EconomicCode, ltr: true, mode: "numeric", max: 16); }
+        @{ Text(nameof(Model.LegalNationalId), "شناسه ملی", Model.LegalNationalId, "legal-only", true, "۱۱ رقم", "numeric", 13); }
+        @{ Text(nameof(Model.RegistrationNumber), "شماره ثبت", Model.RegistrationNumber, "legal-only", true, mode: "numeric", max: 20); }
+        <label class="field"><span><span class="individual-only">کد ملی</span><span class="legal-only">کد ملی نماینده</span></span><input name="Profile.NationalCode" value="@Model.NationalCode" placeholder="۱۰ رقم" maxlength="12" dir="ltr" inputmode="numeric" />@{ Error("Profile.NationalCode"); }</label>
+        @{ Text(nameof(Model.BirthCertificateNumber), "شماره شناسنامه", Model.BirthCertificateNumber, ltr: true, mode: "numeric", max: 12); }
+        @{ Text(nameof(Model.BirthDate), "تاریخ تولد", Model.BirthDate, ltr: true, placeholder: "1370/05/12", max: 10); }
+        @{ Select(nameof(Model.EmployeeCount), "تعداد پرسنل", Model.EmployeeCount, CustomerFormRules.EmployeeCounts); }
+        @{ Text(nameof(Model.AccountingCode), "کد حسابداری", Model.AccountingCode, ltr: true, max: 40); }
+        @{ Text(nameof(Model.AcquaintanceDate), "تاریخ آشنایی", Model.AcquaintanceDate, ltr: true, placeholder: "1403/01/15", max: 10); }
+        @{ Text(nameof(Model.SoftwarePurchase), "خرید نرم‌افزار", Model.SoftwarePurchase); }
+        @{ Text(nameof(Model.BranchSubscriptionCode), "کد اشتراک شعبه", Model.BranchSubscriptionCode, ltr: true, max: 40); }
+        <label class="field"><span>نحوه آشنایی</span><input name="Profile.ReferralSource" value="@Model.ReferralSource" list="referralOptions" placeholder="نحوه آشنایی" maxlength="120" /><datalist id="referralOptions">@foreach (var item in CustomerFormRules.ReferralSources) { <option value="@item"></option> }</datalist>@{ Error("Profile.ReferralSource"); }</label>
+        @{ Text(nameof(Model.Website), "آدرس وب‌سایت", Model.Website, ltr: true, placeholder: "example.com", mode: "url"); }
+        <label class="field"><span>ایمیل</span><input name="PrimaryEmail" type="email" value="@email" placeholder="ایمیل" dir="ltr" maxlength="256" />@Html.ValidationMessage("PrimaryEmail", null, new { @class = "field-error" })</label>
+    </div>
+</section>

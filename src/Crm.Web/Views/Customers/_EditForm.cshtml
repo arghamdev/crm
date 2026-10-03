@@ -1,7 +1,30 @@
 @model CustomerEditDto
-<form class="drawer-form" method="post" action="/customers/@Model.Id/edit" hx-post="/customers/@Model.Id/edit" hx-target="#drawerBody" hx-swap="innerHTML">
-    @Html.AntiForgeryToken()<input type="hidden" name="ExpectedVersion" value="@Model.ExpectedVersion"/><div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <section class="form-section"><h3>Master Data مشتری</h3><div class="form-grid"><label class="field"><span>کد</span><input value="@Model.Code" readonly/></label><label class="field"><span>نوع</span><input value="@(Model.Kind == CustomerKind.Legal ? "حقوقی" : "حقیقی")" readonly/></label><label class="field field--full"><span>نام *</span><input name="Name" value="@Model.Name"/><span asp-validation-for="Name" class="field-error"></span></label><label class="field"><span>شناسه ملی</span><input name="NationalId" value="@Model.NationalId"/></label><label class="field"><span>شهر</span><input name="City" value="@Model.City"/></label><label class="field"><span>تلفن اصلی</span><input name="PrimaryPhone" value="@Model.PrimaryPhone"/></label><label class="field"><span>ایمیل اصلی</span><input type="email" name="PrimaryEmail" value="@Model.PrimaryEmail"/></label><label class="field"><span>مالک حساب</span><input name="Owner" value="@Model.Owner"/></label><label class="field"><span>شعبه *</span><select name="BranchId">@foreach(var item in Model.Branches){<option value="@item.Id" selected="@(item.Id == Model.BranchId)">@item.Name — @item.Code</option>}</select></label><label class="field"><span>قلمرو</span><select name="TerritoryId"><option value="">بدون قلمرو</option>@foreach(var item in Model.Territories){<option value="@item.Id" selected="@(item.Id == Model.TerritoryId)">@item.Name — @item.Code</option>}</select></label><label class="field"><span>بخش‌بندی</span><select name="Segment"><option selected="@(Model.Segment == "استاندارد")">استاندارد</option><option selected="@(Model.Segment == "رشد")">رشد</option><option selected="@(Model.Segment == "کلیدی")">کلیدی</option></select></label><label class="field field--full"><span>دلیل تغییر مالکیت/دامنه</span><textarea name="OwnershipChangeReason" rows="2" placeholder="در صورت تغییر مالک، شعبه یا قلمرو الزامی است"></textarea></label></div></section>
-    <div class="identity-form-note">نسخه مورد انتظار: @Model.ExpectedVersion. تغییر مالکیت، رکورد تاریخچه جدید ایجاد می‌کند.</div><div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیره</button></div>
+@{ var profile = Model.Profile ?? new CustomerProfileInput(); }
+<form class="drawer-form customer-form" data-kind="@Model.Kind" method="post" action="/customers/@Model.Id/edit" enctype="multipart/form-data"
+      hx-post="/customers/@Model.Id/edit" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()<input type="hidden" name="ExpectedVersion" value="@Model.ExpectedVersion"/>
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="customer-identity-box">
+        <label class="logo-picker" title="عکس یا لوگوی سازمان (PNG، JPEG یا WebP، حداکثر ۵۱۲ کیلوبایت)">
+            <span class="logo-picker__image">@if (Model.HasLogo) { <img src="/customers/@Model.Id/logo?v=@Model.ExpectedVersion" alt="عکس سازمان" /> } else { <svg><use href="#i-building"/></svg> }</span>
+            <span>@(Model.HasLogo ? "تعویض عکس" : "عکس سازمان")</span>
+            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" data-file-label="logoFileName" /><span class="logo-picker__name" id="logoFileName">انتخاب تصویر…</span>
+            @Html.ValidationMessage("logo", null, new { @class = "field-error" })
+        </label>
+        <div class="customer-identity-box__fields">
+            <p class="kind-fixed">@(Model.Kind == CustomerKind.Legal ? "مشتری حقوقی (شرکت/فروشگاه)" : "مشتری حقیقی (شخص)") · <bdi dir="ltr">@Model.Code</bdi></p>
+            <label class="field"><span>نام تجاری مشتری *</span><input name="Name" value="@Model.Name" maxlength="200"/>@Html.ValidationMessage("Name", null, new { @class = "field-error" })</label>
+            @if (Model.HasLogo) { <label class="consent-row"><input type="checkbox" name="removeLogo" value="true" /><span>حذف عکس فعلی</span></label> }
+        </div>
+    </section>
+    <partial name="_ProfileFields" model="profile" view-data='new ViewDataDictionary(ViewData) { ["City"] = Model.City, ["Email"] = Model.PrimaryEmail?.ToLowerInvariant(), ["Code"] = Model.Code }' />
+    <section class="form-section"><h3>مالکیت و دسترسی</h3><div class="form-grid form-grid--4">
+        <label class="field"><span>مالک حساب</span><input name="Owner" value="@Model.Owner"/></label>
+        <label class="field"><span>شعبه *</span><select name="BranchId">@foreach(var item in Model.Branches){<option value="@item.Id" selected="@(item.Id == Model.BranchId)">@item.Name — @item.Code</option>}</select></label>
+        <label class="field"><span>قلمرو</span><select name="TerritoryId"><option value="">بدون قلمرو</option>@foreach(var item in Model.Territories){<option value="@item.Id" selected="@(item.Id == Model.TerritoryId)">@item.Name — @item.Code</option>}</select></label>
+        <label class="field"><span>بخش‌بندی</span><select name="Segment"><option selected="@(Model.Segment == "استاندارد")">استاندارد</option><option selected="@(Model.Segment == "رشد")">رشد</option><option selected="@(Model.Segment == "کلیدی")">کلیدی</option></select></label>
+        <label class="field field--full"><span>دلیل تغییر مالکیت/دامنه</span><textarea name="OwnershipChangeReason" rows="2" placeholder="در صورت تغییر مالک، شعبه یا قلمرو الزامی است"></textarea></label>
+    </div></section>
+    <div class="identity-form-note">رابط‌های مشتری از بخش «رابط‌های مشتری» در صفحهٔ مشتری مدیریت می‌شوند. نسخه مورد انتظار: @Model.ExpectedVersion.</div>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ویرایش</button></div>
 </form>
-

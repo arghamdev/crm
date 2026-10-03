@@ -29,7 +29,8 @@ public sealed record QuoteDto(Guid Id, string Code, string Customer, string Oppo
 public sealed record WorkItemDto(Guid Id, string Title, string Priority, DateTimeOffset DueAtUtc, bool IsDone);
 public sealed record CreateCustomerCommand(string Name, string City, string Owner, string BranchId, string Segment,
     CustomerKind Kind = CustomerKind.Legal, string? NationalId = null, string? PrimaryPhone = null, string? PrimaryEmail = null,
-    bool AllowPotentialDuplicate = false, string? DuplicateReason = null);
+    bool AllowPotentialDuplicate = false, string? DuplicateReason = null,
+    CustomerProfileInput? Profile = null, IReadOnlyList<ContactPersonInput>? Contacts = null);
 public sealed record CreateLeadCommand(string Name, string? Contact, string Source, string? Owner, string BranchId,
     Guid? OwnerUserId = null, string? Phone = null, string? Email = null, string? TerritoryId = null,
     string? NextAction = null, DateTimeOffset? NextActionAtUtc = null);

@@ -32,19 +32,40 @@ public sealed class CustomerContact(
     string? phone,
     string? email,
     bool isPrimary,
-    ContactConsentStatus consentStatus) : Entity(id)
+    ContactConsentStatus consentStatus,
+    ContactPersonDetails? details = null) : Entity(id)
 {
     public string CompanyId { get; } = Required(companyId, nameof(companyId));
     public Guid CustomerId { get; private set; } = customerId;
-    public string FullName { get; private set; } = Required(fullName, nameof(fullName));
+    public string FullName { get; private set; } = Required(details?.FullName ?? fullName, nameof(fullName));
     public string Role { get; private set; } = role?.Trim() ?? string.Empty;
     public string? Phone { get; private set; } = Optional(phone);
     public string? Email { get; private set; } = NormalizeEmail(email);
     public bool IsPrimary { get; private set; } = isPrimary;
     public ContactConsentStatus ConsentStatus { get; private set; } = consentStatus;
     public bool IsActive { get; private set; } = true;
+    public string? Title { get; private set; } = Clip(details?.Title, 40);
+    public string? FirstName { get; private set; } = Clip(details?.FirstName, 100);
+    public string? LastName { get; private set; } = Clip(details?.LastName, 100);
+    public string? Mobile { get; private set; } = Clip(details?.Mobile, 20);
+    public string? Extension { get; private set; } = Clip(details?.Extension, 10);
+    public string? Notes { get; private set; } = Clip(details?.Notes, 1000);
 
     private CustomerContact() : this(Guid.Empty, "EF", Guid.Empty, "EF", string.Empty, null, null, false, ContactConsentStatus.Unknown) { }
+
+    /// <summary>Updates a contact person captured with the structured form (title, first/last name, mobile, extension).</summary>
+    public void UpdateDetails(ContactPersonDetails details, string role, string? phone, string? email, bool isPrimary, ContactConsentStatus consentStatus)
+    {
+        FullName = Required(details.FullName ?? string.Empty, nameof(details));
+        (Title, FirstName, LastName) = (Clip(details.Title, 40), Clip(details.FirstName, 100), Clip(details.LastName, 100));
+        (Mobile, Extension, Notes) = (Clip(details.Mobile, 20), Clip(details.Extension, 10), Clip(details.Notes, 1000));
+        Role = role?.Trim() ?? string.Empty;
+        Phone = Optional(phone);
+        Email = NormalizeEmail(email);
+        IsPrimary = isPrimary;
+        ConsentStatus = consentStatus;
+        Touch();
+    }
 
     public void Update(string fullName, string role, string? phone, string? email, bool isPrimary, ContactConsentStatus consentStatus)
     {
@@ -69,6 +90,17 @@ public sealed class CustomerContact(
     private static string Required(string value, string name) => string.IsNullOrWhiteSpace(value) ? throw new ArgumentException("Value is required.", name) : value.Trim();
     private static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static string? NormalizeEmail(string? value) => Optional(value)?.ToUpperInvariant();
+    private static string? Clip(string? value, int max) =>
+        Crm.Domain.Common.PersianText.NormalizeLetters(value) is { } text ? text.Length <= max ? text : throw new InvalidOperationException($"حداکثر طول مجاز {max} نویسه است.") : null;
+}
+
+/// <summary>Structured contact person fields of the customer form (رابط مشتری).</summary>
+public sealed record ContactPersonDetails(string? Title, string? FirstName, string? LastName, string? Mobile, string? Extension, string? Notes)
+{
+    /// <summary>"عنوان نام نام‌خانوادگی" when first or last name is given; otherwise null so the free-form full name is used.</summary>
+    public string? FullName =>
+        string.Join(' ', new[] { Title, FirstName, LastName }.Select(x => x?.Trim()).Where(x => !string.IsNullOrEmpty(x))) is { Length: > 0 } name &&
+        (!string.IsNullOrWhiteSpace(FirstName) || !string.IsNullOrWhiteSpace(LastName)) ? name : null;
 }
 
 public sealed class CustomerAddress(

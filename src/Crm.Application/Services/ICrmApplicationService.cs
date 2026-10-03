@@ -8,7 +8,7 @@ public interface ICrmApplicationService
     IReadOnlyList<CustomerDto> GetCustomers(Guid currentUserId, OrganizationSelection organization, string? query = null);
     PagedResult<CustomerDto> SearchCustomers(Guid currentUserId, OrganizationSelection organization, string? query = null, int page = 1, int pageSize = 20);
     CustomerDto? GetCustomer(Guid currentUserId, OrganizationSelection organization, Guid id);
-    CustomerDto CreateCustomer(Guid currentUserId, OrganizationSelection organization, CreateCustomerCommand command);
+    CustomerDto CreateCustomer(Guid currentUserId, OrganizationSelection organization, CreateCustomerCommand command, CustomerLogoUpload? logo = null);
     IReadOnlyList<LeadDto> GetLeads(Guid currentUserId, OrganizationSelection organization);
     LeadDto CreateLead(Guid currentUserId, OrganizationSelection organization, CreateLeadCommand command);
     OpportunityDto ConvertLead(Guid currentUserId, OrganizationSelection organization, Guid id);

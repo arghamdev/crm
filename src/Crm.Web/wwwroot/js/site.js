@@ -66,6 +66,15 @@
   drawerBackdrop?.addEventListener("click", closeDrawer);
   document.addEventListener("click", event => {
     if (event.target.closest("[data-drawer-close]")) closeDrawer();
+    // Repeating form rows (e.g. customer contact persons) are removed client-side; the server binds what remains.
+    const remove = event.target.closest("[data-remove-row]");
+    if (remove) remove.closest("[data-row]")?.remove();
+  });
+  // Shows the chosen file name next to a visually hidden file input (e.g. the customer logo picker).
+  document.addEventListener("change", event => {
+    const input = event.target.closest?.("input[type=file][data-file-label]");
+    const label = input && document.getElementById(input.dataset.fileLabel);
+    if (label) label.textContent = input.files?.[0]?.name ?? "انتخاب تصویر…";
   });
   document.addEventListener("submit", event => {
     const form = event.target;

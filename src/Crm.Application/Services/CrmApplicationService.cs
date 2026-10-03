@@ -87,16 +87,21 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             .Select(x => Map(data, x, snapshot)).SingleOrDefault());
     }
 
-    public CustomerDto CreateCustomer(Guid currentUserId, OrganizationSelection organization, CreateCustomerCommand command)
+    public CustomerDto CreateCustomer(Guid currentUserId, OrganizationSelection organization, CreateCustomerCommand command, CustomerLogoUpload? logo = null)
     {
         var snapshot = RequiredSnapshot(currentUserId);
+        // The full customer form (profile) derives the identifier, phone and email from its kind-specific fields.
+        var form = command.Profile is null ? null : CustomerFormRules.Normalize(command.Kind, command.Profile, command.Contacts, command.PrimaryEmail);
+        var nationalId = form is null ? command.NationalId : form.NationalId;
+        var primaryPhone = form is null ? command.PrimaryPhone : form.PrimaryPhone;
+        var primaryEmail = form is null ? command.PrimaryEmail : form.PrimaryEmail;
         return store.Write(data =>
         {
             Ensure(command.Name, nameof(command.Name));
             if (string.IsNullOrWhiteSpace(command.Owner)) throw new InvalidOperationException("مالک حساب الزامی است.");
             var scope = ResolveWriteScope(data, snapshot, organization, "Customer.Create", command.BranchId);
             var matches = CustomerDataQualityRules.FindDuplicates(data.Customers, organization.CompanyId, command.Name,
-                command.City, command.NationalId, command.PrimaryPhone, command.PrimaryEmail);
+                command.City, nationalId, primaryPhone, primaryEmail);
             if (matches.Any(x => x.IsExact))
                 throw new InvalidOperationException("شناسه ملی مشتری دیگری در همین شرکت ثبت شده است.");
             if (matches.Count > 0 && !command.AllowPotentialDuplicate)
@@ -105,7 +110,7 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
                 throw new InvalidOperationException("برای ایجاد رکورد مشابه، ثبت دلیل الزامی است.");
             var customer = new Customer(Guid.NewGuid(), RecordCodes.Next(data.Customers.Select(x => x.Code), "CUS-", 481, 5), command.Name,
                 command.City, command.Owner, organization.CompanyId, scope.Id, scope.Name, organization.TerritoryId,
-                command.Segment, 1_000_000_000m, command.Kind, command.NationalId, command.PrimaryPhone, command.PrimaryEmail);
+                command.Segment, 1_000_000_000m, command.Kind, nationalId, primaryPhone, primaryEmail);
             data.Customers.Add(customer);
             data.Append<Crm.Domain.Customers.CustomerOwnershipHistory>(new CustomerOwnershipHistory(Guid.NewGuid(), customer.CompanyId,
                 customer.Id, customer.BranchId, customer.TerritoryId, customer.Owner, DateTimeOffset.UtcNow,
@@ -113,7 +118,12 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             data.Append<Crm.Domain.Customers.CustomerTimelineEvent>(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id,
                 CustomerTimelineType.Created, "مشتری ایجاد شد", command.DuplicateReason ?? "ثبت اولیه",
                 DateTimeOffset.UtcNow, "CRM", null, currentUserId));
-            if (!string.IsNullOrWhiteSpace(command.PrimaryPhone) || !string.IsNullOrWhiteSpace(command.PrimaryEmail))
+            if (form is not null)
+            {
+                CustomerProfileWriter.Apply(data, customer, form, logo, removeLogo: false);
+                CustomerProfileWriter.AddContacts(data, customer, form);
+            }
+            else if (!string.IsNullOrWhiteSpace(command.PrimaryPhone) || !string.IsNullOrWhiteSpace(command.PrimaryEmail))
                 data.CustomerContacts.Add(new CustomerContact(Guid.NewGuid(), customer.CompanyId, customer.Id,
                     "تماس اصلی", "Primary", command.PrimaryPhone, command.PrimaryEmail, true, ContactConsentStatus.Unknown));
             foreach (var match in matches)

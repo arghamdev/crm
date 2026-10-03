@@ -53,7 +53,8 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
                 issues,
                 Sources(customer),
                 MapDuplicates(data, VisibleDuplicateCandidates(data, snapshot, organization)
-                    .Where(x => x.CustomerId == customer.Id || x.PossibleDuplicateCustomerId == customer.Id)));
+                    .Where(x => x.CustomerId == customer.Id || x.PossibleDuplicateCustomerId == customer.Id)),
+                CustomerProfileWriter.Map(data.Find<CustomerProfile>(x => x.Id == customer.Id).SingleOrDefault(), customer, snapshot));
         });
     }
 
@@ -73,9 +74,13 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
                 .OrderBy(x => x.Name).Select(x => new OrganizationUnitOptionDto(x.UnitId, x.Code, x.Name, x.Type.ToString(), Same(x.UnitId, customer.BranchId))).ToList();
             var territories = data.Territories.Where(x => Same(x.CompanyId, organization.CompanyId) && x.Status == OrganizationStatus.Active)
                 .OrderBy(x => x.Name).Select(x => new TerritoryOptionDto(x.TerritoryId, x.Code, x.Name, x.Dimension.ToString(), Same(x.TerritoryId, customer.TerritoryId))).ToList();
+            var profile = data.Find<CustomerProfile>(x => x.Id == customer.Id).SingleOrDefault();
+            var address = data.Find<CustomerAddress>(x => x.CustomerId == customer.Id && x.IsActive && x.Type == CustomerAddressType.Registered)
+                .OrderByDescending(x => x.IsPrimary).FirstOrDefault();
             return new CustomerEditDto(customer.Id, customer.Code, customer.Name, customer.City, customer.Owner,
                 customer.BranchId, customer.TerritoryId, customer.Segment, customer.Kind, customer.NationalId,
-                customer.PrimaryPhone, customer.PrimaryEmail, customer.Version, branches, territories);
+                customer.PrimaryPhone, customer.PrimaryEmail, customer.Version, branches, territories,
+                CustomerFormRules.ToInput(customer, profile, address)) { HasLogo = profile?.LogoContentType is not null };
         });
     }
 
@@ -97,7 +102,8 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         });
     }
 
-    public void Update(Guid currentUserId, OrganizationSelection organization, Guid customerId, UpdateCustomerCommand command, DateTimeOffset nowUtc)
+    public void Update(Guid currentUserId, OrganizationSelection organization, Guid customerId, UpdateCustomerCommand command, DateTimeOffset nowUtc,
+        CustomerLogoUpload? logo = null, bool removeLogo = false)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         if (!snapshot.PermissionsFor(organization.CompanyId).Contains(FieldMasking.NationalIdPermission) ||
@@ -109,6 +115,9 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             EnsureCustomerMutable(customer);
             EnsureVersion(customer.Version, command.ExpectedVersion);
             if (string.IsNullOrWhiteSpace(command.Name)) throw new InvalidOperationException("نام مشتری الزامی است.");
+            var form = command.Profile is null ? null :
+                CustomerFormRules.Normalize(customer.Kind, command.Profile, null, command.PrimaryEmail, customer.NationalId);
+            if (form is not null) command = command with { NationalId = form.NationalId, PrimaryPhone = form.PrimaryPhone, PrimaryEmail = form.PrimaryEmail };
             var owner = string.IsNullOrWhiteSpace(command.Owner)
                 ? throw new InvalidOperationException("مالک حساب الزامی است.")
                 : command.Owner.Trim();
@@ -130,6 +139,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             }
             customer.UpdateMasterData(command.Name, command.City, owner, scope.BranchId, scope.BranchName,
                 scope.TerritoryId, command.Segment, command.NationalId, command.PrimaryPhone, command.PrimaryEmail);
+            if (form is not null) CustomerProfileWriter.Apply(data, customer, form, logo, removeLogo);
             var after = $"{customer.Name}|{customer.BranchId}|{customer.TerritoryId}|{customer.Owner}";
             AddTimeline(data, customer, ownershipChanged ? CustomerTimelineType.OwnershipChanged : CustomerTimelineType.MasterDataChanged,
                 ownershipChanged ? "مالکیت مشتری تغییر کرد" : "اطلاعات پایه مشتری ویرایش شد", $"{before} → {after}", nowUtc, currentUserId);
@@ -157,6 +167,98 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             AddTimeline(data, customer, CustomerTimelineType.ContactAdded, "شخص تماس افزوده شد", contact.FullName, nowUtc, currentUserId);
             return true;
         });
+    }
+
+    public CustomerContactFormDto? GetContactForm(Guid currentUserId, OrganizationSelection organization, Guid customerId, Guid? contactId)
+    {
+        var snapshot = RequiredContactEditor(currentUserId, organization);
+        return store.Read(data =>
+        {
+            var customer = data.Customers.SingleOrDefault(x => x.Id == customerId && InContext(snapshot, organization, "Customer.Update", x));
+            if (customer is null || customer.Status == CustomerStatus.Inactive) return null;
+            if (contactId is null) return new CustomerContactFormDto(customer.Id, null, new ContactPersonInput(), ContactConsentStatus.Unknown, 0);
+            var contact = data.Find<CustomerContact>(x => x.Id == contactId && x.CustomerId == customer.Id && x.IsActive).SingleOrDefault();
+            return contact is null ? null : new CustomerContactFormDto(customer.Id, contact.Id, CustomerFormRules.ToInput(contact), contact.ConsentStatus, contact.Version);
+        });
+    }
+
+    /// <summary>Adds (contactId null) or edits a structured contact person (رابط مشتری).</summary>
+    public void SaveContactPerson(Guid currentUserId, OrganizationSelection organization, Guid customerId, Guid? contactId,
+        SaveContactPersonCommand command, DateTimeOffset nowUtc)
+    {
+        var snapshot = RequiredContactEditor(currentUserId, organization);
+        var person = CustomerFormRules.Normalize(CustomerKind.Legal, new CustomerProfileInput(), [command.Contact], null).Contacts.SingleOrDefault() ??
+            throw new CustomerValidationException(new Dictionary<string, string> { ["Contacts[0].LastName"] = "نام یا نام خانوادگی رابط الزامی است." });
+        if (person.Phone is null && person.Details.Mobile is null && person.Email is null)
+            throw new CustomerValidationException(new Dictionary<string, string> { ["Contacts[0].Mobile"] = "حداقل یکی از همراه، تلفن یا ایمیل رابط الزامی است." });
+        store.Write(data =>
+        {
+            var customer = RequiredCustomer(data, snapshot, organization, customerId, "Customer.Update");
+            EnsureCustomerMutable(customer);
+            var others = data.Find<CustomerContact>(x => x.CustomerId == customer.Id && x.IsActive && x.IsPrimary && x.Id != contactId).ToList();
+            if (person.IsPrimary)
+                foreach (var existing in others) existing.SetPrimary(false);
+            if (contactId is null)
+            {
+                var contact = new CustomerContact(Guid.NewGuid(), customer.CompanyId, customer.Id, person.Details.FullName!, person.Position,
+                    person.Phone, person.Email, person.IsPrimary || others.Count == 0 && !data.Find<CustomerContact>(x => x.CustomerId == customer.Id && x.IsActive).Any(),
+                    command.ConsentStatus, person.Details);
+                data.CustomerContacts.Add(contact);
+                AddTimeline(data, customer, CustomerTimelineType.ContactAdded, "رابط مشتری افزوده شد", contact.FullName, nowUtc, currentUserId);
+            }
+            else
+            {
+                var contact = data.Find<CustomerContact>(x => x.Id == contactId && x.CustomerId == customer.Id && x.IsActive).SingleOrDefault() ??
+                    throw new KeyNotFoundException("رابط مشتری پیدا نشد.");
+                if (contact.Version != command.ExpectedVersion) throw new InvalidOperationException("رابط مشتری تغییر کرده است؛ صفحه را تازه‌سازی کنید.");
+                contact.UpdateDetails(person.Details, person.Position, person.Phone, person.Email, person.IsPrimary, command.ConsentStatus);
+                AddTimeline(data, customer, CustomerTimelineType.MasterDataChanged, "رابط مشتری ویرایش شد", contact.FullName, nowUtc, currentUserId);
+            }
+            return true;
+        });
+    }
+
+    public void DeactivateContact(Guid currentUserId, OrganizationSelection organization, Guid customerId, Guid contactId, long expectedVersion, DateTimeOffset nowUtc)
+    {
+        var snapshot = RequiredContactEditor(currentUserId, organization);
+        store.Write(data =>
+        {
+            var customer = RequiredCustomer(data, snapshot, organization, customerId, "Customer.Update");
+            EnsureCustomerMutable(customer);
+            var contact = data.Find<CustomerContact>(x => x.Id == contactId && x.CustomerId == customer.Id && x.IsActive).SingleOrDefault() ??
+                throw new KeyNotFoundException("رابط مشتری پیدا نشد.");
+            if (contact.Version != expectedVersion) throw new InvalidOperationException("رابط مشتری تغییر کرده است؛ صفحه را تازه‌سازی کنید.");
+            var wasPrimary = contact.IsPrimary;
+            contact.Deactivate();
+            if (wasPrimary)
+            {
+                contact.SetPrimary(false);
+                data.Find<CustomerContact>(x => x.CustomerId == customer.Id && x.IsActive && x.Id != contactId).OrderBy(x => x.CreatedAtUtc).FirstOrDefault()?.SetPrimary(true);
+            }
+            AddTimeline(data, customer, CustomerTimelineType.MasterDataChanged, "رابط مشتری غیرفعال شد", contact.FullName, nowUtc, currentUserId);
+            return true;
+        });
+    }
+
+    public CustomerLogoDto? GetLogo(Guid currentUserId, OrganizationSelection organization, Guid customerId)
+    {
+        var snapshot = RequiredSnapshot(currentUserId);
+        return store.Read(data =>
+        {
+            var customer = data.Find<Customer>(x => x.Id == customerId).SingleOrDefault(x => InContext(snapshot, organization, "Customer.Read", x));
+            if (customer is null) return null;
+            var logo = data.Find<CustomerLogo>(x => x.Id == customer.Id).SingleOrDefault();
+            return logo is null ? null : new CustomerLogoDto(logo.ContentType, logo.Content, logo.Version);
+        });
+    }
+
+    /// <summary>Contact forms post phone numbers back, so a masked value must never be shown for editing.</summary>
+    private AccessSnapshot RequiredContactEditor(Guid currentUserId, OrganizationSelection organization)
+    {
+        var snapshot = RequiredSnapshot(currentUserId);
+        if (!snapshot.PermissionsFor(organization.CompanyId).Contains(FieldMasking.ContactPermission))
+            throw new UnauthorizedAccessException("ویرایش رابط مشتری به مجوز مشاهدهٔ اطلاعات تماس نیاز دارد.");
+        return snapshot;
     }
 
     public void AddAddress(Guid currentUserId, OrganizationSelection organization, Guid customerId, AddCustomerAddressCommand command, DateTimeOffset nowUtc)
@@ -441,7 +543,8 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         x.CompanyId, x.Branch, x.BranchId, x.TerritoryId, x.Segment, x.Status, x.Balance, x.CreditLimit,
         x.Kind, x.NationalId, x.PrimaryPhone, x.PrimaryEmail, x.DataSource, x.LastSynchronizedAtUtc, x.Version, qualityScore).Mask(snapshot);
     private static CustomerContactDto Map(CustomerContact x, AccessSnapshot snapshot) =>
-        new CustomerContactDto(x.Id, x.FullName, x.Role, x.Phone, x.Email, x.IsPrimary, x.ConsentStatus, x.IsActive, x.Version).Mask(snapshot, x.CompanyId);
+        new CustomerContactDto(x.Id, x.FullName, x.Role, x.Phone, x.Email, x.IsPrimary, x.ConsentStatus, x.IsActive, x.Version,
+            x.Title, x.FirstName, x.LastName, x.Mobile, x.Extension, x.Notes).Mask(snapshot, x.CompanyId);
     private static CustomerAddressDto Map(CustomerAddress x) => new(x.Id, x.Type, x.Title, x.Province, x.City, x.AddressLine, x.PostalCode, x.IsPrimary, x.IsActive, x.Version);
     private static CustomerTimelineDto Map(CustomerTimelineEvent x) => new(x.Id, x.Type, x.Title, x.Description, x.OccurredAtUtc, x.Source, x.SourceReference, x.ActorUserId);
     private static CustomerOwnershipDto Map(CustomerOwnershipHistory x) => new(x.Id, x.BranchId, x.TerritoryId, x.Owner, x.ValidFromUtc, x.ValidToUtc, x.Reason, x.ChangedByUserId);

@@ -3,7 +3,8 @@ using Crm.Domain.Customers;
 namespace Crm.Application.Contracts;
 
 public sealed record CustomerContactDto(Guid Id, string FullName, string Role, string? Phone, string? Email,
-    bool IsPrimary, ContactConsentStatus ConsentStatus, bool IsActive, long Version);
+    bool IsPrimary, ContactConsentStatus ConsentStatus, bool IsActive, long Version,
+    string? Title = null, string? FirstName = null, string? LastName = null, string? Mobile = null, string? Extension = null, string? Notes = null);
 public sealed record CustomerAddressDto(Guid Id, CustomerAddressType Type, string Title, string Province, string City,
     string AddressLine, string? PostalCode, bool IsPrimary, bool IsActive, long Version);
 public sealed record CustomerTimelineDto(Guid Id, CustomerTimelineType Type, string Title, string Description,
@@ -33,16 +34,21 @@ public sealed record Customer360Dto(
     IReadOnlyList<CustomerDealerAffiliationDto> DealerAffiliations,
     IReadOnlyList<DataQualityIssueDto> DataQualityIssues,
     IReadOnlyList<CustomerSourceDto> Sources,
-    IReadOnlyList<DuplicateCandidateDto> DuplicateCandidates);
+    IReadOnlyList<DuplicateCandidateDto> DuplicateCandidates,
+    CustomerProfileDto? Profile = null);
 
 public sealed record CustomerEditDto(
     Guid Id, string Code, string Name, string City, string Owner, string BranchId, string? TerritoryId,
     string Segment, CustomerKind Kind, string? NationalId, string? PrimaryPhone, string? PrimaryEmail,
-    long ExpectedVersion, IReadOnlyList<OrganizationUnitOptionDto> Branches, IReadOnlyList<TerritoryOptionDto> Territories);
+    long ExpectedVersion, IReadOnlyList<OrganizationUnitOptionDto> Branches, IReadOnlyList<TerritoryOptionDto> Territories,
+    CustomerProfileInput? Profile = null)
+{
+    public bool HasLogo { get; init; }
+}
 
 public sealed record UpdateCustomerCommand(string Name, string City, string Owner, string BranchId, string? TerritoryId,
     string Segment, string? NationalId, string? PrimaryPhone, string? PrimaryEmail, string OwnershipChangeReason,
-    long ExpectedVersion);
+    long ExpectedVersion, CustomerProfileInput? Profile = null);
 public sealed record AddCustomerContactCommand(string FullName, string Role, string? Phone, string? Email,
     bool IsPrimary, ContactConsentStatus ConsentStatus);
 public sealed record AddCustomerAddressCommand(CustomerAddressType Type, string Title, string Province, string City,
