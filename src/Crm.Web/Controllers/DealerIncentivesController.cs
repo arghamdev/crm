@@ -1,4 +1,4 @@
-using System.Globalization;
+using Crm.Domain.Channel;
 using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
 using Crm.Application.Services;
@@ -102,11 +102,8 @@ public sealed class DealerIncentivesController(IDealerIncentiveService incentive
         return Redirect($"/dealers/commissions?period={Key(Period(period))}");
     }
 
-    private static string Key(DateTimeOffset period) => period.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    private static string Key(DateTimeOffset period) => ChannelPeriod.Key(period);
 
-    /// <summary>"yyyy-MM" (Gregorian); anything else falls back to the current month.</summary>
-    private static DateTimeOffset Period(string? value) =>
-        DateTime.TryParseExact(value, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
-            ? new DateTimeOffset(parsed.Year, parsed.Month, 1, 0, 0, 0, TimeSpan.Zero)
-            : DealerIncentiveService.PeriodStart(DateTimeOffset.UtcNow);
+    /// <summary>Jalali "1405-07"; anything else falls back to the current month.</summary>
+    private static DateTimeOffset Period(string? value) => ChannelPeriod.Parse(value) ?? ChannelPeriod.StartOf(DateTimeOffset.UtcNow);
 }

@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "کمیسیون نمایندگان";
     ViewData["IncentiveTab"] = "commissions";
-    var periodKey = Model.PeriodFromUtc.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    var periodKey = ChannelPeriod.Key(Model.PeriodFromUtc);
     var tiers = Model.Plan?.Tiers.ToList() ?? [new CommissionTierDto(0, 0)];
     while (tiers.Count < 6) tiers.Add(null!);
 }
@@ -49,7 +49,7 @@
     }
 </section>
 <section class="panel table-panel">
-    <div class="panel-heading"><div><strong>صورت‌های کمیسیون دوره</strong><small>تأیید یا رد فقط توسط مالی و غیر از محاسبه‌کننده؛ صورت تأییدشده نهایی است و در محاسبهٔ مجدد تغییر نمی‌کند.</small></div></div>
+    <div class="panel-heading"><div><strong>صورت‌های کمیسیون @ChannelPeriod.Label(Model.PeriodFromUtc)</strong><small>تأیید یا رد فقط توسط مالی و غیر از محاسبه‌کننده؛ صورت تأییدشده نهایی است و در محاسبهٔ مجدد تغییر نمی‌کند.</small></div></div>
     @if (Model.Statements.Count == 0) { <p class="empty-state">برای این دوره هنوز کمیسیونی محاسبه نشده است.</p> }
     else
     {
@@ -64,7 +64,7 @@
             <td><strong><bdi dir="ltr">@($"{item.CommissionAmount:N0}")</bdi></strong></td>
             <td>@if (item.OverdueAmount > 0) { <bdi dir="ltr">@($"{item.OverdueAmount:N0}")</bdi> } else { <text>—</text> }</td>
             <td><span class="badge @item.Status.Badge()"><span></span>@item.Status.Label()</span></td>
-            <td><small>@item.CalculatedBy · <bdi dir="ltr">@item.CalculatedAtUtc.ToString("yyyy/MM/dd HH:mm")</bdi></small>@if (item.DecidedBy is not null) { <br /><small>@item.DecidedBy@(item.DecisionNote is null ? "" : $": {item.DecisionNote}")</small> }</td>
+            <td><small>@item.CalculatedBy · <bdi dir="ltr">@Crm.Domain.Common.JalaliDate.Format(item.CalculatedAtUtc.UtcDateTime) @item.CalculatedAtUtc.ToString("HH:mm")</bdi></small>@if (item.DecidedBy is not null) { <br /><small>@item.DecidedBy@(item.DecisionNote is null ? "" : $": {item.DecisionNote}")</small> }</td>
             <td>
             @if (item.CanDecide)
             {

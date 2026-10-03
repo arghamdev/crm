@@ -240,7 +240,7 @@ public sealed class ReportingService(ICrmDataStore store, IAccessSnapshotService
                 if (actual is null) { missingDealerPeriods++; continue; }
                 var target = data.DealerTargets.SingleOrDefault(x => x.DealerId == dealer.Id && x.CompanyId == org.CompanyId &&
                     x.BranchId == dealer.BranchId && x.TerritoryId == dealer.TerritoryId && x.PeriodFromUtc == actual.PeriodFromUtc && x.PeriodToUtc == actual.PeriodToUtc);
-                var periodLabel = $"{actual.PeriodFromUtc:yyyy-MM-dd} تا {actual.PeriodToUtc:yyyy-MM-dd} (پایان غیرشامل)";
+                var periodLabel = $"{Crm.Domain.Common.JalaliDate.Format(actual.PeriodFromUtc.UtcDateTime)} تا {Crm.Domain.Common.JalaliDate.Format(actual.PeriodToUtc.UtcDateTime)} (پایان غیرشامل)";
                 Add("dealerSales", dealer.Id.ToString(), dealer.Code, dealer.TradeName, dealer, periodLabel, actual.NetSales, 0, actual.SynchronizedAtUtc, actual.Source, $"/dealers/{dealer.Id}");
                 if (target is null) { missingDealerPeriods++; continue; }
                 Add("dealerAchievement", dealer.Id.ToString(), dealer.Code, dealer.TradeName, dealer, periodLabel, actual.NetSales, target.Amount, actual.SynchronizedAtUtc, actual.Source, $"/dealers/{dealer.Id}");

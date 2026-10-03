@@ -18,7 +18,7 @@ internal static partial class TestRunner
         using (var response = await expert.GetAsync("/dealers/commissions")) Check(response.StatusCode != HttpStatusCode.OK, "DLR7: sales experts cannot open dealer commissions.");
         using (var response = await dealer.GetAsync("/dealers/ranking")) Check(response.StatusCode != HttpStatusCode.OK, "DLR7: dealer users cannot open the dealer ranking.");
 
-        var period = DateTimeOffset.UtcNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        var period = Crm.Domain.Channel.ChannelPeriod.Key(DateTimeOffset.UtcNow);
         using (var response = await channel.PostAsync("/dealers/commissions/calculate", new FormUrlEncodedContent(new Dictionary<string, string> { ["period"] = period })))
             Check(response.StatusCode == HttpStatusCode.BadRequest, "DLR7: calculation without an anti-forgery token is rejected.");
         var financeToken = await GetAntiforgeryToken(finance, "/dealers/commissions");

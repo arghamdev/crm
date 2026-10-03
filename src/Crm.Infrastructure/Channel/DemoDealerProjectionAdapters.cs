@@ -21,9 +21,9 @@ public sealed class DemoDealerPerformanceProjectionProvider : IDealerPerformance
 {
     public DealerPerformanceProjection Get(string companyId, string dealerBusinessId, DateTimeOffset nowUtc)
     {
-        var start = new DateTimeOffset(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var (start, end) = Crm.Domain.Channel.ChannelPeriod.MonthOf(nowUtc);
         var pilot = dealerBusinessId.Equals("P-D01", StringComparison.OrdinalIgnoreCase);
-        return new DealerPerformanceProjection(start, start.AddMonths(1),
+        return new DealerPerformanceProjection(start, end,
             pilot ? 6_850_000_000m : 1_400_000_000m,
             pilot ? 18 : 4,
             "ERP/BI Mock / Dealer Sales v1",

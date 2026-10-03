@@ -128,8 +128,8 @@ public sealed class DealerApplicationService(
                 return new DealerTargetFormDto(dealer.Id, new SaveDealerTargetCommand(target.PeriodFromUtc,
                     target.PeriodToUtc, target.Amount, target.Source, target.Version));
 
-            var start = new DateTimeOffset(nowUtc.Year, nowUtc.Month, 1, 0, 0, 0, TimeSpan.Zero);
-            return new DealerTargetFormDto(dealer.Id, new SaveDealerTargetCommand(start, start.AddMonths(1),
+            var (start, end) = ChannelPeriod.MonthOf(nowUtc);
+            return new DealerTargetFormDto(dealer.Id, new SaveDealerTargetCommand(start, end,
                 1, "برنامه فروش مصوب", 0));
         });
     }

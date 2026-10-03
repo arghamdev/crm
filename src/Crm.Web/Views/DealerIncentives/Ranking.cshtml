@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "ارزیابی و رتبه‌بندی نمایندگان";
     ViewData["IncentiveTab"] = "ranking";
-    var periodKey = Model.PeriodFromUtc.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    var periodKey = ChannelPeriod.Key(Model.PeriodFromUtc);
 }
 <nav class="breadcrumb"><a href="/dealers">مدیریت نمایندگان</a><svg><use href="#i-chevron"/></svg><span>ارزیابی و رتبه‌بندی</span></nav>
 <header class="page-header"><div><span class="eyebrow">مرحله هفتم · Dealer Scorecard</span><h1>ارزیابی و رتبه‌بندی نمایندگان</h1><p>امتیاز وزنی: تحقق هدف ۴۰٪، وصول مطالبات ۲۵٪، رشد نسبت به دورهٔ قبل ۱۵٪ و کیفیت خدمات (SLA و رضایت) ۲۰٪. سطح: پلاتینی ≥۸۵، طلایی ≥۷۰، نقره‌ای ≥۵۰.</p></div>
@@ -13,7 +13,7 @@
 </header>
 <partial name="_Nav" />
 <section class="panel table-panel">
-    <div class="panel-heading"><div><strong>رتبه‌بندی دوره</strong><small>@(Model.EvaluatedAtUtc is { } at ? $"آخرین اجرا: {at:yyyy/MM/dd HH:mm} (UTC)؛ هر اجرا کل نمایندگان دامنه را با هم رتبه‌بندی می‌کند." : "هنوز ارزیابی برای این دوره اجرا نشده است.")</small></div></div>
+    <div class="panel-heading"><div><strong>رتبه‌بندی @ChannelPeriod.Label(Model.PeriodFromUtc)</strong><small>@(Model.EvaluatedAtUtc is { } at ? $"آخرین اجرا: {Crm.Domain.Common.JalaliDate.Format(at.UtcDateTime)} {at:HH:mm} (UTC)؛ هر اجرا کل نمایندگان دامنه را با هم رتبه‌بندی می‌کند." : "هنوز ارزیابی برای این دوره اجرا نشده است.")</small></div></div>
     @if (Model.Items.Count > 0)
     {
     <div class="table-wrap"><table id="rankingTable"><thead><tr><th>رتبه</th><th>نماینده</th><th>شعبه</th><th>تحقق هدف</th><th>وصول</th><th>رشد</th><th>خدمات</th><th>امتیاز کل</th><th>سطح</th></tr></thead><tbody>

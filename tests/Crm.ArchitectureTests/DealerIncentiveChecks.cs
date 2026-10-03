@@ -17,6 +17,14 @@ internal static class DealerIncentiveChecks
 
     private static void CheckPlanAndScoringRules(Action<bool, string> check)
     {
+        var mehr = ChannelPeriod.MonthOf(new DateTimeOffset(2026, 10, 3, 12, 0, 0, TimeSpan.Zero));
+        check(mehr == (new DateTimeOffset(2026, 9, 23, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 23, 0, 0, 0, TimeSpan.Zero)) &&
+              ChannelPeriod.Key(mehr.From) == "1405-07" && ChannelPeriod.Parse("۱۴۰۵/۰۷") == mehr.From && ChannelPeriod.Parse("2026-10") is null &&
+              ChannelPeriod.Previous(mehr.From).From == new DateTimeOffset(2026, 8, 23, 0, 0, 0, TimeSpan.Zero) &&
+              ChannelPeriod.MonthOf(Crm.Domain.Common.JalaliDate.MonthStart(1405, 1).AddMinutes(-1)).To == Crm.Domain.Common.JalaliDate.MonthStart(1405, 1) &&
+              ChannelPeriod.Key(ChannelPeriod.Previous(Crm.Domain.Common.JalaliDate.MonthStart(1405, 1)).From) == "1404-12",
+            "DLR7: channel periods are Jalali months (Mehr 1405 = 23 Sep to 23 Oct 2026; Esfand/Farvardin boundary).");
+
         var user = Guid.NewGuid();
         var plan = new DealerCommissionPlan(Guid.NewGuid(), "C01", "طرح", [new(100, 2.5m), new(0, 0), new(80, 1.5m), new(120, 3.5m)], user);
         check(plan.TierDefinition == "0:0;80:1.5;100:2.5;120:3.5" && plan.RateFor(79.99m) == 0 && plan.RateFor(80) == 1.5m &&

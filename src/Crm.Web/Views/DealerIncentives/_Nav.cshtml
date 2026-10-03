@@ -1,6 +1,13 @@
-@{ var active = ViewData["IncentiveTab"] as string; var periodKey = ((DateTimeOffset)ViewBag.Period).ToString("yyyy-MM", CultureInfo.InvariantCulture); }
+@{
+    var active = ViewData["IncentiveTab"] as string;
+    var period = (DateTimeOffset)ViewBag.Period;
+    var periodKey = ChannelPeriod.Key(period);
+    // The last 12 Jalali months plus the selected one (if older).
+    var months = Enumerable.Range(0, 12).Select(i => ChannelPeriod.StartOf(DateTimeOffset.UtcNow.AddDays(-30.4 * i))).Append(period).Distinct()
+        .OrderByDescending(x => x).ToList();
+}
 <form class="toolbar pipeline-filter incentive-period" method="get" action="@(active == "ranking" ? "/dealers/ranking" : "/dealers/commissions")">
-    <label class="field"><span>دورهٔ ماهانه (میلادی)</span><input type="month" name="period" value="@periodKey" dir="ltr" /></label>
+    <label class="field"><span>دورهٔ ماهانه (شمسی)</span><select name="period">@foreach (var month in months) { <option value="@ChannelPeriod.Key(month)" selected="@(ChannelPeriod.Key(month) == periodKey)">@ChannelPeriod.Label(month)</option> }</select></label>
     <button class="button button--ghost button--xs" type="submit">نمایش دوره</button>
     <a class="link-button" href="/dealers/commissions?period=@periodKey">کمیسیون</a>
     <a class="link-button" href="/dealers/ranking?period=@periodKey">رتبه‌بندی</a>

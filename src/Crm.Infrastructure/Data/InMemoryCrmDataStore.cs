@@ -330,7 +330,8 @@ internal static class SampleData
     private static void SeedDealers(CrmDataSet data)
     {
         var now = DateTimeOffset.UtcNow;
-        var monthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        // Channel periods are Jalali months (ChannelPeriod).
+        var (monthStart, monthEnd) = ChannelPeriod.MonthOf(now);
         var dealer = new Dealer(Guid.Parse("a0000000-0000-4000-8000-000000000001"), "P-D01", "DLR-0001",
             "شرکت پخش نماینده جنوب", "نماینده پایلوت جنوب", "C01", "B03", "T02", "اهواز",
             "14001234567", "06133334444", "INFO@PILOT-DEALER.TEST", DemoChannelManagerId);
@@ -361,13 +362,13 @@ internal static class SampleData
             "تأیید نهایی مدیر کانال", DemoChannelManagerId, now.AddMonths(-2).AddHours(5)));
 
         data.DealerTargets.Add(new DealerTarget(Guid.Parse("a4000000-0000-4000-8000-000000000001"),
-            "C01", "B03", "T02", dealer.Id, monthStart, monthStart.AddMonths(1), 7_000_000_000m,
+            "C01", "B03", "T02", dealer.Id, monthStart, monthEnd, 7_000_000_000m,
             "برنامه فروش مصوب ۱۴۰۵", DemoChannelManagerId));
         data.DealerFinancialSnapshots.Add(new DealerFinancialSnapshot(Guid.Parse("a5000000-0000-4000-8000-000000000001"),
             "C01", "B03", "T02", dealer.Id, 12_000_000_000m, 4_350_000_000m, 3_980_000_000m,
             620_000_000m, "Accounting Mock / Dealer Ledger v1", now.AddMinutes(-8)));
         data.DealerPerformanceSnapshots.Add(new DealerPerformanceSnapshot(Guid.Parse("a6000000-0000-4000-8000-000000000001"),
-            "C01", "B03", "T02", dealer.Id, monthStart, monthStart.AddMonths(1), 6_850_000_000m, 18,
+            "C01", "B03", "T02", dealer.Id, monthStart, monthEnd, 6_850_000_000m, 18,
             "ERP/BI Mock / Dealer Sales v1", now.AddMinutes(-12)));
         data.DealerCustomerAssignments.AddRange([
             new DealerCustomerAssignment(Guid.Parse("a7000000-0000-4000-8000-000000000001"), "C01", "B03", "T02",
@@ -377,13 +378,13 @@ internal static class SampleData
                 dealer.Id, Guid.Parse("20000000-0000-4000-8000-000000000004"), now.AddMonths(-1),
                 DemoChannelManagerId, "تخصیص مشتری کلیدی کانال")
         ]);
-        SeedDealerIncentives(data, dealer, monthStart, now);
+        SeedDealerIncentives(data, dealer, monthStart, monthEnd, now);
     }
 
     /// <summary>Two more active dealers and last month's sales so the commission run and the ranking have something to compare.</summary>
-    private static void SeedDealerIncentives(CrmDataSet data, Dealer pilot, DateTimeOffset monthStart, DateTimeOffset now)
+    private static void SeedDealerIncentives(CrmDataSet data, Dealer pilot, DateTimeOffset monthStart, DateTimeOffset monthEnd, DateTimeOffset now)
     {
-        var previousMonth = monthStart.AddMonths(-1);
+        var previousMonth = ChannelPeriod.Previous(monthStart).From;
         data.DealerPerformanceSnapshots.Add(new DealerPerformanceSnapshot(Guid.Parse("a6000000-0000-4000-8000-000000000002"),
             "C01", "B03", "T02", pilot.Id, previousMonth, monthStart, 6_100_000_000m, 16, "ERP/BI Mock / Dealer Sales v1", monthStart.AddHours(2)));
 
@@ -408,11 +409,11 @@ internal static class SampleData
             contract.Approve(DemoChannelManagerId, now.AddMonths(-3).AddHours(1), "تأیید نمونه");
             data.DealerContracts.Add(contract);
             data.DealerTargets.Add(new DealerTarget(Guid.Parse($"b4000000-0000-4000-8000-00000000000{index}"), "C01", item.Branch, item.Territory,
-                dealer.Id, monthStart, monthStart.AddMonths(1), item.Target, "برنامه فروش مصوب ۱۴۰۵", DemoChannelManagerId));
+                dealer.Id, monthStart, monthEnd, item.Target, "برنامه فروش مصوب ۱۴۰۵", DemoChannelManagerId));
             data.DealerFinancialSnapshots.Add(new DealerFinancialSnapshot(Guid.Parse($"b5000000-0000-4000-8000-00000000000{index}"), "C01", item.Branch,
                 item.Territory, dealer.Id, item.Balance * 3, item.Balance, item.Balance, item.Overdue, "Accounting Mock / Dealer Ledger v1", now.AddMinutes(-9)));
             data.DealerPerformanceSnapshots.Add(new DealerPerformanceSnapshot(Guid.Parse($"b6000000-0000-4000-8000-00000000000{index}"), "C01", item.Branch,
-                item.Territory, dealer.Id, monthStart, monthStart.AddMonths(1), item.Sales, 9, "ERP/BI Mock / Dealer Sales v1", now.AddMinutes(-11)));
+                item.Territory, dealer.Id, monthStart, monthEnd, item.Sales, 9, "ERP/BI Mock / Dealer Sales v1", now.AddMinutes(-11)));
             data.DealerPerformanceSnapshots.Add(new DealerPerformanceSnapshot(Guid.Parse($"b6100000-0000-4000-8000-00000000000{index}"), "C01", item.Branch,
                 item.Territory, dealer.Id, previousMonth, monthStart, item.Previous, 8, "ERP/BI Mock / Dealer Sales v1", monthStart.AddHours(2)));
             index++;

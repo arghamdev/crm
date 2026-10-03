@@ -14,7 +14,8 @@ namespace Crm.Application.Services;
 /// </summary>
 public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotService access) : IDealerIncentiveService
 {
-    public static DateTimeOffset PeriodStart(DateTimeOffset value) => new(value.Year, value.Month, 1, 0, 0, 0, TimeSpan.Zero);
+    /// <summary>Start of the Jalali month containing the value (see <see cref="ChannelPeriod"/>).</summary>
+    public static DateTimeOffset PeriodStart(DateTimeOffset value) => ChannelPeriod.StartOf(value);
 
     public CommissionWorkspaceDto GetCommissionWorkspace(Guid currentUserId, OrganizationSelection organization, DateTimeOffset period)
     {
@@ -74,8 +75,7 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
     {
         var snapshot = RequiredSnapshot(currentUserId);
         Require(snapshot, organization.CompanyId, "Dealer.Commission.Manage");
-        var from = PeriodStart(period);
-        var to = from.AddMonths(1);
+        var (from, to) = ChannelPeriod.MonthOf(period);
         return store.Write(data =>
         {
             var plan = data.Find<DealerCommissionPlan>(x => x.CompanyId == organization.CompanyId).SingleOrDefault() ??
@@ -106,7 +106,7 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
                     dealer.BranchId, dealer.TerritoryId, from, to, sales.NetSales, target.Amount, overdue, plan, currentUserId, nowUtc));
                 calculated++;
             }
-            Audit(data, currentUserId, "Dealer.CommissionCalculated", $"{organization.CompanyId} {from:yyyy-MM}: {calculated} calculated, {skipped} skipped", nowUtc);
+            Audit(data, currentUserId, "Dealer.CommissionCalculated", $"{organization.CompanyId} {ChannelPeriod.Key(from)}: {calculated} calculated, {skipped} skipped", nowUtc);
             return new CommissionRunResult(calculated, skipped, issues);
         });
     }
@@ -151,8 +151,7 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
     {
         var snapshot = RequiredSnapshot(currentUserId);
         Require(snapshot, organization.CompanyId, "Dealer.Evaluation.Run");
-        var from = PeriodStart(period);
-        var to = from.AddMonths(1);
+        var (from, to) = ChannelPeriod.MonthOf(period);
         var evaluatedAt = nowUtc;
         return store.Write(data =>
         {
@@ -162,7 +161,8 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
             {
                 var target = Target(data, dealer, from, to);
                 var sales = Sales(data, dealer, from, to);
-                var previous = Sales(data, dealer, from.AddMonths(-1), from);
+                var (previousFrom, previousTo) = ChannelPeriod.Previous(from);
+                var previous = Sales(data, dealer, previousFrom, previousTo);
                 var financial = LatestFinancial(data, dealer);
                 if (target is null || sales is null) notes.Add($"{dealer.Code}: هدف یا فروش دوره موجود نیست؛ امتیاز تحقق صفر منظور شد.");
                 var (breaches, satisfaction) = ServiceQuality(data, dealer, from, to, nowUtc);
@@ -177,7 +177,7 @@ public sealed class DealerIncentiveService(ICrmDataStore store, IAccessSnapshotS
                 .ThenBy(x => dealers.GetValueOrDefault(x.DealerId).Code, StringComparer.Ordinal).ToList();
             for (var i = 0; i < ranked.Count; i++) ranked[i].AssignRank(i + 1, ranked.Count);
             data.DealerEvaluations.AddRange(ranked);
-            Audit(data, currentUserId, "Dealer.EvaluationRun", $"{organization.CompanyId} {from:yyyy-MM}: {ranked.Count} dealers", nowUtc);
+            Audit(data, currentUserId, "Dealer.EvaluationRun", $"{organization.CompanyId} {ChannelPeriod.Key(from)}: {ranked.Count} dealers", nowUtc);
             return new DealerEvaluationRunResult(ranked.Count, notes);
         });
     }
