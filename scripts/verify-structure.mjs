@@ -184,6 +184,7 @@ const required = [
   ,"src/Crm.Application/Services/AccountRecordService.cs"
   ,"docs/account-file-fa.md"
   ,"CHANGELOG.md"
+  ,"preview/account-file.js"
   ,"CLAUDE.md"
   ,"src/Crm.Web/Presentation/SystemVersion.cs"
   ,"src/Crm.Web/Views/System/Version.cshtml"

@@ -649,6 +649,317 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
 
 /* Mobile: the open sidebar must sit above its overlay (z-index 60) or its links cannot be tapped. */
 @media (max-width: 900px) { .sidebar.is-open { z-index: 65; } }
+/* Account file and new pages in the preview (shared look comes from the MVC stylesheet appended at build time). */
+.u-form .u-wide,.u-form fieldset{grid-column:1/-1}.u-form fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:10px}
+.u-form legend{padding:0 6px;font-weight:700;color:var(--ink-2)}.u-form textarea{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.act-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.side-tabs__body{padding:12px 14px 14px}.kpi__info{color:var(--ink-3);cursor:help}
+.timeline-list{margin:0;padding:0 18px 0 0;display:grid;gap:12px}.timeline-list li{border-inline-start:2px solid var(--line);padding-inline-start:12px}.timeline-list p{margin:4px 0;color:var(--ink-2)}
+.acc-section>summary{list-style:none}.acc-section>summary::-webkit-details-marker{display:none}.tool-button--link{font-size:14px}
+.account-head__avatar{display:grid;place-items:center;width:64px;height:64px;border-radius:16px;color:#fff;background:linear-gradient(145deg,var(--primary-600),var(--navy-700));font-size:26px;font-weight:900}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px 18px;margin:0}.info-grid dt{color:var(--ink-3);font-size:12px}.info-grid dd{margin:2px 0 0;font-weight:650}
+.account-head__identity>div{min-width:0}.topbar__left .version-pill{text-decoration:none}
+@media (max-width:640px){.global-search kbd{display:none}.unified-notice{font-size:12px}}
+
+/* ───────────── Account file (پرونده یکپارچه حساب) ───────────── */
+.account-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 20px 22px; }
+.account-head__identity { display: flex; gap: 16px; min-width: 0; flex: 1 1 520px; }
+.account-head__logo, .account-head__avatar { flex: 0 0 auto; width: 64px; height: 64px; border-radius: 16px; object-fit: contain; background: var(--surface-2); border: 1px solid var(--line); }
+.account-head__avatar { display: grid; place-items: center; color: #fff; border: 0; background: linear-gradient(145deg, var(--primary-600), var(--navy-700)); font-size: 26px; font-weight: 900; }
+.account-head__text { min-width: 0; }
+.account-head__title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.account-head__title h1 { margin: 0 0 0 4px; font-size: 22px; line-height: 1.4; letter-spacing: -.4px; }
+.account-head .badge, .account-file-badge { padding: 4px 10px; font-size: 11px; }
+.account-head__meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0 0; }
+.account-head__meta div { display: flex; gap: 6px; align-items: baseline; }
+.account-head__meta dt { color: var(--ink-3); font-size: 12px; }
+.account-head__meta dd { margin: 0; color: var(--ink); font-size: 13px; font-weight: 700; }
+.account-head__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { display: inline-flex; align-items: center; padding: 3px 10px; color: var(--primary-800); border-radius: 999px; background: var(--primary-50); border: 1px solid color-mix(in srgb, var(--primary-600) 18%, transparent); font-size: 12px; font-weight: 650; }
+.account-head__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.account-head__actions .button { min-height: 38px; padding: 7px 13px; font-size: 13px; }
+.account-banner { display: flex; gap: 10px; align-items: center; margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; font-size: 13px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
+.account-banner svg { width: 18px; height: 18px; flex: 0 0 auto; }
+
+.account-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 14px 0; }
+.kpi { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); border-top: 3px solid var(--primary-600); }
+.kpi--danger { border-top-color: var(--red-600); }
+.kpi--warning { border-top-color: var(--amber-600); }
+.kpi__head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.kpi__label { color: var(--ink-2); font-size: 12.5px; font-weight: 700; }
+.kpi__value { color: var(--ink); font-size: 17px; font-weight: 850; line-height: 1.5; text-decoration: none; overflow-wrap: anywhere; }
+a.kpi__value:hover { color: var(--primary-700); }
+.kpi--danger .kpi__value { color: var(--red-700); }
+.kpi__detail { color: var(--ink-3); font-size: 11.5px; line-height: 1.6; }
+.kpi__def { position: static; }
+.kpi__def summary { display: grid; place-items: center; width: 22px; height: 22px; color: var(--ink-3); border-radius: 50%; cursor: pointer; list-style: none; }
+.kpi__def summary::-webkit-details-marker { display: none; }
+.kpi__def summary svg { width: 16px; height: 16px; }
+.kpi__def[open] summary { color: var(--primary-700); background: var(--primary-50); }
+.kpi__def p { position: absolute; z-index: 5; inset-inline: 8px; top: 40px; margin: 0; padding: 10px 12px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); font-size: 12px; line-height: 1.8; }
+
+.account-layout { display: grid; grid-template-columns: minmax(340px, 410px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.account-side { display: grid; gap: 14px; min-width: 0; }
+.account-main { display: grid; gap: 14px; min-width: 0; }
+.account-main > [data-tab-panel] { display: grid; gap: 14px; }
+.account-main > [data-tab-panel][hidden], .side-tabs > [data-tab-panel][hidden] { display: none; }
+
+.quick-panel { padding: 14px; }
+.quick-panel__head { display: flex; flex-direction: column; margin-bottom: 10px; }
+.quick-panel__head strong { font-size: 14px; }
+.quick-panel__head small { color: var(--ink-3); font-size: 11.5px; }
+.quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.quick-action { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 84px; padding: 10px 6px; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font: inherit; font-size: 12.5px; font-weight: 700; text-align: center; cursor: pointer; transition: .16s ease; }
+.quick-action:hover { border-color: color-mix(in srgb, var(--primary-600) 40%, var(--line)); background: var(--primary-50); transform: translateY(-1px); }
+.quick-action:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary-600) 35%, transparent); outline-offset: 2px; }
+.quick-action__icon { display: grid; place-items: center; width: 38px; height: 38px; color: var(--primary-700); border-radius: 11px; background: var(--primary-50); }
+.quick-action__icon svg { width: 20px; height: 20px; }
+.quick-action:nth-child(2) .quick-action__icon { color: var(--blue-700); background: var(--blue-100); }
+.quick-action:nth-child(3) .quick-action__icon { color: var(--violet-700); background: var(--violet-100); }
+.quick-action:nth-child(4) .quick-action__icon { color: var(--amber-700); background: var(--amber-100); }
+.quick-action:nth-child(5) .quick-action__icon { color: var(--ink-2); background: var(--surface-3); }
+.quick-action:nth-child(6) .quick-action__icon { color: var(--green-700); background: var(--green-100); }
+.quick-action.is-disabled { color: var(--ink-3); cursor: not-allowed; background: var(--surface-2); }
+.quick-action.is-disabled .quick-action__icon { filter: grayscale(1); opacity: .6; }
+.quick-action small { color: var(--ink-3); font-size: 10.5px; font-weight: 500; }
+
+.tabbar { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tabbar__tab { position: relative; flex: 0 0 auto; padding: 12px 12px 11px; color: var(--ink-3); border: 0; background: none; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.tabbar__tab:hover { color: var(--ink); }
+.tabbar__tab.is-active { color: var(--primary-700); }
+.tabbar__tab.is-active::after { content: ""; position: absolute; inset-inline: 8px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--primary-600); }
+.tabbar--main { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+.tabbar__count { display: inline-grid; place-items: center; min-width: 22px; height: 20px; margin-inline-start: 4px; padding: 0 6px; color: var(--ink-2); border-radius: 999px; background: var(--surface-3); font-size: 11px; }
+.side-tabs > [data-tab-panel] { padding: 12px 14px 14px; }
+
+.act-filter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.act-filter--single { grid-template-columns: 1fr; }
+.act-filter select, .act-filter input, .sec-filter select, .sec-filter input { width: 100%; min-height: 36px; padding: 6px 10px; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); font: inherit; font-size: 12.5px; }
+.act-group { margin-top: 8px; }
+.act-group h4 { display: flex; align-items: center; gap: 6px; margin: 10px 0 4px; color: var(--ink-2); font-size: 12.5px; }
+.act-group h4 b { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--surface-3); font-size: 11px; }
+.act-group--overdue h4 { color: var(--red-700); }
+.act-group--overdue h4 b { color: var(--red-700); background: var(--red-100); }
+.act { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 10px; padding: 10px 8px; border-radius: 12px; border: 1px solid transparent; }
+.act + .act { border-top-color: var(--line); border-radius: 0; }
+.act--overdue { border: 1px solid color-mix(in srgb, var(--red-600) 30%, var(--line)); border-inline-start: 4px solid var(--red-600); border-radius: 12px; background: color-mix(in srgb, var(--red-600) 4%, var(--surface)); }
+.act--overdue + .act--overdue { margin-top: 6px; border-top-color: color-mix(in srgb, var(--red-600) 30%, var(--line)); border-radius: 12px; }
+.act--closed { opacity: .92; }
+.act__icon { display: grid; place-items: center; width: 34px; height: 34px; color: var(--primary-700); border-radius: 10px; background: var(--primary-50); }
+.act--overdue .act__icon { color: var(--red-700); background: var(--red-100); }
+.act--closed .act__icon { color: var(--ink-3); background: var(--surface-3); }
+.act__icon svg { width: 17px; height: 17px; }
+.act__body { min-width: 0; }
+.act__title { display: block; padding: 0; color: var(--ink); border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 750; text-align: start; cursor: pointer; text-decoration: none; }
+.act__title:hover { color: var(--primary-700); }
+.act__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 3px; color: var(--ink-3); font-size: 11.5px; }
+.act__meta span { display: inline-flex; align-items: center; gap: 4px; }
+.act__meta svg { width: 13px; height: 13px; }
+.act__meta .badge { font-size: 10.5px; }
+.act__outcome { margin: 6px 0 0; padding: 6px 10px; color: var(--ink-2); border-radius: 8px; background: var(--surface-2); font-size: 12px; }
+.act__actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.chip-action { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 4px 10px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.chip-action svg { width: 14px; height: 14px; }
+.chip-action:hover { color: var(--primary-700); border-color: color-mix(in srgb, var(--primary-600) 35%, var(--line)); background: var(--primary-50); }
+.chip-action--primary { color: #fff; border-color: var(--primary-700); background: var(--primary-700); }
+.chip-action--primary:hover { color: #fff; background: var(--primary-800); }
+.chip-action--danger { color: var(--red-700); }
+.chip-action--danger:hover { color: var(--red-700); border-color: color-mix(in srgb, var(--red-600) 35%, var(--line)); background: var(--red-100); }
+.rec__actions form, .note__actions form { display: inline; }
+
+.note { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.note + .note { margin-top: 8px; }
+.note header { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 13.5px; }
+.note p { margin: 6px 0; color: var(--ink-2); font-size: 13px; }
+.note footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--ink-3); font-size: 11.5px; }
+.note__files { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.note__files a { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; color: var(--primary-700); border-radius: 8px; background: var(--primary-50); font-size: 12px; text-decoration: none; }
+.note__files svg { width: 13px; height: 13px; }
+.note__actions { display: inline-flex; gap: 10px; }
+.pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.state-loading, .state-empty, .state-denied, .state-error { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 22px 12px; color: var(--ink-3); font-size: 13px; text-align: center; }
+.state-loading::before { content: ""; width: 14px; height: 14px; border: 2px solid var(--line-strong); border-top-color: var(--primary-600); border-radius: 50%; animation: account-spin .8s linear infinite; }
+.state-denied { color: var(--amber-700); }
+.state-denied svg { width: 16px; height: 16px; }
+.state-error { color: var(--red-700); }
+@keyframes account-spin { to { transform: rotate(360deg); } }
+
+.info-panel { overflow: hidden; }
+.info-panel__summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; cursor: pointer; list-style: none; }
+.info-panel__summary::-webkit-details-marker, .acc-section > summary::-webkit-details-marker { display: none; }
+.info-panel__summary > span { display: flex; flex-direction: column; }
+.info-panel__summary strong { font-size: 14px; }
+.info-panel__summary small { color: var(--ink-3); font-size: 11.5px; }
+.chev { width: 16px; height: 16px; color: var(--ink-3); transform: rotate(90deg); transition: transform .18s; flex: 0 0 auto; }
+details[open] > summary .chev { transform: rotate(-90deg); }
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 18px; margin: 0; padding: 4px 18px 18px; }
+.info-grid--drawer { padding: 0; grid-template-columns: 1fr 1fr; }
+.info-grid dt { color: var(--ink-3); font-size: 11.5px; }
+.info-grid dd { margin: 2px 0 0; color: var(--ink); font-size: 13.5px; font-weight: 650; overflow-wrap: anywhere; }
+.info-grid dd .chip { margin: 0 0 4px 4px; }
+.info-grid__wide { grid-column: 1 / -1; }
+.overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.overview-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; padding: 0 18px 18px; }
+.overview-sections__item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; font-size: 12.5px; font-weight: 650; text-decoration: none; }
+.overview-sections__item:hover { border-color: color-mix(in srgb, var(--primary-600) 35%, var(--line)); background: var(--primary-50); }
+.overview-sections__item svg { width: 16px; height: 16px; color: var(--primary-700); flex: 0 0 auto; }
+.overview-sections__item span { flex: 1; }
+.overview-sections__item b { color: var(--primary-800); font-size: 13px; }
+
+.related-tools { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; }
+.related-tools__buttons { display: flex; gap: 14px; }
+.related-search { display: flex; align-items: center; gap: 8px; flex: 1 1 280px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); }
+.related-search svg { width: 16px; height: 16px; color: var(--ink-3); }
+.related-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; }
+.section-group { display: grid; gap: 8px; margin-top: 14px; }
+.section-group__title { margin: 0; padding: 0 4px; color: var(--ink-3); font-size: 12px; font-weight: 800; }
+.acc-section { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.acc-section > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; border-radius: 12px; }
+.acc-section > summary:hover { background: var(--surface-2); }
+.acc-section[open] > summary { border-bottom: 1px solid var(--line); border-radius: 12px 12px 0 0; }
+.acc-section__icon { display: grid; place-items: center; width: 32px; height: 32px; color: var(--primary-700); border-radius: 9px; background: var(--primary-50); flex: 0 0 auto; }
+.acc-section__icon svg { width: 17px; height: 17px; }
+.acc-section__title { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 750; }
+.acc-section__count { display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 7px; color: var(--ink-2); border-radius: 999px; background: var(--surface-3); font-size: 12px; }
+.acc-section__tools { display: inline-flex; gap: 4px; }
+.tool-button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.tool-button:hover { color: var(--primary-700); border-color: color-mix(in srgb, var(--primary-600) 35%, var(--line)); background: var(--primary-50); }
+.tool-button svg { width: 15px; height: 15px; }
+.acc-section__body { padding: 10px 14px 12px; }
+.sec-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sec-filter { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 260px; }
+.sec-filter__search { position: relative; flex: 1 1 180px; }
+.sec-filter__search svg { position: absolute; top: 10px; inset-inline-start: 10px; width: 15px; height: 15px; color: var(--ink-3); }
+.sec-filter__search input { padding-inline-start: 32px; }
+.sec-filter select { width: auto; min-width: 140px; }
+.sec-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.button--sm { min-height: 34px; padding: 5px 11px; font-size: 12.5px; border-radius: 9px; }
+.button--sm svg { width: 15px; height: 15px; }
+.sec-note { display: flex; gap: 6px; align-items: flex-start; margin: 4px 0 8px; padding: 8px 10px; color: var(--ink-2); border-radius: 9px; background: var(--surface-2); font-size: 12px; line-height: 1.8; }
+.sec-note svg { width: 15px; height: 15px; margin-top: 3px; flex: 0 0 auto; color: var(--blue-700); }
+.sec-totals { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0 8px; padding: 8px 10px; border: 1px dashed color-mix(in srgb, var(--primary-600) 35%, var(--line)); border-radius: 9px; font-size: 12.5px; }
+.sec-totals span { color: var(--ink-2); font-weight: 700; }
+.sec-totals b { color: var(--primary-800); }
+.rec-list { margin: 0; padding: 0; list-style: none; }
+.rec { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.3fr); gap: 4px 14px; align-items: center; padding: 10px 2px; border-top: 1px solid var(--line); }
+.rec:first-child { border-top: 0; }
+.rec__main { display: flex; flex-direction: column; min-width: 0; }
+.rec__title { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); font-size: 13.5px; font-weight: 750; text-decoration: none; overflow-wrap: anywhere; }
+a.rec__title:hover { color: var(--primary-700); }
+.rec__title svg { width: 14px; height: 14px; }
+.rec__main small { color: var(--ink-3); font-size: 12px; overflow-wrap: anywhere; }
+.rec__extra { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.rec__meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 12px; font-size: 12px; color: var(--ink-2); }
+.rec__meta .badge { font-size: 11px; }
+.rec__amount { color: var(--ink); font-size: 13px; }
+.rec__owner { display: inline-flex; align-items: center; gap: 4px; }
+.rec__owner svg { width: 13px; height: 13px; }
+.rec__actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.sec-pager { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 8px; color: var(--ink-3); font-size: 12px; }
+.sec-count { margin: 6px 0 0; color: var(--ink-3); font-size: 11.5px; text-align: center; }
+
+.timeline-panel .panel-heading { padding-bottom: 6px; }
+.timeline { position: relative; margin: 0; padding: 0 18px 18px; list-style: none; }
+.timeline__day { margin: 12px 0 6px; }
+.timeline__day span { display: inline-block; padding: 2px 10px; color: var(--ink-2); border-radius: 999px; background: var(--surface-3); font-size: 11.5px; font-weight: 750; }
+.timeline__item { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 8px 0; }
+.timeline__item::before { content: ""; position: absolute; top: 40px; bottom: -8px; inset-inline-start: 15px; width: 2px; background: var(--line); }
+.timeline__item:last-child::before { display: none; }
+.timeline__icon { display: grid; place-items: center; width: 32px; height: 32px; color: var(--primary-700); border-radius: 50%; background: var(--primary-50); }
+.timeline__icon svg { width: 15px; height: 15px; }
+.timeline__title { font-size: 13.5px; font-weight: 700; }
+.timeline__title a { color: var(--ink); text-decoration: none; }
+.timeline__title a:hover { color: var(--primary-700); }
+.timeline__item p { margin: 3px 0; color: var(--ink-2); font-size: 12.5px; }
+.timeline__item small { color: var(--ink-3); font-size: 11.5px; }
+
+.account-form .form-section h3 { font-size: 14px; }
+.account-form .form-grid label > span { font-size: 12.5px; }
+.form-context { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: var(--primary-800); border-radius: 10px; background: var(--primary-50); font-size: 13px; }
+.form-context svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.field-help { display: flex; gap: 6px; align-items: flex-start; margin: 4px 0 0; color: var(--ink-3); font-size: 11.5px; font-weight: 500; line-height: 1.7; }
+.field-help svg { width: 14px; height: 14px; margin-top: 3px; flex: 0 0 auto; }
+.pick-list { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.pick-list legend { padding: 0 6px; color: var(--ink-2); font-size: 12.5px; font-weight: 750; }
+.done-toggle > summary { cursor: pointer; list-style: none; }
+.done-toggle > summary h3 { display: inline; }
+.done-toggle > summary small { display: block; margin-top: 2px; color: var(--ink-3); font-size: 11.5px; }
+.done-toggle[open] > summary { margin-bottom: 12px; }
+.link-list { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.link-list form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.link-list__text { display: flex; flex: 1 1 220px; flex-direction: column; min-width: 0; }
+.link-list__text strong { font-size: 13px; }
+.link-list__text small { color: var(--ink-3); font-size: 11.5px; }
+.link-list__fields { display: flex; gap: 8px; flex: 1 1 220px; }
+.link-list__fields label { display: grid; gap: 4px; flex: 1; font-size: 11.5px; }
+.link-list__fields select { min-height: 34px; padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; }
+
+@media (max-width: 1180px) {
+  .account-layout { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); }
+  .act-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+  .account-layout { grid-template-columns: 1fr; }
+  .quick-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .overview-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .account-head { padding: 16px; }
+  .account-head__identity { flex-basis: 100%; }
+  .account-head__logo, .account-head__avatar { width: 52px; height: 52px; font-size: 21px; }
+  .account-head__title h1 { font-size: 18px; }
+  .account-head__actions { width: 100%; }
+  .account-head__actions .button { flex: 1 1 auto; }
+  .account-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .kpi { padding: 12px; }
+  .kpi__value { font-size: 16px; }
+  .quick-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quick-action { min-height: 76px; font-size: 12px; }
+  .act-filter { grid-template-columns: 1fr 1fr; }
+  .rec { grid-template-columns: 1fr; }
+  .rec__meta, .rec__actions { justify-content: flex-start; }
+  .info-grid, .info-grid--drawer { grid-template-columns: 1fr 1fr; }
+  .tabbar__tab { padding: 11px 9px; font-size: 12.5px; }
+}
+.record-list > div > span.mini-icon { display: grid; flex: 0 0 auto; }
+.account-form .form-grid > label { align-self: start; }
+
+/* ───────────── Version (نسخه) ───────────── */
+.version-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 11px; color: var(--primary-800); border: 1px solid color-mix(in srgb, var(--primary-600) 25%, var(--line)); border-radius: 999px; background: var(--primary-50); font-size: 12px; font-weight: 800; text-decoration: none; white-space: nowrap; transition: .16s ease; }
+.version-pill:hover { border-color: var(--primary-600); background: color-mix(in srgb, var(--primary-600) 12%, var(--surface)); }
+.version-pill__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-600); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green-600) 20%, transparent); }
+.version-pill__label { color: var(--ink-2); font-weight: 650; }
+.login-version { margin: 14px 0 0; color: var(--ink-3); font-size: 12px; text-align: center; }
+.version-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; padding: 18px 20px; }
+.version-hero__mark { display: grid; place-items: center; width: 54px; height: 54px; color: #fff; border-radius: 15px; background: linear-gradient(145deg, var(--primary-600), var(--primary-800)); font-size: 24px; font-weight: 900; }
+.version-hero div { display: flex; flex-direction: column; }
+.version-hero small { color: var(--ink-3); font-size: 12px; }
+.version-hero strong { font-size: 26px; line-height: 1.3; letter-spacing: -.5px; }
+.version-hero div > span { color: var(--ink-2); font-size: 13px; }
+.release-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.release { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+.release--current { border-color: color-mix(in srgb, var(--primary-600) 45%, var(--line)); border-inline-start: 4px solid var(--primary-600); }
+.release__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.release__head strong { font-size: 15px; }
+.release__head time { margin-inline-start: auto; color: var(--ink-3); font-size: 12px; }
+.release__head .badge { font-size: 11px; padding: 3px 9px; }
+.release__version { padding: 2px 9px; color: var(--primary-800); border-radius: 8px; background: var(--primary-50); font-size: 13px; font-weight: 800; }
+.release ul { margin: 10px 0 0; padding-inline-start: 20px; color: var(--ink-2); font-size: 13.5px; line-height: 1.9; }
+@media (max-width: 640px) {
+  .version-pill__label { display: none; }
+  .version-pill { padding: 4px 9px; }
+}
+.release code { padding: 1px 6px; border-radius: 6px; background: var(--surface-3); font-size: 12px; direction: ltr; unicode-bidi: isolate; }
+/* Phones: the search box shrinks so the top bar (with the version badge) never scrolls sideways. */
+@media (max-width: 640px) {
+  .topbar { gap: 8px; }
+  .topbar__right { flex: 1 1 auto; min-width: 0; gap: 6px; }
+  .topbar__left { flex: 0 0 auto; gap: 6px; }
+  .global-search { flex: 1 1 auto; width: auto; min-width: 0; }
+  .version-pill__dot { display: none; }
+  .version-pill { min-height: 32px; padding: 3px 8px; font-size: 11.5px; }
+}
 
 </style>
 </head>
@@ -730,7 +1041,7 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
         </form>
         <div id="startupMessage" role="status">در حال آماده‌سازی… اگر دکمه ورود فعال نشد، فایل را دانلود و در مرورگر باز کنید.</div><noscript>اجرای JavaScript برای پیش‌نمایش لازم است. فایل را دانلود و با Chrome یا Edge باز کنید.</noscript><div class="login-note"><span class="status-dot status-dot--success"></span> محیط نمایشی آماده است؛ اطلاعات ورود از قبل تکمیل شده‌اند.</div>
       </div>
-      <p class="login-footer">پیش‌نمایش یکپارچه تا اولویت ۱۰ · کلیه حقوق برای ارقام سیستم محفوظ است.</p>
+      <p class="login-footer">ارقام CRM · نسخه v1.8.1 · 1405/07/12 · پیش‌نمایش آفلاین</p>
     </div>
   </section>
 
@@ -739,7 +1050,7 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
       <div class="sidebar__header">
         <div class="brand brand--light">
           <span class="brand__mark">آ</span>
-          <span><strong>ارقام CRM</strong><small>نمونه یکپارچه</small></span>
+          <span><strong>ارقام CRM</strong><small>نسخه <bdi dir="ltr">1.8.1</bdi> · پیش‌نمایش</small></span>
         </div>
         <button class="icon-button icon-button--sidebar sidebar-close" type="button" id="sidebarClose" aria-label="بستن منو"><svg><use href="#i-close"/></svg></button>
       </div>
@@ -755,7 +1066,7 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
 
         <span class="nav-label">مدیریت</span>
         <a class="nav-item" href="#/reports" data-route="reports"><svg><use href="#i-chart"/></svg><span>گزارش‌ها و تحلیل</span></a>
-        <a class="nav-item" href="#/organization" data-route="organization"><svg><use href="#i-building"/></svg><span>ساختار سازمانی</span></a><a class="nav-item" href="#/identity" data-route="identity"><svg><use href="#i-shield"/></svg><span>کاربران و دسترسی</span></a>
+        <a class="nav-item" href="#/service" data-route="service"><svg><use href="#i-shield"/></svg><span>خدمات و SLA</span></a><a class="nav-item" href="#/commissions" data-route="commissions"><svg><use href="#i-chart"/></svg><span>کمیسیون و رتبه‌بندی</span></a><a class="nav-item" href="#/notifications" data-route="notifications"><svg><use href="#i-bell"/></svg><span>اعلان‌ها</span></a><a class="nav-item" href="#/version" data-route="version"><svg><use href="#i-refresh"/></svg><span>نسخه و تغییرات</span></a><a class="nav-item" href="#/organization" data-route="organization"><svg><use href="#i-building"/></svg><span>ساختار سازمانی</span></a><a class="nav-item" href="#/identity" data-route="identity"><svg><use href="#i-shield"/></svg><span>کاربران و دسترسی</span></a>
       </nav>
 
       <div class="sidebar__support">
@@ -781,7 +1092,7 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
             <kbd>⌘ K</kbd>
           </label>
         </div>
-        <div class="topbar__left">
+        <div class="topbar__left"><a class="version-pill" href="#/version" data-route="version" title="نسخه و تغییرات"><span class="version-pill__dot" aria-hidden="true"></span><span class="version-pill__label">نسخه</span><bdi dir="ltr">v1.8.1</bdi></a>
           <label class="company-select">
             <svg><use href="#i-building"/></svg>
             <select id="companySelect" aria-label="شرکت جاری">
@@ -1311,6 +1622,7 @@ document.addEventListener("keydown", (event)=>{ if((event.metaKey||event.ctrlKey
 
 </script>
 <script>
+window.CRM_VERSION="1.8.1";window.CRM_RELEASES=[{"version":"1.8.1","date":"1405/07/12","title":"به‌روزرسانی پیش‌نمایش آفلاین","changes":["پیش‌نمایش آفلاین (index.html و preview/crm-unified.html) با نسخه‌های ۱٫۱ تا ۱٫۸ هم‌سطح شد.","پرونده یکپارچه حساب در پیش‌نمایش: شش عملیات اصلی، پنل فعالیت با ثبت نتیجه و اقدام بعدی، رکوردهای مرتبط با اتصال و قطع ارتباط، و تاریخچه تغییرات.","فرم مشتری حقیقی/حقوقی با اعتبارسنجی کد ملی و شناسهٔ ملی، و صفحه‌های خدمات و SLA، کمیسیون و رتبه‌بندی، اعلان‌ها و «نسخه و تغییرات».","نسخه و فهرست تغییرات پیش‌نمایش از همان منبع برنامهٔ اصلی خوانده می‌شود و آزمون خودکار دارد."]},{"version":"1.8.0","date":"1405/07/12","title":"نسخه‌گذاری سامانه","changes":["شمارهٔ نسخه در نوار کناری، نوار بالا و صفحهٔ ورود نمایش داده می‌شود.","صفحهٔ «تغییرات نسخه» (/system/version) فهرست همهٔ نسخه‌ها و تغییرات هر کدام را نشان می‌دهد.","آزمون خودکار بررسی می‌کند که نسخهٔ برنامه و بالاترین نسخهٔ این فهرست یکی باشند.","رفع اسکرول افقی نوار بالا در موبایل."]},{"version":"1.7.0","date":"1405/07/12","title":"پرونده یکپارچه حساب","changes":["صفحهٔ واحد هر حساب با سربرگ، شاخص‌های دارای تعریف و شش عملیات اصلی (فرصت، تماس، جلسه، وظیفه، یادداشت، سرنخ).","پنل فعالیت با فیلتر، نمایش معوق‌ها، ثبت نتیجه جدا از برنامه‌ریزی و اقدام بعدی؛ یادآوری از طریق صف اعلان.","۲۷ بخش رکوردهای مرتبط با ایجاد، اتصال موجود و قطع ارتباط بدون حذف؛ پرداخت‌ها با تأیید دومرحله‌ای و جمع به تفکیک ارز.","جلوگیری از ثبت تکراری، مجوزهای جداگانه برای هر حوزه و تاریخچهٔ کامل تغییرات."]},{"version":"1.6.1","date":"1405/07/11","title":"اصلاحات ظاهری و مستندات","changes":["چک‌باکس‌ها در فرم‌ها در یک ردیف نمایش داده می‌شوند.","گزارش تحلیل و مستند فاز ۷ به‌روز شد."]},{"version":"1.6.0","date":"1405/07/11","title":"اعلان ایمیل و پیامک","changes":["صف اعلان با تلاش مجدد، جلوگیری از ارسال تکراری و تنظیمات اعلان برای هر کاربر."]},{"version":"1.5.0","date":"1405/07/11","title":"تکمیل فاز ۷ نمایندگان","changes":["تضمین‌ها و آموزش نمایندگان، تقسیم اعتبار فروش و ارسال کمیسیون تأییدشده به حسابداری."]},{"version":"1.4.0","date":"1405/07/11","title":"شکایت پرتال و شاخص‌های خدمات","changes":["شکایت ثبت‌شده در پرتال نماینده به پروندهٔ خدمات تبدیل می‌شود؛ شاخص‌های خدمات به گزارش‌ها اضافه شد."]},{"version":"1.3.0","date":"1405/07/11","title":"دوره‌های شمسی","changes":["دوره‌های کمیسیون و رتبه‌بندی بر اساس ماه‌های شمسی."]},{"version":"1.2.0","date":"1405/07/11","title":"فرم تعریف مشتری","changes":["فرم کامل مشتری حقیقی و حقوقی با افراد رابط، نشان (لوگو) و اعتبارسنجی شناسه‌های ایرانی."]},{"version":"1.1.0","date":"1405/07/11","title":"کمیسیون و رتبه‌بندی نمایندگان","changes":["محاسبه و تأیید کمیسیون، ارزیابی و رتبه‌بندی نمایندگان."]},{"version":"1.0.0","date":"1405/07/11","title":"نسخهٔ پایه","changes":["اولویت‌های ۱ تا ۱۰ نقشهٔ راه: هویت و دسترسی، ساختار چندشرکتی، مشتری ۳۶۰، سرنخ و فرصت، پیش‌فاکتور، سفارش، نمایندگان، گزارش‌ها، پرتال و موبایل، و خدمات و SLA."]}];
 /* Priority 10 visual simulation. Real authorization and persistence live in ASP.NET Core. */
 function createSelfServicePreview(ctx) {
   const {store, escapeHtml:e, header, table, button:b, showForm, amount, idFor, today, save, render, toast, download, closeDrawer} = ctx;
@@ -1362,6 +1674,436 @@ function createSelfServicePreview(ctx) {
     save();closeDrawer();render();toast('تغییر در مدل نمونه ثبت شد.');return true;
   }
   return {allowed,views:{portal:portalView,'partner-requests':inboxView,mobile:mobileView},action,submit,reset(){queue=[];offline=false;blocked=false;lastSync='';},pending:()=>queue.length,tick(){try{expire();}catch(error){toast(error.message,'warning');render();}}};
+}
+
+/* Offline preview of v1.1–v1.8 features: account file, customer form, service desk, commissions, notifications and version.
+   Data lives in the shared preview store (browser storage). The MVC application remains the real implementation. */
+function createAccountFilePreview(ctx) {
+  'use strict';
+  const {store, escapeHtml: e, header, button, showForm, amount, idFor, save, toast, closeDrawer, link} = ctx;
+  const render = () => ctx.render();
+  const user = () => ctx.account();
+  const names = {'sales.manager':'مهدی نادری','sales.expert':'سارا احمدی','finance.manager':'لیلا کریمی','channel.manager':'امیرحسین مرادی','reporting.ceo':'مدیرعامل','dealer.user':'کاربر نماینده'};
+  const me = () => names[user()] || user();
+  const can = {
+    write: () => !['reporting.ceo','dealer.user'].includes(user()),
+    activity: () => ['sales.manager','sales.expert'].includes(user()),
+    note: () => ['sales.manager','sales.expert','finance.manager'].includes(user()),
+    payment: () => ['sales.manager','sales.expert','finance.manager'].includes(user()),
+    approve: () => ['sales.manager','finance.manager'].includes(user()),
+    manage: () => user() === 'sales.manager',
+    commission: () => ['sales.manager','channel.manager','finance.manager','reporting.ceo'].includes(user())
+  };
+  const pad = n => String(n).padStart(2, '0');
+  const local = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const shift = (days, hours = 0) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hours || d.getHours(), hours ? 0 : d.getMinutes(), 0, 0); return local(d); };
+  const now = () => local(new Date());
+  const jDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {year: 'numeric', month: '2-digit', day: '2-digit'});
+  const jTime = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit', hour12: false});
+  const jalali = value => { const d = new Date(value); return Number.isNaN(d.getTime()) ? '—' : jDate.format(d); };
+  const when = value => { const d = new Date(value); return Number.isNaN(d.getTime()) ? '—' : `${jDate.format(d)} · ${jTime.format(d)}`; };
+  const money = (n, cur = 'IRR') => `${amount(n)} ${cur}`;
+  const opt = (items, selected) => items.map(([v, l]) => `<option value="${e(v)}" ${String(v) === String(selected ?? '') ? 'selected' : ''}>${e(l)}</option>`).join('');
+  const field = (label, html, wide = false) => `<label class="${wide ? 'u-wide' : ''}">${e(label)}${html}</label>`;
+  const opField = () => `<input type="hidden" name="op" value="op-${Date.now()}-${Math.random().toString(36).slice(2)}">`;
+  const nextId = key => idFor(key);
+  const ui = {tab: 'overview', side: 'activities', type: '', state: '', open: new Set(['opportunities', 'payments']), search: {}};
+
+  // ── Seed (once; merged into older saved stores) ──
+  const c0 = store.customers[0], c1 = store.customers[1];
+  store.ops ??= [];
+  store.contacts ??= [
+    {id: 1, customerId: c0.id, name: 'علی رستگار', role: 'مدیر تدارکات', mobile: '09121234567', email: 'a.rostegar@sepehr.test', primary: true, active: true},
+    {id: 2, customerId: c0.id, name: 'مینا کاظمی', role: 'مالی', mobile: '09123334455', email: 'finance@sepehr.test', primary: false, active: true},
+    {id: 3, customerId: c1.id, name: 'رضا محمودی', role: 'مدیر فروش', mobile: '09131112233', email: 'r.mahmoudi@arya.test', primary: true, active: true}];
+  store.activities ??= [
+    {id: 1, customerId: c0.id, type: 'call', subject: 'تماس پیگیری پرداخت فاکتور', contact: 'مینا کاظمی', owner: 'سارا احمدی', start: shift(-1, 10), duration: 10, status: 'planned', priority: 'بالا', reminder: 15},
+    {id: 2, customerId: c0.id, type: 'meeting', subject: 'جلسهٔ ارائهٔ راهکار بسته‌بندی', contact: 'علی رستگار', owner: 'سارا احمدی', start: shift(1, 11), end: shift(1, 12), location: 'دفتر مرکزی سپهر', participants: ['علی رستگار', 'مهدی نادری'], status: 'planned', priority: 'عادی', reminder: 30, opportunityId: 21},
+    {id: 3, customerId: c0.id, type: 'task', subject: 'ارسال پیش‌فاکتور اصلاحی', owner: 'سارا احمدی', start: shift(3, 17), status: 'planned', priority: 'بالا', opportunityId: 21},
+    {id: 4, customerId: c0.id, type: 'call', subject: 'پیگیری نیاز خرید فصل', contact: 'علی رستگار', owner: 'سارا احمدی', start: shift(-5, 10), duration: 18, status: 'done', result: 'پاسخ داد', outcome: 'نیاز ۲۰ تن تأیید شد؛ منتظر پیش‌فاکتور هستند.', opportunityId: 21}];
+  store.notes ??= [{id: 1, customerId: c0.id, title: 'ترجیحات خرید', body: 'تحویل فقط صبح‌ها در انبار کرج؛ هماهنگی با آقای رستگار.', visibility: 'عمومی', author: 'مهدی نادری', at: shift(-2, 9)}];
+  store.payments ??= [
+    {id: 1, customerId: c0.id, direction: 'دریافت', method: 'حواله بانکی', amount: 1200000000, currency: 'IRR', date: shift(-20).slice(0, 10), reference: 'TRX-558812', status: 'تأییدشده', by: 'سارا احمدی'},
+    {id: 2, customerId: c0.id, direction: 'دریافت', method: 'چک', amount: 300000000, currency: 'IRR', date: shift(-12).slice(0, 10), reference: 'CHQ-771245', status: 'برگشتی', by: 'سارا احمدی', note: 'برگشت چک به دلیل کسری موجودی'},
+    {id: 3, customerId: c0.id, direction: 'دریافت', method: 'چک', amount: 450000000, currency: 'IRR', date: shift(-1).slice(0, 10), reference: 'CHQ-771300', status: 'ثبت‌شده', by: 'سارا احمدی'},
+    {id: 4, customerId: c0.id, direction: 'دریافت', method: 'حواله بانکی', amount: 12000, currency: 'USD', date: shift(-30).slice(0, 10), reference: 'SWIFT-2291', status: 'ثبت‌شده', by: 'سارا احمدی'}];
+  store.documents ??= [{id: 1, name: 'قرارداد پشتیبانی ۱۴۰۵.pdf', size: '۲۴۰ KB', by: 'مهدی نادری', at: shift(-8, 10), links: [c0.id]}, {id: 2, name: 'کاتالوگ محصولات.pdf', size: '۱٫۲ MB', by: 'سارا احمدی', at: shift(-40, 10), links: [c1.id]}];
+  store.campaigns ??= [{id: 1, name: 'نمایشگاه ایران‌فودتک ۱۴۰۵', type: 'رویداد'}, {id: 2, name: 'پیامک جشنواره پاییز', type: 'پیامک'}];
+  store.campaignMembers ??= [{id: 1, campaignId: 1, customerId: c0.id, status: 'پاسخ داده'}];
+  store.accountHistory ??= [{id: 1, customerId: c0.id, at: shift(-30, 9), by: 'مهدی نادری', title: 'حساب ایجاد شد'}];
+  store.serviceCases ??= [
+    {id: 1, code: 'SC-1405-001', customerId: c0.id, subject: 'تأخیر در تحویل سفارش', priority: 'بالا', status: 'باز', opened: shift(-1, 9), due: shift(0, 17), owner: 'سارا احمدی', source: 'تماس'},
+    {id: 2, code: 'SC-1405-002', customerId: c1.id, subject: 'درخواست آموزش کاربری', priority: 'عادی', status: 'بسته', opened: shift(-6, 9), due: shift(-3, 17), owner: 'محمد رضایی', source: 'پرتال نماینده', csat: 4}];
+  store.commissions ??= [];
+  store.notifications ??= [{id: 1, at: shift(-1, 9), category: 'یادآور فعالیت', title: 'یادآور تماس: تماس پیگیری پرداخت فاکتور', to: 'سارا احمدی', channel: 'ایمیل'}];
+  for (const c of store.customers) { c.relationship ??= 'مشتری'; c.tags ??= c.id === c0.id ? ['کلیدی', 'صنایع غذایی'] : []; }
+  save();
+
+  const op = data => { if (!data.op) return false; if (store.ops.includes(data.op)) return true; store.ops.push(data.op); if (store.ops.length > 300) store.ops.shift(); return false; };
+  const log = (customerId, title) => store.accountHistory.push({id: nextId('accountHistory'), customerId, at: now(), by: me(), title});
+  const notify = (category, title, to) => store.notifications.push({id: nextId('notifications'), at: now(), category, title, to, channel: 'ایمیل'});
+  const account = () => store.customers.find(x => x.id === ctx.selected()) || null;
+  const label = {call: 'تماس', meeting: 'جلسه', task: 'وظیفه'};
+  const iconOf = {call: 'clock', meeting: 'users', task: 'check'};
+  const overdue = a => a.status === 'planned' && new Date(a.type === 'meeting' && a.end ? a.end : a.start) < new Date();
+  const activitiesOf = c => store.activities.filter(a => a.customerId === c.id);
+  const oppsOf = c => store.opportunities.filter(o => o.customer === c.name);
+  const sum = list => Object.entries(list.reduce((m, p) => ({...m, [p.currency]: (m[p.currency] || 0) + (p.direction === 'دریافت' ? p.amount : -p.amount)}), {}));
+
+  // ── Account file ──
+  function kpis(c) {
+    const open = oppsOf(c).filter(o => !['برنده', 'باخته'].includes(o.stage));
+    const acts = activitiesOf(c), planned = acts.filter(a => a.status === 'planned');
+    const done = [...acts.filter(a => a.status === 'done').map(a => ({at: a.start, t: label[a.type] + ': ' + a.subject})), ...store.notes.filter(n => n.customerId === c.id).map(n => ({at: n.at, t: 'یادداشت: ' + n.title}))].sort((a, b) => b.at.localeCompare(a.at))[0];
+    const next = planned.filter(a => !overdue(a)).sort((a, b) => a.start.localeCompare(b.start))[0];
+    const receipts = sum(store.payments.filter(p => p.customerId === c.id && p.status === 'تأییدشده'));
+    const pending = store.payments.filter(p => p.customerId === c.id && p.status === 'ثبت‌شده').length;
+    const tile = (k, l, v, d, def, tone = '') => `<article class="kpi ${tone}" data-kpi="${k}"><div class="kpi__head"><span class="kpi__label">${l}</span><span class="kpi__info" title="${e(def)}">ⓘ</span></div><strong class="kpi__value"><bdi dir="ltr">${v}</bdi></strong><small class="kpi__detail">${d}</small></article>`;
+    return `<section class="account-kpis">${[
+      tile('open', 'فرصت‌های باز', amount(open.length), open.length ? money(open.reduce((s, o) => s + o.value, 0)) : 'فرصت بازی نیست', 'فرصت‌هایی که هنوز برنده یا باخته نشده‌اند؛ مبلغ به تفکیک ارز.'),
+      tile('overdue', 'فعالیت‌های معوق', amount(planned.filter(overdue).length), amount(planned.length) + ' فعالیت برنامه‌ریزی‌شده', 'فعالیت انجام‌نشده‌ای که زمان یا مهلت آن گذشته است.', planned.some(overdue) ? 'kpi--danger' : ''),
+      tile('last', 'آخرین تعامل', done ? jalali(done.at) : '—', done ? e(done.t) : 'تعاملی ثبت نشده', 'آخرین فعالیت انجام‌شده یا یادداشت.'),
+      tile('next', 'اقدام بعدی', next ? when(next.start) : '—', next ? e(label[next.type] + ': ' + next.subject) : 'اقدامی برنامه‌ریزی نشده', 'نزدیک‌ترین فعالیت برنامه‌ریزی‌شدهٔ غیرمعوق.', next ? '' : 'kpi--warning'),
+      tile('receipts', 'دریافت‌های تأییدشده', receipts.map(([cur, n]) => money(n, cur)).join(' + ') || '—', pending ? amount(pending) + ' مورد در انتظار تأیید' : 'ثبت‌شده در CRM', 'فقط وضعیت «تأییدشده»؛ ثبت‌شده، برگشتی و لغوشده در جمع نیستند. ارزها جمع زده نمی‌شوند.'),
+      tile('balance', 'مانده حساب', money(c.balance || 0), 'منبع: حسابداری نمونه', 'ماندهٔ بدهی از سامانهٔ مالی با منبع و زمان همگام‌سازی.')].join('')}</section>`;
+  }
+  function quick(c) {
+    const active = c.status !== 'غیرفعال';
+    const q = (label, ic, action, allowed) => allowed && active
+      ? `<button type="button" class="quick-action" data-u-action="${action}" data-id="${c.id}"><span class="quick-action__icon">${icon(ic)}</span><span>${label}</span></button>`
+      : `<span class="quick-action is-disabled" title="${active ? 'برای این عملیات مجوز ندارید' : 'حساب غیرفعال است'}"><span class="quick-action__icon">${icon(ic)}</span><span>${label}</span><small>${active ? 'بدون مجوز' : 'حساب غیرفعال'}</small></span>`;
+    return `<section class="panel quick-panel"><div class="quick-panel__head"><strong>عملیات اصلی</strong><small>حساب جاری از پیش انتخاب شده است</small></div><div class="quick-actions">
+      ${q('ایجاد فرصت', 'target', 'af-new-opportunity', can.activity())}${q('برنامه‌ریزی تماس', 'clock', 'af-new-call', can.activity())}${q('برنامه‌ریزی جلسه', 'users', 'af-new-meeting', can.activity())}
+      ${q('ایجاد وظیفه', 'check', 'af-new-task', can.activity())}${q('ایجاد یادداشت', 'file', 'af-new-note', can.note())}${q('ایجاد سرنخ', 'lead', 'af-new-lead', can.activity())}</div></section>`;
+  }
+  const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+  function activityItem(a) {
+    const closed = a.status !== 'planned', late = overdue(a);
+    const state = late ? ['danger', 'معوق'] : a.status === 'planned' ? ['info', 'برنامه‌ریزی‌شده'] : a.status === 'done' ? ['success', 'انجام‌شده'] : ['neutral', 'لغوشده'];
+    const opp = a.opportunityId ? store.opportunities.find(o => o.id === a.opportunityId) : null;
+    const actions = !closed && can.activity() ? `<div class="act__actions"><button class="chip-action chip-action--primary" data-u-action="af-complete" data-id="${a.id}">ثبت نتیجه</button><button class="chip-action" data-u-action="af-reschedule" data-id="${a.id}">زمان جدید</button><button class="chip-action chip-action--danger" data-u-action="af-cancel" data-id="${a.id}">لغو</button></div>` : '';
+    return `<article class="act ${late ? 'act--overdue' : ''} ${closed ? 'act--closed' : ''}" data-activity="${a.id}"><span class="act__icon">${icon(iconOf[a.type])}</span><div class="act__body"><strong class="act__title">${label[a.type]}: ${e(a.subject)}</strong>
+      <div class="act__meta"><span class="badge badge--${state[0]}"><span></span>${state[1]}</span><span>${when(a.start)}${a.type === 'meeting' && a.end ? ' تا ' + jTime.format(new Date(a.end)) : ''}</span><span>${e(a.owner)}</span>${a.contact ? `<span>رابط: ${e(a.contact)}</span>` : ''}${opp ? `<span>فرصت ${e(opp.code)}</span>` : ''}${a.location ? `<span>${e(a.location)}</span>` : ''}${a.result ? `<span>${e(a.result)}</span>` : ''}</div>
+      ${a.outcome || a.reason ? `<p class="act__outcome"><b>${a.status === 'cancelled' ? 'دلیل لغو:' : 'نتیجه:'}</b> ${e(a.outcome || a.reason)}</p>` : ''}</div>${actions}</article>`;
+  }
+  function activityPanel(c) {
+    let list = activitiesOf(c);
+    if (ui.type) list = list.filter(a => a.type === ui.type);
+    if (ui.state === 'overdue') list = list.filter(overdue); else if (ui.state) list = list.filter(a => a.status === ui.state);
+    const chip = (key, value, text) => `<button class="chip-action ${ui[key] === value ? 'chip-action--primary' : ''}" data-u-action="af-filter" data-id="${key}:${value}">${text}</button>`;
+    const group = (title, items, css) => items.length ? `<section class="act-group ${css}"><h4>${title} <b>${amount(items.length)}</b></h4>${items.map(activityItem).join('')}</section>` : '';
+    const late = list.filter(overdue).sort((a, b) => a.start.localeCompare(b.start));
+    const open = list.filter(a => a.status === 'planned' && !overdue(a)).sort((a, b) => a.start.localeCompare(b.start));
+    const past = list.filter(a => a.status !== 'planned').sort((a, b) => b.start.localeCompare(a.start));
+    return `<div class="act-chips">${chip('type', '', 'همه')}${chip('type', 'call', 'تماس')}${chip('type', 'meeting', 'جلسه')}${chip('type', 'task', 'وظیفه')}</div><div class="act-chips">${chip('state', '', 'همهٔ وضعیت‌ها')}${chip('state', 'overdue', 'معوق')}${chip('state', 'planned', 'برنامه‌ریزی‌شده')}${chip('state', 'done', 'انجام‌شده')}</div>
+      ${list.length ? group('معوق', late, 'act-group--overdue') + group('فعالیت‌های باز', open, '') + group('فعالیت‌های گذشته', past, '') : '<p class="state-empty">فعالیتی با این فیلتر نیست.</p>'}`;
+  }
+  function notesPanel(c) {
+    const notes = store.notes.filter(n => n.customerId === c.id && (n.visibility === 'عمومی' || n.author === me() || (n.visibility === 'محدود' && can.manage())));
+    return notes.length ? notes.sort((a, b) => b.at.localeCompare(a.at)).map(n => `<article class="note"><header><strong>${e(n.title)}</strong><span class="badge badge--${n.visibility === 'عمومی' ? 'neutral' : 'warning'}">${e(n.visibility)}</span></header><p>${e(n.body)}</p><footer>${e(n.author)} · ${when(n.at)}</footer></article>`).join('') : '<p class="state-empty">یادداشتی ثبت نشده است.</p>';
+  }
+  const row = (title, sub, status, tone, amt, date, actions = []) => `<li class="rec"><div class="rec__main"><span class="rec__title">${title}</span>${sub ? `<small>${sub}</small>` : ''}</div><div class="rec__meta">${status ? `<span class="badge badge--${tone}"><span></span>${e(status)}</span>` : ''}${amt ? `<b class="rec__amount" dir="ltr">${amt}</b>` : ''}${date ? `<span>${date}</span>` : ''}</div>${actions.length ? `<div class="rec__actions">${actions.join('')}</div>` : ''}</li>`;
+  const act = (label, action, id, danger = false) => `<button class="chip-action ${danger ? 'chip-action--danger' : ''}" data-u-action="${action}" data-id="${e(id)}">${label}</button>`;
+  function sections(c) {
+    const q = key => (ui.search[key] || '').trim();
+    const match = (key, ...values) => !q(key) || values.some(v => String(v ?? '').includes(q(key)));
+    const active = c.status !== 'غیرفعال' && can.write();
+    const payments = store.payments.filter(p => p.customerId === c.id);
+    const list = [
+      {key: 'contacts', title: 'افراد رابط', group: 'ارتباطات', icon: 'users', create: active && can.activity(), rows: store.contacts.filter(x => x.customerId === c.id && x.active && match('contacts', x.name, x.role, x.mobile)).map(x => row(e(x.name), e(x.role) + ' · <bdi dir="ltr">' + e(x.mobile) + '</bdi>', x.primary ? 'رابط اصلی' : '', 'success', '', '', active && can.activity() ? [act('قطع ارتباط (غیرفعال)', 'af-contact-off', x.id, true)] : []))},
+      {key: 'opportunities', title: 'فرصت‌های فروش', group: 'فروش', icon: 'target', create: active && can.activity(), totals: oppsOf(c).filter(o => !['برنده', 'باخته'].includes(o.stage)).reduce((s, o) => s + o.value, 0), totalsLabel: 'ارزش فرصت‌های باز', rows: oppsOf(c).filter(o => match('opportunities', o.name, o.code)).map(o => row(link('opportunities', o.name), e(o.code) + ' · احتمال ' + amount(o.probability) + '٪', o.stage, 'info', money(o.value, o.currency || 'IRR'), '', active && !['برنده', 'باخته'].includes(o.stage) ? [act('ایجاد پیش‌فاکتور', 'af-quote', o.id)] : []))},
+      {key: 'quotes', title: 'پیش‌فاکتورها', group: 'فروش', icon: 'file', rows: store.quotes.filter(x => x.customer === c.name && match('quotes', x.code)).map(x => row(e(x.code), e(x.opportunity), x.status, 'info', money(x.amount * (1 - x.discount / 100)), e(x.valid)))},
+      {key: 'leads', title: 'سرنخ‌ها', group: 'فروش', icon: 'lead', create: active && can.activity(), linkable: active && can.activity(), rows: store.leads.filter(x => x.customerId === c.id && match('leads', x.name, x.code)).map(x => row(e(x.name), e(x.code) + ' · ' + e(x.source), x.status, 'info', '', '', active && x.status !== 'تبدیل‌شده' ? [act('قطع ارتباط', 'af-lead-unlink', x.id, true)] : []))},
+      {key: 'orders', title: 'سفارش‌های فروش', group: 'فروش', icon: 'inbox', rows: (store.orders || []).filter(x => x.customer === c.name).map(x => row(e(x.code), 'مرجع ERP ' + e(x.erp || '—'), x.status, 'info', money(x.amount), ''))},
+      {key: 'payments', title: 'پرداخت‌ها و دریافت‌ها', group: 'مالی', icon: 'check', create: active && can.payment(), sums: sum(payments.filter(p => p.status === 'تأییدشده')), totalsLabel: 'خالص تأییدشده (هر ارز جدا)', note: 'فقط «تأییدشده» در جمع است؛ ثبت‌کننده نمی‌تواند پرداخت خود را تأیید کند.',
+        rows: payments.filter(p => match('payments', p.reference, p.method)).sort((a, b) => b.date.localeCompare(a.date)).map(p => row(e(p.direction + ' · ' + p.method), e(p.reference || '') + (p.note ? ' · ' + e(p.note) : ''), p.status, p.status === 'تأییدشده' ? 'success' : p.status === 'ثبت‌شده' ? 'warning' : 'neutral', money(p.amount, p.currency), jalali(p.date),
+          active && can.approve() ? [p.status === 'ثبت‌شده' && p.by !== me() ? act('تأیید', 'af-pay-approve', p.id) : '', p.status === 'ثبت‌شده' ? act('لغو', 'af-pay-cancel', p.id, true) : '', p.status === 'تأییدشده' ? act('ثبت برگشتی', 'af-pay-return', p.id, true) : ''].filter(Boolean) : []))},
+      {key: 'documents', title: 'اسناد و پیوست‌ها', group: 'اسناد', icon: 'file', create: active && can.note(), linkable: active && can.note(), note: 'قطع ارتباط فقط پیوند را برمی‌دارد و فایل در حساب‌های دیگر باقی می‌ماند.', rows: store.documents.filter(d => d.links.includes(c.id) && match('documents', d.name)).map(d => row(e(d.name), e(d.size + ' · ' + d.by), '', '', '', jalali(d.at), active && can.note() ? [act('قطع ارتباط', 'af-doc-unlink', d.id, true)] : []))},
+      {key: 'campaigns', title: 'کمپین‌ها', group: 'بازاریابی', icon: 'bell', linkable: active && can.manage(), rows: store.campaignMembers.filter(m => m.customerId === c.id).map(m => { const k = store.campaigns.find(x => x.id === m.campaignId); return row(e(k?.name || '—'), e(k?.type || ''), m.status, 'info', '', '', active && can.manage() ? [act('خروج از کمپین', 'af-campaign-leave', m.id, true)] : []); })},
+      {key: 'service', title: 'درخواست‌های خدمات', group: 'خدمات', icon: 'shield', create: active && can.write(), rows: store.serviceCases.filter(s => s.customerId === c.id).map(s => row(e(s.subject), e(s.code) + ' · اولویت ' + e(s.priority), s.status, s.status === 'باز' ? (new Date(s.due) < new Date() ? 'danger' : 'info') : 'success', '', jalali(s.opened)))},
+      {key: 'hierarchy', title: 'حساب مادر و زیرمجموعه', group: 'ساختار', icon: 'building', linkable: active && can.manage(), rows: [...(c.parentId ? [store.customers.find(x => x.id === c.parentId)].filter(Boolean).map(p => row(link('customer', p.name, p.id), e(p.code), 'حساب مادر', 'info', '', '', can.manage() ? [act('جدا کردن', 'af-parent-unlink', c.id, true)] : [])) : []),
+        ...store.customers.filter(x => x.parentId === c.id).map(x => row(link('customer', x.name, x.id), e(x.code), 'زیرمجموعه', 'neutral', '', '', can.manage() ? [act('جدا کردن زیرمجموعه', 'af-parent-unlink', x.id, true)] : []))]}
+    ];
+    const groups = [...new Set(list.map(s => s.group))];
+    return `<div class="related-tools panel"><span>${amount(list.reduce((n, s) => n + s.rows.length, 0))} رکورد مرتبط در ${amount(list.length)} بخش</span><div class="related-tools__buttons"><button class="link-button" data-u-action="af-open-all" data-id="1">باز کردن همه</button><button class="link-button" data-u-action="af-open-all" data-id="0">بستن همه</button></div></div>` +
+      groups.map(g => `<div class="section-group"><h3 class="section-group__title">${g}</h3>${list.filter(s => s.group === g).map(s => `<details class="acc-section" id="sec-${s.key}" ${ui.open.has(s.key) ? 'open' : ''}><summary data-u-action="af-toggle" data-id="${s.key}"><span class="acc-section__icon">${icon(s.icon)}</span><span class="acc-section__title">${s.title}</span><b class="acc-section__count">${amount(s.rows.length)}</b><span class="acc-section__tools">${s.create ? `<button class="tool-button" data-u-action="af-create" data-id="${s.key}" title="ایجاد در ${s.title}">${icon('plus')}</button>` : ''}${s.linkable ? `<button class="tool-button tool-button--link" data-u-action="af-link" data-id="${s.key}" title="اتصال رکورد موجود">🔗</button>` : ''}</span></summary>
+        <div class="acc-section__body"><form class="sec-filter" data-u-form="af-search" data-id="${s.key}"><input name="q" value="${e(q(s.key))}" placeholder="جست‌وجو در ${s.title} (Enter)"></form>${s.note ? `<p class="sec-note">${s.note}</p>` : ''}${s.sums?.length ? `<div class="sec-totals"><span>${s.totalsLabel}:</span>${s.sums.map(([cur, n]) => `<b dir="ltr">${money(n, cur)}</b>`).join('')}</div>` : s.totals ? `<div class="sec-totals"><span>${s.totalsLabel}:</span><b dir="ltr">${money(s.totals)}</b></div>` : ''}
+        ${s.rows.length ? `<ul class="rec-list">${s.rows.join('')}</ul>` : `<p class="state-empty">${q(s.key) ? 'موردی با این جست‌وجو پیدا نشد.' : 'موردی ثبت نشده است.'}</p>`}</div></details>`).join('')}</div>`).join('') +
+      '<p class="u-period">در نسخهٔ MVC، ۲۷ بخش (قرارداد، پروژه، تضمین، حساب بانکی، نظرسنجی، مشارکت، رزرو/هدیه/نمونه، شعب و …) با بارگذاری تدریجی و صفحه‌بندی موجود است.</p>';
+  }
+  function timeline(c, historyOnly) {
+    const items = historyOnly
+      ? store.accountHistory.filter(h => h.customerId === c.id).map(h => ({at: h.at, title: h.title, by: h.by}))
+      : [...activitiesOf(c).filter(a => a.status !== 'planned').map(a => ({at: a.start, title: `${label[a.type]} ${a.status === 'done' ? 'انجام شد' : 'لغو شد'}: ${a.subject}`, text: a.outcome || a.reason, by: a.owner})),
+         ...store.notes.filter(n => n.customerId === c.id && n.visibility === 'عمومی').map(n => ({at: n.at, title: 'یادداشت: ' + n.title, text: n.body, by: n.author})),
+         ...store.payments.filter(p => p.customerId === c.id).map(p => ({at: p.date + 'T09:00', title: `${p.direction} ${money(p.amount, p.currency)}: ${p.status}`, by: p.by}))];
+    items.sort((a, b) => b.at.localeCompare(a.at));
+    return items.length ? `<ol class="timeline-list">${items.map(x => `<li><strong>${e(x.title)}</strong>${x.text ? `<p>${e(x.text)}</p>` : ''}<small>${when(x.at)} · ${e(x.by || 'سیستم')}</small></li>`).join('')}</ol>` : '<p class="state-empty">رویدادی ثبت نشده است.</p>';
+  }
+  function overview(c) {
+    const contacts = store.contacts.filter(x => x.customerId === c.id && x.active);
+    return `<section class="panel u-panel"><h2>اطلاعات حساب</h2><dl class="info-grid">${[['نوع شخص', c.type], ['نوع رابطه', c.relationship], ['بخش', c.segment], ['شهر', c.city], ['تلفن', c.phone], ['ایمیل', c.email || '—'], [c.type === 'حقیقی' ? 'کد ملی' : 'شناسه ملی', c.nationalId || '—'], ['شعبه', c.branch], ['مالک', c.owner],
+      ['برچسب‌ها', (c.tags || []).map(t => '#' + t).join('، ') || '—'], ['رابط اصلی', contacts.find(x => x.primary)?.name || '—'], ...(c.profile ? Object.entries(c.profile).filter(([, v]) => v) : [])].map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join('')}</dl></section>`;
+  }
+  function accountView() {
+    const c = account();
+    if (!c) return header('حساب پیدا نشد', '', link('customers', 'فهرست مشتریان'));
+    const active = c.status !== 'غیرفعال';
+    const tab = (key, text) => `<button class="tabbar__tab ${ui.tab === key ? 'is-active' : ''}" data-u-action="af-tab" data-id="${key}">${text}</button>`;
+    const side = (key, text) => `<button class="tabbar__tab ${ui.side === key ? 'is-active' : ''}" data-u-action="af-side" data-id="${key}">${text}</button>`;
+    return `<header class="account-head panel"><div class="account-head__identity"><span class="account-head__avatar">${e(c.name.slice(0, 1))}</span><div><div class="account-head__title"><h1>${e(c.name)}</h1>${ctx.statusBadge(c.status)}<span class="badge badge--info">${e(c.relationship)}</span><span class="badge badge--neutral">${e(c.type)}</span></div>
+      <p class="account-head__meta">کد <bdi dir="ltr">${e(c.code)}</bdi> · مالک ${e(c.owner)} · شعبه ${e(c.branch)}</p>${(c.tags || []).length ? `<div class="account-head__tags">${c.tags.map(t => `<span class="chip">#${e(t)}</span>`).join('')}</div>` : ''}</div></div>
+      <div class="account-head__actions">${can.manage() && active ? button('af-classify', 'نوع رابطه و برچسب', c.id) : ''}${can.manage() ? button('af-status', active ? 'غیرفعال‌سازی' : 'فعال‌سازی', c.id) : ''}${link('customers', 'بازگشت به فهرست')}</div></header>
+      ${active ? '' : '<p class="account-banner">این حساب غیرفعال است: سوابق می‌ماند ولی ثبت رکورد جدید بسته است. حذف حساب دارای سابقه مجاز نیست.</p>'}
+      ${kpis(c)}
+      <div class="account-layout"><aside class="account-side">${quick(c)}<section class="panel side-tabs"><div class="tabbar">${side('activities', 'فعالیت‌ها')}${side('notes', 'یادداشت‌ها')}</div><div class="side-tabs__body">${ui.side === 'notes' ? notesPanel(c) : activityPanel(c)}</div></section></aside>
+      <div class="account-main"><div class="tabbar tabbar--main">${tab('overview', 'نمای کلی')}${tab('activities', 'فعالیت‌ها و تعاملات')}${tab('related', 'رکوردهای مرتبط')}${tab('history', 'تاریخچه تغییرات')}</div>
+      ${ui.tab === 'related' ? sections(c) : ui.tab === 'activities' ? `<section class="panel u-panel"><h2>خط زمانی تعاملات</h2>${timeline(c, false)}</section>` : ui.tab === 'history' ? `<section class="panel u-panel"><h2>تاریخچه تغییرات</h2>${timeline(c, true)}</section>` : overview(c)}</div></div>`;
+  }
+
+  // ── Forms ──
+  const contactOptions = c => [['', '— بدون رابط —'], ...store.contacts.filter(x => x.customerId === c.id && x.active).map(x => [x.name, x.name])];
+  const ownerOptions = () => (can.manage() ? Object.values(names).slice(0, 2) : [me()]).map(x => [x, x]);
+  const ctxLine = c => `<p class="form-context">حساب: <b>${e(c.name)}</b></p>${opField()}`;
+  function activityForm(c, type) {
+    const opps = oppsOf(c).filter(o => !['برنده', 'باخته'].includes(o.stage));
+    showForm(type === 'call' ? 'برنامه‌ریزی تماس' : type === 'meeting' ? 'برنامه‌ریزی جلسه' : 'ایجاد وظیفه', ctxLine(c) +
+      field(type === 'task' ? 'عنوان وظیفه *' : 'موضوع *', '<input name="subject" required maxlength="200">', true) +
+      (type !== 'meeting' ? field('فرد رابط', `<select name="contact">${opt(contactOptions(c), store.contacts.find(x => x.customerId === c.id && x.primary)?.name)}</select>`) : '') +
+      field('مسئول *', `<select name="owner">${opt(ownerOptions(), me())}</select>`) +
+      field(type === 'task' ? 'مهلت *' : 'شروع *', `<input type="datetime-local" name="start" required value="${type === 'task' ? shift(1, 10) : shift(0, new Date().getHours() + 1)}">`) +
+      (type === 'call' ? field('مدت (دقیقه)', '<input type="number" name="duration" min="1" max="600" value="15">') + field('جهت', `<select name="direction">${opt([['خروجی', 'خروجی'], ['ورودی', 'ورودی']])}</select>`) : '') +
+      (type === 'meeting' ? field('پایان *', `<input type="datetime-local" name="end" required value="${shift(0, new Date().getHours() + 2)}">`) + field('مکان یا پیوند', '<input name="location">', true) +
+        `<fieldset class="u-wide pick-list"><legend>شرکت‌کنندگان</legend>${store.contacts.filter(x => x.customerId === c.id && x.active).map(x => `<label class="consent-row"><input type="checkbox" name="p_${x.id}" value="${e(x.name)}"> ${e(x.name)}</label>`).join('')}</fieldset>` : '') +
+      (type === 'task' ? field('اولویت', `<select name="priority">${opt([['عادی', 'عادی'], ['بالا', 'بالا'], ['فوری', 'فوری'], ['کم', 'کم']], 'عادی')}</select>`) : field('یادآوری', `<select name="reminder">${opt([['', 'بدون یادآوری'], ['15', '۱۵ دقیقه قبل'], ['30', '۳۰ دقیقه قبل'], ['60', '۱ ساعت قبل']], '15')}</select>`)) +
+      field('مرتبط با فرصت', `<select name="opportunityId">${opt([['', '— فقط حساب —'], ...opps.map(o => [o.id, o.code + ' · ' + o.name])])}</select>`, true) +
+      field(type === 'meeting' ? 'دستور جلسه' : 'توضیحات', '<textarea name="description" rows="3"></textarea>', true) +
+      (type !== 'task' ? `<fieldset class="u-wide pick-list"><legend>${type === 'call' ? 'این تماس انجام شده است؟' : 'این جلسه برگزار شده است؟'}</legend><label class="consent-row"><input type="checkbox" name="done" value="1"> بله، نتیجه را همین حالا ثبت کن</label>${type === 'call' ? field('نتیجهٔ تماس', `<select name="result">${opt([['', '—'], ['پاسخ داد', 'پاسخ داد'], ['پاسخ نداد', 'پاسخ نداد'], ['مشغول', 'مشغول'], ['پیغام گذاشته شد', 'پیغام گذاشته شد']])}</select>`) : ''}${field('شرح نتیجه', '<textarea name="outcome" rows="2"></textarea>', true)}</fieldset>` : ''),
+      'af-activity', type + ':' + c.id);
+  }
+  function stepForm(a, step) {
+    const c = store.customers.find(x => x.id === a.customerId);
+    const head = `<p class="form-context">${label[a.type]}: <b>${e(a.subject)}</b> · ${when(a.start)}</p>${opField()}`;
+    if (step === 'complete') showForm('ثبت نتیجه', head + (a.type === 'call' ? field('نتیجهٔ تماس *', `<select name="result" required>${opt([['', '—'], ['پاسخ داد', 'پاسخ داد'], ['پاسخ نداد', 'پاسخ نداد'], ['مشغول', 'مشغول'], ['پیغام گذاشته شد', 'پیغام گذاشته شد']])}</select>`) : '') +
+      field(a.type === 'task' ? 'توضیح انجام کار' : 'شرح نتیجه *', `<textarea name="outcome" rows="3" ${a.type === 'task' ? '' : 'required'}></textarea>`, true) +
+      `<fieldset class="u-wide pick-list"><legend>اقدام بعدی (اختیاری)</legend>${field('نوع', `<select name="nextType">${opt([['', '— بدون اقدام بعدی —'], ['call', 'تماس'], ['meeting', 'جلسه'], ['task', 'وظیفه']])}</select>`)}${field('موضوع', '<input name="nextSubject">')}${field('زمان', `<input type="datetime-local" name="nextStart" value="${shift(2, 10)}">`)}</fieldset>`, 'af-complete', a.id);
+    else if (step === 'reschedule') showForm('زمان جدید', head + field('شروع جدید *', `<input type="datetime-local" name="start" required value="${a.start}">`) + (a.type === 'meeting' ? field('پایان', `<input type="datetime-local" name="end" value="${a.end || ''}">`) : ''), 'af-reschedule', a.id);
+    else showForm('لغو فعالیت', head + field('دلیل لغو *', '<textarea name="reason" rows="3" required></textarea>', true) + '<p class="u-period">فعالیت حذف نمی‌شود؛ با وضعیت «لغوشده» در سوابق می‌ماند.</p>', 'af-cancel', a.id);
+    return c;
+  }
+  function createForm(c, key) {
+    const forms = {
+      opportunities: () => showForm('ایجاد فرصت فروش', ctxLine(c) + field('عنوان فرصت *', '<input name="name" required>', true) + field('فرد رابط', `<select name="contact">${opt(contactOptions(c))}</select>`) +
+        field('مرحله', `<select name="stage">${opt([['شناسایی', 'شناسایی'], ['کشف', 'نیازسنجی'], ['ارائه راهکار', 'ارائه راهکار'], ['مذاکره', 'مذاکره']], 'شناسایی')}</select>`) + field('مبلغ *', '<input name="value" required inputmode="numeric" placeholder="2,500,000,000">') +
+        field('واحد پول', `<select name="currency">${opt([['IRR', 'ریال (IRR)'], ['USD', 'دلار (USD)'], ['EUR', 'یورو (EUR)']], 'IRR')}</select>`) + field('احتمال (٪)', '<input type="number" name="probability" min="1" max="99" value="20">') +
+        field('تاریخ پیش‌بینی بسته‌شدن *', `<input type="date" name="expectedClose" required value="${shift(30).slice(0, 10)}">`) + field('مسئول', `<select name="owner">${opt(ownerOptions(), me())}</select>`) + field('اقدام بعدی *', '<input name="next" required>', true), 'af-opportunity', c.id),
+      leads: () => showForm('ایجاد سرنخ برای این حساب', ctxLine(c) + field('عنوان سرنخ / نیاز *', '<input name="name" required>', true) + field('فرد رابط', `<select name="contact">${opt(contactOptions(c))}</select>`) +
+        field('منبع', `<select name="source">${opt(['مشتری فعلی', 'تماس ورودی', 'وب‌سایت', 'نمایشگاه', 'معرفی'].map(x => [x, x]), 'مشتری فعلی')}</select>`) + field('مسئول پیگیری', `<select name="owner">${opt(ownerOptions(), me())}</select>`) + '<p class="u-period">سرنخ به همین حساب متصل می‌ماند.</p>', 'af-lead', c.id),
+      payments: () => showForm('ثبت پرداخت / دریافت', ctxLine(c) + field('نوع', `<select name="direction">${opt([['دریافت', 'دریافت از حساب'], ['پرداخت', 'پرداخت به حساب']], 'دریافت')}</select>`) +
+        field('روش', `<select name="method">${opt(['حواله بانکی', 'چک', 'نقد', 'کارتخوان'].map(x => [x, x]), 'حواله بانکی')}</select>`) + field('مبلغ *', '<input name="amount" required inputmode="numeric">') +
+        field('واحد پول', `<select name="currency">${opt([['IRR', 'ریال (IRR)'], ['USD', 'دلار (USD)'], ['EUR', 'یورو (EUR)']], 'IRR')}</select>`) + field('تاریخ *', `<input type="date" name="date" required value="${shift(0).slice(0, 10)}">`) +
+        field('شماره چک / کد پیگیری', '<input name="reference">') + '<p class="u-period">برای چک و حواله، شماره الزامی است. ثبت با وضعیت «ثبت‌شده» انجام می‌شود.</p>', 'af-payment', c.id),
+      contacts: () => showForm('تعریف فرد رابط', ctxLine(c) + field('نام و نام خانوادگی *', '<input name="name" required>') + field('سمت', '<input name="role">') + field('همراه', '<input name="mobile" inputmode="tel" placeholder="09xxxxxxxxx">') + field('ایمیل', '<input name="email" type="email">') + '<label class="consent-row"><input type="checkbox" name="primary" value="1"> رابط اصلی</label>', 'af-contact', c.id),
+      documents: () => showForm('بارگذاری سند', ctxLine(c) + field('نام سند *', '<input name="name" required placeholder="مثلاً قرارداد.pdf">', true) + '<p class="u-period">در پیش‌نمایش فقط نام سند ثبت می‌شود؛ بارگذاری فایل واقعی در نسخهٔ MVC است.</p>', 'af-document', c.id),
+      service: () => showForm('ثبت درخواست خدمات', ctxLine(c) + field('موضوع *', '<input name="subject" required>', true) + field('اولویت', `<select name="priority">${opt(['عادی', 'بالا', 'بحرانی'].map(x => [x, x]), 'عادی')}</select>`), 'sv-new', c.id)
+    };
+    (forms[key] || (() => toast('ایجاد این بخش در پیش‌نمایش فعال نیست.', 'warning')))();
+  }
+  function linkForm(c, key) {
+    const sources = {
+      leads: store.leads.filter(l => !l.customerId && l.status !== 'تبدیل‌شده').map(l => [l.id, l.code + ' · ' + l.name]),
+      documents: store.documents.filter(d => !d.links.includes(c.id)).map(d => [d.id, d.name]),
+      campaigns: store.campaigns.filter(k => !store.campaignMembers.some(m => m.campaignId === k.id && m.customerId === c.id)).map(k => [k.id, k.name + ' · ' + k.type]),
+      hierarchy: store.customers.filter(x => x.id !== c.id && !x.parentId && x.id !== c.parentId).map(x => [x.id, x.name])
+    }[key] || [];
+    if (!sources.length) { toast('رکورد قابل اتصالی وجود ندارد.', 'warning'); return; }
+    showForm('اتصال رکورد موجود', ctxLine(c) + field('رکورد *', `<select name="recordId" required>${opt(sources)}</select>`, true) + (key === 'hierarchy' ? field('نوع ارتباط', `<select name="role">${opt([['child', 'حساب انتخابی زیرمجموعهٔ این حساب شود'], ['parent', 'حساب انتخابی مادر این حساب شود']], 'child')}</select>`, true) : '') + '<p class="u-period">اتصال، رکورد را کپی نمی‌کند؛ همان رکورد به این حساب هم وصل می‌شود.</p>', 'af-link', key + ':' + c.id);
+  }
+
+  // ── Customer form (v1.2): individual / legal fields and a contact person ──
+  const digits = v => String(v || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, '');
+  const validNationalCode = v => { const s = digits(v); if (!/^\d{10}$/.test(s) || /^(\d)\1{9}$/.test(s)) return false; const sum = [...s.slice(0, 9)].reduce((t, d, i) => t + Number(d) * (10 - i), 0) % 11; return Number(s[9]) === (sum < 2 ? sum : 11 - sum); };
+  const validLegalId = v => { const s = digits(v); if (!/^\d{11}$/.test(s)) return false; const k = Number(s[9]) + 2, w = [29, 27, 23, 19, 17]; const sum = [...s.slice(0, 10)].reduce((t, d, i) => t + (Number(d) + k) * w[i % 5], 0) % 11; return Number(s[10]) === (sum === 10 ? 0 : sum); };
+  function customerForm(kind = 'حقوقی') {
+    const legal = kind === 'حقوقی';
+    showForm('تعریف مشتری جدید', opField() + `<p class="form-context">نوع شخص: <b>${legal ? 'حقوقی' : 'حقیقی'}</b> ${button('af-customer-kind', legal ? 'تغییر به حقیقی' : 'تغییر به حقوقی', legal ? 'حقیقی' : 'حقوقی')}</p>` +
+      (legal ? field('نام شرکت *', '<input name="name" required>', true) + field('شناسه ملی (۱۱ رقم) *', '<input name="nationalId" required inputmode="numeric">') + field('کد اقتصادی', '<input name="economicCode" inputmode="numeric">') + field('شماره ثبت', '<input name="registration" inputmode="numeric">') + field('نماینده', '<input name="representative">')
+        : field('نام *', '<input name="firstName" required>') + field('نام خانوادگی *', '<input name="lastName" required>') + field('کد ملی (۱۰ رقم) *', '<input name="nationalId" required inputmode="numeric">') + field('تاریخ تولد (شمسی)', '<input name="birthDate" placeholder="1368/04/10">')) +
+      field('تلفن همراه *', '<input name="mobile" required inputmode="tel" placeholder="09xxxxxxxxx">') + field('شهر', '<input name="city">') + field('شعبه', `<select name="branch">${opt(['مرکزی', 'اصفهان', 'اهواز', 'شیراز', 'تبریز'].map(x => [x, x]), 'مرکزی')}</select>`) +
+      `<fieldset class="u-wide pick-list"><legend>فرد رابط</legend>${field('نام و نام خانوادگی', '<input name="contactName">')}${field('سمت', '<input name="contactRole">')}${field('همراه', '<input name="contactMobile" inputmode="tel">')}</fieldset>`, 'af-customer', kind);
+  }
+
+  // ── Other pages ──
+  function versionView() {
+    const releases = ctx.releases || [];
+    return header('نسخه و تغییرات', 'فهرست نسخه‌های ارقام CRM؛ تازه‌ترین نسخه در بالا.') +
+      `<section class="version-hero panel"><span class="version-hero__mark">آ</span><div><small>نسخهٔ جاری</small><strong dir="ltr">v${e(ctx.version)}</strong><span>${releases[0] ? 'انتشار ' + e(releases[0].date) : ''}</span></div></section>
+      <ol class="release-list">${releases.map((r, i) => `<li class="release ${i === 0 ? 'release--current' : ''}"><div class="release__head"><span class="release__version" dir="ltr">v${e(r.version)}</span><strong>${e(r.title)}</strong>${i === 0 ? '<span class="badge badge--success"><span></span>نسخهٔ جاری</span>' : ''}<time>${e(r.date)}</time></div><ul>${r.changes.map(x => `<li>${e(x)}</li>`).join('')}</ul></li>`).join('')}</ol>`;
+  }
+  function serviceView() {
+    const cases = store.serviceCases.filter(s => ctx.visible(store.customers.find(c => c.id === s.customerId) || {}));
+    const sla = s => s.status !== 'باز' ? ['success', 'بسته'] : new Date(s.due) < new Date() ? ['danger', 'نقض SLA'] : ['info', 'در مهلت'];
+    const open = cases.filter(s => s.status === 'باز'), closed = cases.filter(s => s.csat);
+    return header('خدمات و SLA', 'درخواست‌های خدمات، مهلت پاسخ و رضایت مشتری؛ شکایت پرتال نماینده هم اینجا پرونده می‌شود.', can.write() ? button('sv-create', 'ثبت درخواست') : '') +
+      `<section class="u-grid"><article class="u-card"><span>پرونده‌های باز</span><strong>${amount(open.length)}</strong></article><article class="u-card"><span>نقض SLA</span><strong>${amount(open.filter(s => new Date(s.due) < new Date()).length)}</strong></article><article class="u-card"><span>میانگین رضایت</span><strong>${closed.length ? amount(Math.round(10 * closed.reduce((t, s) => t + s.csat, 0) / closed.length) / 10) + ' از ۵' : '—'}</strong></article></section>` +
+      `<section class="panel u-panel">${ctx.table(['پرونده', 'مشتری', 'اولویت', 'مهلت', 'وضعیت SLA', 'منبع', 'عملیات'], cases.map(s => { const c = store.customers.find(x => x.id === s.customerId); const st = sla(s); return `<tr><td>${e(s.code)}<small class="cell-sub">${e(s.subject)}</small></td><td>${c ? link('customer', c.name, c.id) : '—'}</td><td>${e(s.priority)}</td><td>${when(s.due)}</td><td><span class="badge badge--${st[0]}"><span></span>${st[1]}</span></td><td>${e(s.source || '')}</td><td>${s.status === 'باز' && can.write() ? button('sv-close', 'بستن با رضایت', s.id) : s.csat ? 'رضایت ' + amount(s.csat) + '/۵' : ''}</td></tr>`; }).join(''))}</section>`;
+  }
+  function commissionView() {
+    const dealers = store.dealers.filter(ctx.visible);
+    const rate = d => { const p = d.target ? d.actual / d.target : 0; return p >= 1 ? 3 : p >= .8 ? 2 : 1; };
+    const ranked = [...dealers].sort((a, b) => (b.target ? b.actual / b.target : 0) - (a.target ? a.actual / a.target : 0));
+    return header('کمیسیون و رتبه‌بندی نمایندگان', 'دورهٔ ماه شمسی جاری · پلکان: زیر ۸۰٪ هدف ۱٪، ۸۰ تا ۱۰۰٪ دو درصد، بالای هدف ۳٪ فروش.', ['channel.manager', 'sales.manager'].includes(user()) ? button('cm-calc', 'محاسبهٔ کمیسیون دوره') : '') +
+      `<section class="panel u-panel"><h2>صورت‌حساب کمیسیون</h2>${ctx.table(['نماینده', 'فروش دوره', 'تحقق هدف', 'نرخ', 'کمیسیون', 'وضعیت', 'عملیات'], store.commissions.map(m => { const d = store.dealers.find(x => x.id === m.dealerId); return `<tr><td>${e(d?.name || '—')}</td><td>${money(m.sales)}</td><td>${amount(m.achievement)}٪</td><td>${amount(m.rate)}٪</td><td>${money(m.amount)}</td><td>${ctx.statusBadge(m.status)}</td><td>${m.status === 'در انتظار تأیید' && user() === 'finance.manager' ? button('cm-approve', 'تأیید و ارسال به حسابداری', m.id) : m.sent ? 'ارسال‌شده به حسابداری (نمایشی)' : ''}</td></tr>`; }).join(''))}</section>` +
+      `<section class="panel u-panel"><h2>رتبه‌بندی</h2>${ctx.table(['رتبه', 'نماینده', 'هدف', 'عملکرد', 'تحقق', 'نرخ پلکان'], ranked.map((d, i) => `<tr><td>${amount(i + 1)}</td><td>${e(d.name)}</td><td>${money(d.target)}</td><td>${money(d.actual)}</td><td>${amount(d.target ? Math.round(100 * d.actual / d.target) : 0)}٪</td><td>${amount(rate(d))}٪</td></tr>`).join(''))}<p class="u-period">تضمین‌ها، آموزش‌ها و تقسیم اعتبار فروش در نسخهٔ MVC موجود است.</p></section>`;
+  }
+  function notificationView() {
+    const mine = store.notifications.filter(n => can.manage() || user() === 'finance.manager' || n.to === me()).sort((a, b) => b.at.localeCompare(a.at));
+    return header('اعلان‌ها', 'صف اعلان ایمیل/پیامک: یادآور فعالیت، نقض SLA و تأیید کمیسیون. در پیش‌نمایش ارسال واقعی انجام نمی‌شود.') +
+      `<section class="panel u-panel">${ctx.table(['زمان', 'دسته', 'عنوان', 'گیرنده', 'کانال'], mine.map(n => `<tr><td>${when(n.at)}</td><td>${e(n.category)}</td><td>${e(n.title)}</td><td>${e(n.to)}</td><td>${e(n.channel)}</td></tr>`).join(''))}</section>`;
+  }
+
+  // ── Actions and submits ──
+  function action(name, id) {
+    if (!name.startsWith('af-') && !name.startsWith('sv-') && !name.startsWith('cm-')) return false;
+    const c = account(), num = Number(String(id).split(':').pop());
+    const find = (key, x = num) => store[key].find(r => r.id === x);
+    const done = msg => { save(); render(); if (msg) toast(msg); return true; };
+    switch (name) {
+      case 'af-tab': ui.tab = id; return done();
+      case 'af-side': ui.side = id; return done();
+      case 'af-filter': { const [k, v] = String(id).split(':'); ui[k] = v || ''; return done(); }
+      case 'af-toggle': ui.open.has(id) ? ui.open.delete(id) : ui.open.add(id); return done();
+      case 'af-open-all': ui.open = id === '1' ? new Set(['contacts', 'opportunities', 'quotes', 'leads', 'orders', 'payments', 'documents', 'campaigns', 'service', 'hierarchy']) : new Set(); return done();
+      case 'af-new-opportunity': createForm(c, 'opportunities'); return true;
+      case 'af-new-lead': createForm(c, 'leads'); return true;
+      case 'af-new-call': activityForm(c, 'call'); return true;
+      case 'af-new-meeting': activityForm(c, 'meeting'); return true;
+      case 'af-new-task': activityForm(c, 'task'); return true;
+      case 'af-new-note': showForm('ایجاد یادداشت', ctxLine(c) + field('عنوان *', '<input name="title" required>', true) + field('متن *', '<textarea name="body" rows="5" required></textarea>', true) + field('سطح دسترسی', `<select name="visibility">${opt([['عمومی', 'عمومی'], ['محدود', 'محدود (نویسنده و مدیران)'], ['خصوصی', 'خصوصی (فقط نویسنده)']], 'عمومی')}</select>`), 'af-note', c.id); return true;
+      case 'af-create': ui.open.add(id); createForm(c, id); return true;
+      case 'af-link': linkForm(c, id); return true;
+      case 'af-complete': case 'af-reschedule': case 'af-cancel': { const a = find('activities'); if (a && a.status === 'planned' && can.activity()) stepForm(a, name.slice(3)); return true; }
+      case 'af-classify': showForm('نوع رابطه و برچسب‌ها', ctxLine(c) + field('نوع رابطه', `<select name="relationship">${opt(['مشتری', 'مشتری بالقوه', 'تأمین‌کننده', 'شریک تجاری'].map(x => [x, x]), c.relationship)}</select>`) + field('برچسب‌ها (با ویرگول)', `<input name="tags" value="${e((c.tags || []).join('، '))}">`, true), 'af-classify', c.id); return true;
+      case 'af-status': showForm(c.status === 'غیرفعال' ? 'فعال‌سازی حساب' : 'غیرفعال‌سازی حساب', ctxLine(c) + field('دلیل *', '<textarea name="reason" required rows="3"></textarea>', true) + '<p class="u-period">حساب حذف نمی‌شود؛ همهٔ سوابق می‌ماند.</p>', 'af-status', c.id); return true;
+      case 'af-quote': navigateQuote(c); return true;
+      case 'af-contact-off': { const x = find('contacts'); if (x) { x.active = false; log(c.id, 'رابط ' + x.name + ' غیرفعال شد'); } return done('رابط غیرفعال شد؛ سوابق او حذف نشد.'); }
+      case 'af-lead-unlink': { const x = store.leads.find(l => l.id === num); if (x) { delete x.customerId; log(c.id, 'ارتباط سرنخ ' + x.code + ' قطع شد'); } return done('ارتباط قطع شد؛ سرنخ حذف نشد.'); }
+      case 'af-doc-unlink': { const d = find('documents'); if (d) { d.links = d.links.filter(x => x !== c.id); log(c.id, 'ارتباط سند «' + d.name + '» قطع شد'); } return done('ارتباط قطع شد؛ فایل حذف نشد.'); }
+      case 'af-campaign-leave': store.campaignMembers = store.campaignMembers.filter(m => m.id !== num); log(c.id, 'خروج از کمپین'); return done('عضویت حذف شد؛ کمپین باقی است.');
+      case 'af-parent-unlink': { const x = store.customers.find(k => k.id === num); if (x) { delete x.parentId; log(c.id, 'ارتباط مادر/زیرمجموعه با ' + x.name + ' قطع شد'); } return done('ارتباط قطع شد.'); }
+      case 'af-pay-approve': { const p = find('payments'); if (!p || !can.approve()) return true; if (p.by === me()) { toast('ثبت‌کننده نمی‌تواند پرداخت خود را تأیید کند.', 'warning'); return true; } p.status = 'تأییدشده'; log(c.id, `${p.direction} ${money(p.amount, p.currency)}: تأییدشده`); return done('پرداخت تأیید شد.'); }
+      case 'af-pay-cancel': case 'af-pay-return': showForm(name === 'af-pay-cancel' ? 'لغو پرداخت' : 'ثبت برگشتی', ctxLine(c) + field('دلیل *', '<textarea name="reason" required rows="2"></textarea>', true), 'af-pay-reason', (name === 'af-pay-cancel' ? 'cancel:' : 'return:') + num); return true;
+      case 'af-customer-kind': customerForm(id); return true;
+      case 'sv-create': showForm('ثبت درخواست خدمات', opField() + field('مشتری', `<select name="customerId">${opt(store.customers.filter(ctx.visible).map(x => [x.id, x.name]))}</select>`, true) + field('موضوع *', '<input name="subject" required>', true) + field('اولویت', `<select name="priority">${opt(['عادی', 'بالا', 'بحرانی'].map(x => [x, x]), 'عادی')}</select>`), 'sv-new', ''); return true;
+      case 'sv-close': showForm('بستن پرونده', opField() + field('رضایت مشتری (۱ تا ۵) *', '<input type="number" name="csat" min="1" max="5" required value="5">'), 'sv-close', num); return true;
+      case 'cm-calc': { store.commissions = store.commissions.filter(m => m.status !== 'در انتظار تأیید'); for (const d of store.dealers) { if (store.commissions.some(m => m.dealerId === d.id && m.status === 'تأییدشده')) continue; const ach = d.target ? Math.round(100 * d.actual / d.target) : 0, r = ach >= 100 ? 3 : ach >= 80 ? 2 : 1; store.commissions.push({id: nextId('commissions'), dealerId: d.id, sales: d.actual, achievement: ach, rate: r, amount: Math.round(d.actual * r / 100), status: 'در انتظار تأیید'}); } notify('تأیید کمیسیون', 'کمیسیون دوره برای تأیید آماده است', 'لیلا کریمی'); return done('کمیسیون دوره محاسبه شد و برای تأیید مالی ارسال شد.'); }
+      case 'cm-approve': { const m = find('commissions'); if (m && user() === 'finance.manager') { m.status = 'تأییدشده'; m.sent = true; } return done('کمیسیون تأیید و به صف ارسال حسابداری رفت.'); }
+    }
+    return true;
+  }
+  function navigateQuote(c) { ctx.navigate('quotes'); toast('پیش‌فاکتور برای «' + c.name + '» از صفحهٔ پیشنهادها ساخته می‌شود.'); }
+  function submit(kind, data, id) {
+    if (!kind.startsWith('af-') && !kind.startsWith('sv-')) return false;
+    if (kind === 'af-search') { ui.search[id] = String(data.q || '').trim(); ui.open.add(id); render(); return true; }
+    if (op(data)) { closeDrawer(); return true; }
+    const finish = (msg, keepTab) => { save(); closeDrawer(); if (keepTab) ui.tab = keepTab; render(); toast(msg); return true; };
+    const [part, rawId] = String(id).includes(':') ? String(id).split(':') : ['', id];
+    const c = store.customers.find(x => x.id === Number(rawId)) || account();
+    const text = v => String(v ?? '').trim();
+    const num = v => Number(digits(v));
+    if (kind.startsWith('af-') && c && c.status === 'غیرفعال' && !['af-status', 'af-customer'].includes(kind)) throw new Error('حساب غیرفعال است؛ ابتدا آن را فعال کنید.');
+    switch (kind) {
+      case 'af-customer': {
+        const legal = id === 'حقوقی', nid = digits(data.nationalId), mobile = digits(data.mobile);
+        if (legal ? !validLegalId(nid) : !validNationalCode(nid)) throw new Error(legal ? 'شناسهٔ ملی شرکت معتبر نیست (۱۱ رقم با رقم کنترل).' : 'کد ملی معتبر نیست (۱۰ رقم با رقم کنترل).');
+        if (!/^09\d{9}$/.test(mobile)) throw new Error('شمارهٔ همراه باید ۱۱ رقم و با ۰۹ شروع شود.');
+        if (store.customers.some(x => digits(x.nationalId) === nid)) throw new Error('مشتری با این شناسه قبلاً ثبت شده است.');
+        const name = legal ? text(data.name) : `${text(data.firstName)} ${text(data.lastName)}`;
+        const newId = nextId('customers');
+        store.customers.push({id: newId, code: 'CUS-DEMO-' + newId, name, type: id, segment: 'استاندارد', city: text(data.city), owner: me(), branch: data.branch, phone: mobile, email: '', nationalId: nid, status: 'فعال', quality: 70, balance: 0, credit: 0, initials: name.slice(0, 2), color: 'teal', relationship: 'مشتری', tags: [],
+          profile: legal ? {'کد اقتصادی': text(data.economicCode), 'شماره ثبت': text(data.registration), 'نماینده': text(data.representative)} : {'تاریخ تولد': text(data.birthDate)}});
+        if (text(data.contactName)) store.contacts.push({id: nextId('contacts'), customerId: newId, name: text(data.contactName), role: text(data.contactRole), mobile: digits(data.contactMobile), email: '', primary: true, active: true});
+        log(newId, 'حساب ایجاد شد');
+        save(); closeDrawer(); ctx.navigate('customer', String(newId)); toast('مشتری ثبت شد.'); return true;
+      }
+      case 'af-activity': {
+        const type = part, start = text(data.start);
+        if (!start) throw new Error('زمان الزامی است.');
+        if (type === 'meeting' && (!data.end || data.end <= start)) throw new Error('پایان جلسه باید بعد از شروع باشد.');
+        const doneNow = data.done === '1';
+        if (doneNow && start > now()) throw new Error('فعالیت انجام‌شده نمی‌تواند زمان آینده داشته باشد.');
+        if (doneNow && !text(data.outcome)) throw new Error('شرح نتیجه را وارد کنید.');
+        if (doneNow && type === 'call' && !data.result) throw new Error('نتیجهٔ تماس را انتخاب کنید.');
+        const a = {id: nextId('activities'), customerId: c.id, type, subject: text(data.subject), contact: data.contact || '', owner: data.owner || me(), start, end: data.end || '', duration: Number(data.duration) || null, location: text(data.location),
+          participants: Object.entries(data).filter(([k]) => k.startsWith('p_')).map(([, v]) => v), priority: data.priority || 'عادی', reminder: Number(data.reminder) || null, opportunityId: Number(data.opportunityId) || null, description: text(data.description),
+          status: doneNow ? 'done' : 'planned', result: doneNow ? data.result || '' : '', outcome: doneNow ? text(data.outcome) : ''};
+        store.activities.push(a);
+        if (a.reminder && !doneNow) notify('یادآور فعالیت', `یادآور ${label[type]}: ${a.subject}`, a.owner);
+        log(c.id, `${label[type]} ${doneNow ? 'انجام‌شده ثبت شد' : 'برنامه‌ریزی شد'}: ${a.subject}`);
+        ui.side = 'activities'; ui.type = ''; ui.state = '';
+        return finish(doneNow ? 'فعالیت انجام‌شده ثبت شد.' : `${label[type]} «${a.subject}» برنامه‌ریزی شد.`);
+      }
+      case 'af-complete': {
+        const a = store.activities.find(x => x.id === Number(id));
+        if (!a || a.status !== 'planned') return finish('فعالیت قبلاً بسته شده است.');
+        if (a.type !== 'task' && !text(data.outcome)) throw new Error('شرح نتیجه را وارد کنید.');
+        if (a.type === 'call' && !data.result) throw new Error('نتیجهٔ تماس را انتخاب کنید.');
+        if (data.nextType && (!text(data.nextSubject) || !data.nextStart || data.nextStart <= now())) throw new Error('برای اقدام بعدی موضوع و زمان آینده را وارد کنید.');
+        Object.assign(a, {status: 'done', outcome: text(data.outcome), result: data.result || ''});
+        log(a.customerId, `${label[a.type]} انجام شد: ${a.subject}`);
+        if (data.nextType) { store.activities.push({id: nextId('activities'), customerId: a.customerId, type: data.nextType, subject: text(data.nextSubject), contact: a.contact, owner: a.owner, start: data.nextStart, end: data.nextType === 'meeting' ? data.nextStart : '', status: 'planned', priority: 'عادی', opportunityId: a.opportunityId, followUpOf: a.id}); log(a.customerId, 'اقدام بعدی برنامه‌ریزی شد: ' + text(data.nextSubject)); }
+        return finish(data.nextType ? 'نتیجه ثبت و اقدام بعدی برنامه‌ریزی شد.' : 'نتیجه ثبت شد.');
+      }
+      case 'af-reschedule': { const a = store.activities.find(x => x.id === Number(id)); if (!a || a.status !== 'planned') return finish('فعالیت بسته شده است.'); if (data.end && data.end <= data.start) throw new Error('پایان باید بعد از شروع باشد.'); const before = when(a.start); a.start = data.start; if (a.type === 'meeting') a.end = data.end || a.end; log(a.customerId, `زمان ${label[a.type]} تغییر کرد: ${before} ← ${when(a.start)}`); return finish('زمان جدید ثبت شد.'); }
+      case 'af-cancel': { const a = store.activities.find(x => x.id === Number(id)); if (!a || a.status !== 'planned') return finish('فعالیت بسته شده است.'); if (!text(data.reason)) throw new Error('دلیل لغو الزامی است.'); Object.assign(a, {status: 'cancelled', reason: text(data.reason)}); log(a.customerId, `${label[a.type]} لغو شد: ${a.subject}`); return finish('فعالیت لغو شد.'); }
+      case 'af-note': { const n = {id: nextId('notes'), customerId: c.id, title: text(data.title), body: text(data.body), visibility: data.visibility || 'عمومی', author: me(), at: now()}; store.notes.push(n); log(c.id, 'یادداشت ثبت شد: ' + n.title); ui.side = 'notes'; return finish('یادداشت ثبت شد.'); }
+      case 'af-opportunity': {
+        const value = num(data.value), p = Number(data.probability);
+        if (!value) throw new Error('مبلغ را عددی وارد کنید.');
+        if (!(p >= 1 && p <= 99)) throw new Error('احتمال باید بین ۱ تا ۹۹ باشد.');
+        const oid = nextId('opportunities');
+        store.opportunities.push({id: oid, code: 'OP-DEMO-' + oid, name: text(data.name), customer: c.name, value, currency: data.currency || 'IRR', owner: data.owner || me(), probability: p, stage: data.stage || 'شناسایی', next: text(data.next), age: 0, risk: 'کم', branch: c.branch, expectedClose: data.expectedClose, contact: data.contact || ''});
+        log(c.id, 'فرصت ایجاد شد: ' + text(data.name)); ui.open.add('opportunities');
+        return finish('فرصت فروش ایجاد شد.');
+      }
+      case 'af-lead': { const lid = nextId('leads'); store.leads.push({id: lid, code: 'LD-DEMO-' + lid, name: text(data.name), contact: data.contact || c.name, source: data.source, owner: data.owner || me(), score: 60, age: 0, status: 'تخصیص‌یافته', sla: 'نزدیک', next: 'تماس اولیه', date: 'امروز', created: now().slice(0, 10), branch: c.branch, customerId: c.id}); log(c.id, 'سرنخ برای حساب ثبت شد: ' + text(data.name)); ui.open.add('leads'); return finish('سرنخ برای حساب ثبت شد.'); }
+      case 'af-payment': {
+        const value = num(data.amount);
+        if (!value) throw new Error('مبلغ را عددی وارد کنید.');
+        if (['چک', 'حواله بانکی'].includes(data.method) && !text(data.reference)) throw new Error('برای چک و حواله، شماره یا کد پیگیری الزامی است.');
+        if (data.date > now().slice(0, 10)) throw new Error('تاریخ پرداخت نمی‌تواند در آینده باشد.');
+        store.payments.push({id: nextId('payments'), customerId: c.id, direction: data.direction, method: data.method, amount: value, currency: data.currency || 'IRR', date: data.date, reference: text(data.reference), status: 'ثبت‌شده', by: me()});
+        log(c.id, `${data.direction} ${money(value, data.currency || 'IRR')} ثبت شد`); ui.open.add('payments'); return finish('پرداخت با وضعیت «ثبت‌شده» ذخیره شد.');
+      }
+      case 'af-pay-reason': { const p = store.payments.find(x => x.id === Number(rawId)); if (!p) return finish(''); if (!text(data.reason)) throw new Error('دلیل الزامی است.'); p.status = part === 'cancel' ? 'لغوشده' : 'برگشتی'; p.note = text(data.reason); log(p.customerId, `${p.direction} ${money(p.amount, p.currency)}: ${p.status}`); return finish('وضعیت پرداخت به‌روز شد.'); }
+      case 'af-contact': { if (data.mobile && !/^09\d{9}$/.test(digits(data.mobile))) throw new Error('شمارهٔ همراه معتبر نیست.'); if (data.primary === '1') store.contacts.filter(x => x.customerId === c.id).forEach(x => { x.primary = false; }); store.contacts.push({id: nextId('contacts'), customerId: c.id, name: text(data.name), role: text(data.role), mobile: digits(data.mobile), email: text(data.email), primary: data.primary === '1', active: true}); log(c.id, 'رابط تعریف شد: ' + text(data.name)); ui.open.add('contacts'); return finish('فرد رابط افزوده شد.'); }
+      case 'af-document': { store.documents.push({id: nextId('documents'), name: text(data.name), size: '—', by: me(), at: now(), links: [c.id]}); log(c.id, 'سند ثبت شد: ' + text(data.name)); ui.open.add('documents'); return finish('سند ثبت شد.'); }
+      case 'af-link': {
+        const rid = Number(data.recordId);
+        if (part === 'leads') { const l = store.leads.find(x => x.id === rid); if (l) l.customerId = c.id; }
+        if (part === 'documents') { const d = store.documents.find(x => x.id === rid); if (d && !d.links.includes(c.id)) d.links.push(c.id); }
+        if (part === 'campaigns' && !store.campaignMembers.some(m => m.campaignId === rid && m.customerId === c.id)) store.campaignMembers.push({id: nextId('campaignMembers'), campaignId: rid, customerId: c.id, status: 'هدف‌گذاری‌شده'});
+        if (part === 'hierarchy') {
+          const other = store.customers.find(x => x.id === rid);
+          const ancestors = x => { const list = []; let p = x.parentId; while (p && !list.includes(p)) { list.push(p); p = store.customers.find(k => k.id === p)?.parentId; } return list; };
+          if (data.role === 'parent') { if (ancestors(other).includes(c.id)) throw new Error('این ارتباط حلقه ایجاد می‌کند.'); c.parentId = other.id; } else { if (ancestors(c).includes(other.id)) throw new Error('این ارتباط حلقه ایجاد می‌کند.'); other.parentId = c.id; }
+        }
+        log(c.id, 'رکورد موجود متصل شد (' + part + ')'); ui.open.add(part); return finish('رکورد به حساب متصل شد.');
+      }
+      case 'af-classify': c.relationship = data.relationship; c.tags = String(data.tags || '').split(/[,،]/).map(x => x.trim()).filter(Boolean).slice(0, 10); log(c.id, 'نوع رابطه / برچسب‌ها تغییر کرد'); return finish('ذخیره شد.');
+      case 'af-status': if (!text(data.reason)) throw new Error('دلیل الزامی است.'); c.status = c.status === 'غیرفعال' ? 'فعال' : 'غیرفعال'; log(c.id, (c.status === 'فعال' ? 'حساب فعال شد: ' : 'حساب غیرفعال شد: ') + text(data.reason)); return finish('وضعیت حساب تغییر کرد.');
+      case 'sv-new': { const cid = Number(data.customerId || rawId), sid = nextId('serviceCases'), hours = data.priority === 'بحرانی' ? 4 : data.priority === 'بالا' ? 8 : 24, due = new Date(Date.now() + hours * 3600000); store.serviceCases.push({id: sid, code: 'SC-DEMO-' + sid, customerId: cid, subject: text(data.subject), priority: data.priority, status: 'باز', opened: now(), due: local(due), owner: me(), source: 'CRM'}); log(cid, 'درخواست خدمات ثبت شد: ' + text(data.subject)); return finish('درخواست خدمات ثبت شد؛ مهلت SLA ' + amount(hours) + ' ساعت.'); }
+      case 'sv-close': { const s = store.serviceCases.find(x => x.id === Number(id)); const score = Number(data.csat); if (!(score >= 1 && score <= 5)) throw new Error('رضایت باید بین ۱ تا ۵ باشد.'); if (s) Object.assign(s, {status: 'بسته', csat: score}); return finish('پرونده بسته شد.'); }
+    }
+    return false;
+  }
+  return {
+    views: {customer: accountView, version: versionView, service: serviceView, commissions: commissionView, notifications: notificationView},
+    routes: ['version', 'service', 'commissions', 'notifications'],
+    allowed: route => route === 'version' || (route === 'commissions' ? can.commission() : ['service', 'notifications'].includes(route) ? user() !== 'dealer.user' : true),
+    action, submit, customerForm, resetUi: () => { ui.tab = 'overview'; ui.side = 'activities'; ui.type = ''; ui.state = ''; ui.search = {}; },
+    search: (key, q) => { ui.search[key] = q; ui.open.add(key); render(); }
+  };
 }
 
 /* Offline demonstration only. The MVC application remains the authorization boundary. */
@@ -1464,17 +2206,20 @@ function createSelfServicePreview(ctx) {
     else download('crm-reporting-demo-v1.json',JSON.stringify({schemaVersion:'crm.reporting.demo.v1',demo:true,generatedAt:new Date().toISOString(),filter:reportFilter,facts:f},null,2),'application/json');
     store.audit.push({at:new Date().toISOString(),event:'Reporting.Export',format,rows:f.length});save();toast('خروجی نمونه آماده شد.');
   }
-  function navigate(route,id='') { closeDrawer();closeModal();state.route=route;state.query='';if(route==='customer')state.selectedCustomerId=Number(id);if(route==='report-detail')drillMetric=id||'forecast';
+  function navigate(route,id='') { closeDrawer();closeModal();state.route=route;state.query='';if(route==='customer'){if(state.selectedCustomerId!==Number(id))af.resetUi();state.selectedCustomerId=Number(id);}if(route==='report-detail')drillMetric=id||'forecast';
     const hash='#/'+route+(id?'?id='+encodeURIComponent(id):'');if(location.hash!==hash){try{history.pushState(null,'',hash);}catch{location.hash=hash;}}render();closeMobileMenu(); }
   function readRoute(){const raw=location.hash.replace(/^#\/?/,'');const [route,query='']=raw.split('?');state.route=route||'dashboard';const id=new URLSearchParams(query).get('id');if(state.route==='customer')state.selectedCustomerId=Number(id);if(state.route==='report-detail')drillMetric=id||'forecast';}
   const selfService=createSelfServicePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,today,save,render:()=>render(),toast,download,closeDrawer,account:()=>account,visible});
-  const knownRoutes=['dashboard','customers','customer','customer-quality','customer-duplicates','leads','opportunities','quotes','orders','dealers','workqueue','reports','report-detail','identity','organization','portal','partner-requests','mobile'];
+  const af=createAccountFilePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,save,render:()=>render(),toast,closeDrawer,link,statusBadge,account:()=>account,visible,
+    navigate:(route,id)=>navigate(route,id),selected:()=>state.selectedCustomerId,releases:window.CRM_RELEASES||[],version:window.CRM_VERSION||''});
+  const allowedRoute=route=>af.allowed(route)&&(route==='version'||selfService.allowed(route));
+  const knownRoutes=[...af.routes,'dashboard','customers','customer','customer-quality','customer-duplicates','leads','opportunities','quotes','orders','dealers','workqueue','reports','report-detail','identity','organization','portal','partner-requests','mobile'];
   render = function(){if(!signedIn)return;
     for(const key of ['opportunities','quotes'])for(const record of store[key])record.branch??=store.customers.find(c=>c.name===record.customer)?.branch||scope||'مرکزی';
     const source={};for(const k of ['customers','leads','opportunities','quotes','tasks']){source[k]=store[k];store[k]=rows(k);}
     try {
-      const views={orders:ordersView,dealers:dealersView,reports:reportsView,'report-detail':drillView,organization:organizationView,...selfService.views};
-      if(!selfService.allowed(state.route))$('#viewHost').innerHTML=header('این صفحه برای نقش فعلی فعال نیست','از منوی مجاز استفاده کنید.');
+      const views={orders:ordersView,dealers:dealersView,reports:reportsView,'report-detail':drillView,organization:organizationView,...selfService.views,...af.views};
+      if(!allowedRoute(state.route))$('#viewHost').innerHTML=header('این صفحه برای نقش فعلی فعال نیست','از منوی مجاز استفاده کنید.');
       else if(!knownRoutes.includes(state.route))$('#viewHost').innerHTML=header('صفحه پیدا نشد','از منوی اصلی یک صفحه را انتخاب کنید.',link('dashboard','مرکز عملیات'));
       else if(state.route==='customer'&&!store.customers.some(x=>x.id===state.selectedCustomerId))$('#viewHost').innerHTML=header('مشتری در این دامنه موجود نیست','',link('customers','فهرست مشتریان'));
       else if(views[state.route])$('#viewHost').innerHTML=views[state.route]();
@@ -1482,7 +2227,7 @@ function createSelfServicePreview(ctx) {
       const title=$('#viewHost h1')?.textContent||'ارقام CRM';document.title=title+' | ارقام CRM';
       $('#viewHost').insertAdjacentHTML('afterbegin',`<div class="unified-breadcrumb">${link('dashboard','مرکز عملیات')}<span> / ${escapeHtml(title)}</span></div>`);
       $$('.nav-item').forEach(x=>{const active=x.dataset.route===state.route||(state.route.startsWith('customer')&&x.dataset.route==='customers')||(state.route==='report-detail'&&x.dataset.route==='reports');x.classList.toggle('is-active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
-      $$('.nav-item').forEach(x=>x.hidden=!selfService.allowed(x.dataset.route));
+      $$('.nav-item').forEach(x=>x.hidden=!allowedRoute(x.dataset.route));
       $('#globalSearch').hidden=account==='dealer.user';$('#companySelect').disabled=account==='dealer.user';
       $('#customerNavCount').textContent=fa(store.customers.length);
       if(state.route==='quotes')$$('tbody tr').forEach((tr,i)=>{const q=store.quotes[i];if(q)tr.querySelector('.row-actions')?.insertAdjacentHTML('beforeend',button('quote-detail','مشاهده',q.id));});
@@ -1496,6 +2241,7 @@ function createSelfServicePreview(ctx) {
   handleForm=function(form){const oldIds=new Set(store.leads.map(x=>x.id));legacyForm(form);for(const l of store.leads)if(!oldIds.has(l.id)){l.created=today;l.branch=scope||'مرکزی';}for(const o of store.opportunities)o.expectedClose??=today;save();};
   handleAction=function(action,target){
     if(action==='export'){navigate('reports');return;}
+    if(action==='new-customer'){af.customerForm();return;}
     if(action==='convert-lead'){
       const lead=store.leads.find(x=>x.id===Number(target.dataset.id));if(!lead||lead.status==='تبدیل‌شده')return;
       if(lead.status!=='واجد شرایط'){lead.status='واجد شرایط';save();render();return;}
@@ -1506,6 +2252,7 @@ function createSelfServicePreview(ctx) {
   };
   function userAction(action,id){
     if(selfService.action(action,id))return;
+    if(af.action(action,id))return;
     if(action==='close-drawer'){closeDrawer();return;}
     if(action==='logout'){if(selfService.pending()&&!window.confirm('صف ارسال‌نشده با خروج پاک می‌شود. ادامه می‌دهید؟'))return;selfService.reset();signedIn=false;account='';try{sessionStorage.removeItem('crm-unified-session');}catch{}$('#appShell').hidden=true;$('#loginScreen').hidden=false;$('#loginSubmit').disabled=false;return;}
     if(action==='reset-data'){openModal('بازنشانی داده نمونه','<p>تغییرات همین پیش‌نمایش پاک و داده اولیه بازگردانده شود؟</p>','بازنشانی',()=>{storageSet('argham-crm-unified-v1','');location.reload();});return;}
@@ -1533,7 +2280,7 @@ function createSelfServicePreview(ctx) {
     if(form.id==='loginForm'){event.preventDefault();event.stopImmediatePropagation();const data=new FormData(form),user=String(data.get('username')||'').trim();if(!accounts[user]||data.get('password')!=='Demo@1405'){$('#startupMessage').textContent='نام کاربری یا رمز نمونه نادرست است. sales.manager / Demo@1405';return;}enter(user);return;}
     if(!form.dataset.uForm)return;event.preventDefault();event.stopImmediatePropagation();if(!form.reportValidity())return;
     const data=Object.fromEntries(new FormData(form));
-    try{if(selfService.submit(form.dataset.uForm,data,form.dataset.id))return;}catch(error){form.querySelector('.u-form-error').textContent=error.message;return;}
+    try{if(selfService.submit(form.dataset.uForm,data,form.dataset.id))return;if(af.submit(form.dataset.uForm,data,form.dataset.id))return;}catch(error){form.querySelector('.u-form-error').textContent=error.message;return;}
     if(form.dataset.uForm==='report'){const days=(Date.parse(data.to+'T00:00:00Z')-Date.parse(data.from+'T00:00:00Z'))/86400000;if(!Number.isFinite(days)||days<0||days>365||data.from<'2000-01-01'){$('#reportErrors').innerHTML='<p class="u-error">بازه باید از سال ۲۰۰۰ به بعد و بین ۱ تا ۳۶۶ روز باشد.</p>';return;}reportFilter=data;render();return;}
     if(form.dataset.uForm==='order'){const q=store.quotes.find(x=>x.id===Number(data.quoteId)&&visible(x)&&x.status==='تأییدشده');if(!q||store.orders.some(x=>x.quoteId===q.id))return;const id=idFor('orders');store.orders.push({id,code:'ORD-DEMO-'+id,quoteId:q.id,customer:q.customer,amount:q.amount*(1-q.discount/100),status:'پیش‌نویس',erp:'',history:['ایجاد از '+q.code]});}
     if(form.dataset.uForm==='dealer'){const target=Number(data.target);if(!Number.isFinite(target)||target<=0)return;const d=store.dealers.find(x=>x.id===Number(form.dataset.id));if(d)Object.assign(d,{name:data.name,branch:data.branch,contract:data.contract,target});else{const id=idFor('dealers');store.dealers.push({id,code:'DLR-DEMO-'+id,name:data.name,branch:data.branch,contract:data.contract,target,actual:0,status:'در بررسی',customers:[],synced:today,periodFrom:monthStart,periodTo:nextMonth});}}
