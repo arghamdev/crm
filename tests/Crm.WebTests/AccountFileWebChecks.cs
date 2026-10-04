@@ -35,6 +35,12 @@ internal static partial class TestRunner
         CheckHtml(html.Contains($"hx-get=\"{basePath}/follow-ups\"") && HtmlContains(html, "پیگیری") && !HtmlContains(html, "اطلاعات تماس، شناسه‌ها و طبقه‌بندی") &&
                   html.Contains("id=\"activityPanel\"") && html.Contains("data-lazy-details"),
             "ACCW: the side panel is «پیگیری», the activity panel sits in its tab and the overview no longer repeats the account info.", "accw-layout", html);
+        var top = html.IndexOf("class=\"account-head__top\"", StringComparison.Ordinal);
+        var quickAt = html.IndexOf("quick-panel--head", StringComparison.Ordinal);
+        var sideAt = html.IndexOf("class=\"account-side\"", StringComparison.Ordinal);
+        CheckHtml(top > 0 && quickAt > top && quickAt < html.IndexOf("class=\"account-card\"", StringComparison.Ordinal) && quickAt < sideAt &&
+                  !html[sideAt..].Contains("quick-panel"),
+            "ACCW: «عملیات اصلی» sits in the header next to the account card, not in the side column.", "accw-quick-head", html);
         using (var response = await manager.SendAsync(Htmx(HttpMethod.Get, $"{basePath}/follow-ups")))
         {
             var follow = await response.Content.ReadAsStringAsync();

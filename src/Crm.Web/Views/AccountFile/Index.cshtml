@@ -9,7 +9,20 @@
 <nav class="breadcrumb"><a href="/customers">مشتریان و حساب‌ها</a><svg><use href="#i-chevron"/></svg><span>@a.Name</span></nav>
 
 <header class="account-head" data-account-id="@a.Id">
-    <partial name="_AccountCard" model="AccountCardModel.From(a)" />
+    <div class="account-head__top">
+        <section class="panel quick-panel quick-panel--head">
+            <div class="quick-panel__head"><strong>عملیات اصلی</strong><small>حساب جاری از پیش انتخاب شده است</small></div>
+            <div class="quick-actions">
+                <partial name="_QuickAction" model='new QuickActionModel("ایجاد فرصت", "i-target", $"{basePath}/quick/opportunity", Model.Quick.Opportunity, active)' />
+                <partial name="_QuickAction" model='new QuickActionModel("برنامه‌ریزی تماس", "i-phone", $"{basePath}/activities/new/Call", Model.Quick.Call, active)' />
+                <partial name="_QuickAction" model='new QuickActionModel("برنامه‌ریزی جلسه", "i-calendar", $"{basePath}/activities/new/Meeting", Model.Quick.Meeting, active)' />
+                <partial name="_QuickAction" model='new QuickActionModel("ایجاد وظیفه", "i-task", $"{basePath}/activities/new/Task", Model.Quick.Task, active)' />
+                <partial name="_QuickAction" model='new QuickActionModel("ایجاد یادداشت", "i-note", $"{basePath}/notes/new", Model.Quick.Note, active)' />
+                <partial name="_QuickAction" model='new QuickActionModel("ایجاد سرنخ", "i-lead", $"{basePath}/quick/lead", Model.Quick.Lead, active)' />
+            </div>
+        </section>
+        <partial name="_AccountCard" model="AccountCardModel.From(a)" />
+    </div>
     <div class="account-head__bar">
         <div class="account-head__meta">
             <span class="badge badge--info">@AccountRecordService.RelationshipLabel(a.Relationship)</span>
@@ -45,19 +58,7 @@
 </section>
 
 <div class="account-layout">
-    <aside class="account-side" aria-label="فعالیت‌ها و عملیات">
-        <section class="panel quick-panel">
-            <div class="quick-panel__head"><strong>عملیات اصلی</strong><small>حساب جاری از پیش انتخاب شده است</small></div>
-            <div class="quick-actions">
-                <partial name="_QuickAction" model='new QuickActionModel("ایجاد فرصت", "i-target", $"{basePath}/quick/opportunity", Model.Quick.Opportunity, active)' />
-                <partial name="_QuickAction" model='new QuickActionModel("برنامه‌ریزی تماس", "i-phone", $"{basePath}/activities/new/Call", Model.Quick.Call, active)' />
-                <partial name="_QuickAction" model='new QuickActionModel("برنامه‌ریزی جلسه", "i-calendar", $"{basePath}/activities/new/Meeting", Model.Quick.Meeting, active)' />
-                <partial name="_QuickAction" model='new QuickActionModel("ایجاد وظیفه", "i-task", $"{basePath}/activities/new/Task", Model.Quick.Task, active)' />
-                <partial name="_QuickAction" model='new QuickActionModel("ایجاد یادداشت", "i-note", $"{basePath}/notes/new", Model.Quick.Note, active)' />
-                <partial name="_QuickAction" model='new QuickActionModel("ایجاد سرنخ", "i-lead", $"{basePath}/quick/lead", Model.Quick.Lead, active)' />
-            </div>
-        </section>
-
+    <aside class="account-side" aria-label="پیگیری و یادداشت‌ها">
         <section class="panel side-tabs" data-tabs="side">
             <div class="tabbar" role="tablist">
                 <button type="button" role="tab" class="tabbar__tab is-active" data-tab="side-followups" aria-selected="true">پیگیری</button>

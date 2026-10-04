@@ -200,3 +200,11 @@ assert(fp.includes('act-chips')&&fp.includes('خط زمانی تعاملات'),'
 fu.click({uAction:'af-side',id:'notes'});assert(fu.node('#viewHost').innerHTML.includes('class="note"')||fu.node('#viewHost').innerHTML.includes('یادداشتی ثبت نشده'));
 assert.deepEqual(fu.errors,[]);
 console.log('v1.9.2 preview checks passed: overview without repeated account info, follow-up side panel, activity panel in its tab.');
+// v1.9.3: «عملیات اصلی» sits in the header next to the account card, not in the side column.
+const qh=runtime({hash:'#/customer?id=1'});
+qh.dispatch('submit',qh.form('login',{username:'sales.manager',password:'Demo@1405'}));
+const qp=qh.node('#viewHost').innerHTML;
+assert(/<div class="account-head__top"><section class="panel quick-panel quick-panel--head">[\s\S]*?<section class="account-card"/.test(qp),'Quick actions sit next to the account card in the header.');
+assert(!/<aside class="account-side">[\s\S]*?quick-panel/.test(qp),'The side column no longer holds the quick actions.');
+assert.deepEqual(qh.errors,[]);
+console.log('v1.9.3 preview checks passed: quick actions in the header next to the account card.');
