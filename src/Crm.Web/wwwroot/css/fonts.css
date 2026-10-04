@@ -1,0 +1,7 @@
+/* IRANSansX — organizational font. Linked only when wwwroot/fonts/IRANSansX-Regular.woff2 exists (see docs/brand-font-fa.md).
+   An installed copy (local) is preferred over a download. Missing optional weights fall back to the nearest available one. */
+@font-face { font-family: "IRANSansX"; font-style: normal; font-weight: 400; font-display: swap; src: local("IRANSansX"), local("IRANSansX-Regular"), url("../fonts/IRANSansX-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IRANSansX"; font-style: normal; font-weight: 500; font-display: swap; src: local("IRANSansX Medium"), local("IRANSansX-Medium"), url("../fonts/IRANSansX-Medium.woff2") format("woff2"); }
+@font-face { font-family: "IRANSansX"; font-style: normal; font-weight: 600; font-display: swap; src: local("IRANSansX DemiBold"), local("IRANSansX-DemiBold"), url("../fonts/IRANSansX-DemiBold.woff2") format("woff2"); }
+@font-face { font-family: "IRANSansX"; font-style: normal; font-weight: 700; font-display: swap; src: local("IRANSansX Bold"), local("IRANSansX-Bold"), url("../fonts/IRANSansX-Bold.woff2") format("woff2"); }
+@font-face { font-family: "IRANSansX"; font-style: normal; font-weight: 800 900; font-display: swap; src: local("IRANSansX ExtraBold"), local("IRANSansX-ExtraBold"), url("../fonts/IRANSansX-ExtraBold.woff2") format("woff2"); }

@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: light;
-  --font: "Vazirmatn", "IRANSansX", "Segoe UI", Tahoma, sans-serif;
+  --font: "IRANSansX", "IRANSans", "Vazirmatn", "Segoe UI", Tahoma, sans-serif; /* فونت سازمانی: ایران‌سنس */
   /* Organizational palette (رنگ سازمانی) — v1.9.1 */
   --navy-950: #0d1a2b;
   --navy-900: #14263d; /* منوی اصلی و هویت سامانه */
