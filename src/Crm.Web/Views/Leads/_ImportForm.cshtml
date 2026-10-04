@@ -1,0 +1,15 @@
+@{ var branches = ViewBag.Branches as IReadOnlyList<OrganizationUnitOptionDto> ?? []; var selected = ViewBag.BranchId as string; }
+<form class="drawer-form" method="post" action="/leads/import" enctype="multipart/form-data" hx-post="/leads/import" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="form-section">
+        <h3 data-drawer-title>ورود اطلاعات سرنخ از فایل</h3>
+        <p class="bulk-note"><svg><use href="#i-upload"/></svg><span>فایل CSV با کدگذاری UTF-8 (خروجی «CSV UTF-8» در Excel). سطر اول نام ستون‌هاست: <b>نام سرنخ</b>، شخص تماس، تلفن، ایمیل، منبع. هر ردیف با همان قواعد ثبت دستی (دسترسی شعبه و کنترل تکرار) ثبت می‌شود؛ حداکثر ۵۰۰ ردیف.</span></p>
+        <div class="form-grid">
+            <label class="field field--full"><span>شعبه *</span><select name="branchId">@foreach (var branch in branches) { <option value="@branch.Id" selected="@(string.Equals(branch.Id, selected, StringComparison.OrdinalIgnoreCase))">@branch.Name — @branch.Code</option> }</select></label>
+            <label class="field field--full"><span>فایل CSV *</span><input type="file" name="file" accept=".csv,text/csv" /></label>
+        </div>
+        <a class="link-button" href="/leads/import/template" download><svg><use href="#i-download"/></svg>دریافت فایل نمونه</a>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">بارگذاری و ثبت</button></div>
+</form>

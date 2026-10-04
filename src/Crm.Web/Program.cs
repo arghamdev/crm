@@ -187,6 +187,7 @@ builder.Services.AddScoped<IUserContextSelector>(services => services.GetRequire
 builder.Services.AddScoped<IOrganizationAdminService, OrganizationAdminService>();
 builder.Services.AddScoped<ICrmApplicationService, CrmApplicationService>();
 builder.Services.AddScoped<ISalesPipelineService, SalesPipelineService>();
+builder.Services.AddScoped<ICustomerListService, CustomerListService>();
 builder.Services.AddScoped<IQuoteApplicationService, QuoteApplicationService>();
 builder.Services.AddSingleton<IProductPriceCatalog, DemoProductPriceCatalog>();
 builder.Services.AddScoped<IOrderApplicationService, OrderApplicationService>();

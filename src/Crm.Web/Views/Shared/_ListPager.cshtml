@@ -1,0 +1,39 @@
+@model ListPagerModel
+@{ var s = Model.State; }
+<footer class="list-pager">
+    <span class="list-pager__summary">نمایش <b>@Model.First.ToString("N0")</b> تا <b>@Model.Last.ToString("N0")</b> از <b>@Model.TotalCount.ToString("N0")</b> @Model.Label</span>
+    <nav class="list-pager__pages" aria-label="صفحه‌بندی">
+        @if (Model.Page > 1)
+        {
+            <a class="pager-btn" href="@s.Href(("page", 1))" hx-get="@s.Table(("page", 1))" aria-label="صفحه اول"><svg><use href="#i-chevrons"/></svg></a>
+            <a class="pager-btn" href="@s.Href(("page", Model.Page - 1))" hx-get="@s.Table(("page", Model.Page - 1))" aria-label="صفحه قبل" rel="prev"><svg><use href="#i-chevron"/></svg></a>
+        }
+        else
+        {
+            <span class="pager-btn is-disabled" aria-hidden="true"><svg><use href="#i-chevrons"/></svg></span>
+            <span class="pager-btn is-disabled" aria-hidden="true"><svg><use href="#i-chevron"/></svg></span>
+        }
+        @foreach (var page in Model.Pages())
+        {
+            if (page is not { } number) { <span class="pager-gap">…</span> }
+            else if (number == Model.Page) { <span class="pager-btn is-active" aria-current="page">@number</span> }
+            else { <a class="pager-btn" href="@s.Href(("page", number))" hx-get="@s.Table(("page", number))">@number</a> }
+        }
+        @if (Model.Page < Model.TotalPages)
+        {
+            <a class="pager-btn" href="@s.Href(("page", Model.Page + 1))" hx-get="@s.Table(("page", Model.Page + 1))" aria-label="صفحه بعد" rel="next"><svg class="flip"><use href="#i-chevron"/></svg></a>
+            <a class="pager-btn" href="@s.Href(("page", Model.TotalPages))" hx-get="@s.Table(("page", Model.TotalPages))" aria-label="صفحه آخر"><svg class="flip"><use href="#i-chevrons"/></svg></a>
+        }
+        else
+        {
+            <span class="pager-btn is-disabled" aria-hidden="true"><svg class="flip"><use href="#i-chevron"/></svg></span>
+            <span class="pager-btn is-disabled" aria-hidden="true"><svg class="flip"><use href="#i-chevrons"/></svg></span>
+        }
+    </nav>
+    <label class="list-pager__size">
+        <select name="pageSize" form="@Model.FormId" hx-get="@s.TablePath" hx-include="#@Model.FormId" hx-trigger="change" aria-label="تعداد در صفحه">
+            @foreach (var size in ListPagerModel.PageSizes) { <option value="@size" selected="@(size == Model.PageSize)">@size</option> }
+        </select>
+        <span>مورد در صفحه</span>
+    </label>
+</footer>

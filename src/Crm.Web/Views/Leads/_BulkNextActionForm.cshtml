@@ -1,0 +1,17 @@
+@model BulkLeadFormModel
+<form class="drawer-form" method="post" action="/leads/bulk/next-action" hx-post="/leads/bulk/next-action" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    @foreach (var id in Model.Ids) { <input type="hidden" name="Ids" value="@id" /> }
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section">
+        <h3 data-drawer-title>افزودن فعالیت برای سرنخ‌های انتخاب‌شده</h3>
+        <p class="bulk-note"><svg><use href="#i-calendar"/></svg><span>برای <b>@Model.Ids.Length</b> سرنخ «اقدام بعدی» ثبت می‌شود و در تاریخچه هر سرنخ می‌ماند.</span></p>
+        <div class="form-grid">
+            <label class="field field--full"><span>فعالیت *</span><input name="NextAction" value="@Model.NextAction" list="leadNextActions" maxlength="200" /><span asp-validation-for="NextAction" class="field-error"></span></label>
+            <datalist id="leadNextActions"><option value="تماس پیگیری"></option><option value="ارسال پیشنهاد قیمت"></option><option value="جلسه معرفی محصول"></option><option value="ارسال ایمیل معرفی"></option><option value="بازدید حضوری"></option></datalist>
+            <label class="field"><span>تاریخ *</span><input name="DueDate" value="@Model.DueDate" placeholder="۱۴۰۵/۰۷/۲۰" inputmode="numeric" data-jalali /><span asp-validation-for="DueDate" class="field-error"></span></label>
+            <label class="field"><span>ساعت</span><input name="DueTime" value="@Model.DueTime" placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></label>
+        </div>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت فعالیت</button></div>
+</form>

@@ -69,6 +69,7 @@ internal static partial class TestRunner
         await CheckDealerAssurance(channelManager, financeUser, expert);
         await CheckNotificationSettings(expert);
         await CheckAccountFile(serviceManager, expert, financeUser, dealerUser);
+        await CheckListWorkspaces(serviceManager, expert, financeUser);
 
         using var secondNode = new DemoWebFactory(keyRingPath, sharedStore);
         await CheckSharedKeyRing(secondNode, managerCookie);
@@ -158,14 +159,14 @@ internal static partial class TestRunner
 
         using var customersResponse = await client.GetAsync("/customers");
         var html = await customersResponse.Content.ReadAsStringAsync();
-        Check(customersResponse.StatusCode == HttpStatusCode.OK && html.Contains("4 رکورد", StringComparison.Ordinal),
+        Check(customersResponse.StatusCode == HttpStatusCode.OK && HtmlContains(html, "از <b>4</b> حساب"),
             "Company-scoped manager must see all four seeded customers.");
         Check(html.Contains("/lib/htmx/htmx.min.js", StringComparison.Ordinal),
             "Authenticated pages must load the local HTMX asset without a CDN dependency.");
         using var page = await client.GetAsync("/customers/table?q=سپهر&page=1&pageSize=10");
         var pageHtml = await page.Content.ReadAsStringAsync();
         CheckHtml(page.StatusCode == HttpStatusCode.OK && HtmlContains(pageHtml, "صنایع غذایی سپهر") &&
-              HtmlContains(pageHtml, "1 رکورد"),
+              HtmlContains(pageHtml, "از <b>1</b> حساب"),
             "Customer table must apply server-side search and return pagination metadata.", "customer-search", pageHtml);
     }
 
@@ -174,9 +175,9 @@ internal static partial class TestRunner
         using (var leads = await client.GetAsync("/leads"))
         {
             var html = await leads.Content.ReadAsStringAsync();
-            Check(leads.StatusCode == HttpStatusCode.OK && html.Contains("Lead Management", StringComparison.Ordinal) &&
-                  html.Contains("SLA گذشته", StringComparison.Ordinal),
-                "Lead workspace must render SLA and ownership metrics.");
+            Check(leads.StatusCode == HttpStatusCode.OK && HtmlContains(html, "مدیریت سرنخ‌های فروش") && HtmlContains(html, "نیازمند اقدام") &&
+                  HtmlContains(html, "مشکوک به تکرار") && html.Contains("data-bulk-item", StringComparison.Ordinal),
+                "Lead workspace must render the view tabs, counters and selectable rows.");
         }
 
         const string qualifiedLeadId = "30000000-0000-4000-8000-000000000001";
@@ -511,7 +512,7 @@ internal static partial class TestRunner
 
         using var customersResponse = await client.GetAsync("/customers");
         var html = await customersResponse.Content.ReadAsStringAsync();
-        Check(customersResponse.StatusCode == HttpStatusCode.OK && html.Contains("1 رکورد", StringComparison.Ordinal),
+        Check(customersResponse.StatusCode == HttpStatusCode.OK && HtmlContains(html, "از <b>1</b> حساب"),
             "Branch-scoped expert must only see the central-branch customer.");
 
         using (var details = await client.GetAsync("/customers/20000000-0000-4000-8000-000000000001"))
@@ -600,7 +601,7 @@ internal static partial class TestRunner
         using (var customers = await client.GetAsync("/customers"))
         {
             var html = await customers.Content.ReadAsStringAsync();
-            CheckHtml(customers.StatusCode == HttpStatusCode.OK && HtmlContains(html, "2 رکورد") &&
+            CheckHtml(customers.StatusCode == HttpStatusCode.OK && HtmlContains(html, "از <b>2</b> حساب") &&
                   HtmlContains(html, "بازرگانی دریا") &&
                   !HtmlContains(html, "صنایع غذایی سپهر"),
                 "C02 context must expose only C02 customer data.", "company-c02-customers", html);

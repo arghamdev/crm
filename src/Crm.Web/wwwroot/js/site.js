@@ -162,6 +162,63 @@
     });
   });
 
+  // ───────────── List workspaces: row selection, bulk action bar, row menus ─────────────
+  function syncBulk(scope) {
+    const items = [...scope.querySelectorAll("[data-bulk-item]")];
+    const checked = items.filter(item => item.checked);
+    const bar = scope.querySelector("[data-bulk-bar]");
+    if (bar) bar.hidden = checked.length === 0;
+    const count = scope.querySelector("[data-bulk-count]");
+    if (count) count.textContent = checked.length;
+    const all = scope.querySelector("[data-bulk-all]");
+    if (all) {
+      all.checked = items.length > 0 && checked.length === items.length;
+      all.indeterminate = checked.length > 0 && checked.length < items.length;
+    }
+    items.forEach(item => item.closest("tr, .list-card")?.classList.toggle("is-selected", item.checked));
+  }
+  document.addEventListener("change", event => {
+    const input = event.target;
+    const scope = input.closest?.("[data-bulk]");
+    if (!scope || !input.matches("[data-bulk-item], [data-bulk-all]")) return;
+    if (input.matches("[data-bulk-all]")) scope.querySelectorAll("[data-bulk-item]").forEach(item => { item.checked = input.checked; });
+    syncBulk(scope);
+  });
+  document.addEventListener("click", event => {
+    const clear = event.target.closest("[data-bulk-clear]");
+    const scope = clear?.closest("[data-bulk]");
+    if (scope) {
+      scope.querySelectorAll("[data-bulk-item], [data-bulk-all]").forEach(item => { item.checked = false; });
+      syncBulk(scope);
+    }
+    // One row menu at a time; any click outside (or on a menu item) closes it.
+    document.querySelectorAll("details.row-menu[open]").forEach(menu => {
+      if (!menu.contains(event.target) || event.target.closest(".row-menu__list a, .row-menu__list button")) menu.open = false;
+    });
+  });
+  // Row menus are placed against the viewport, so a horizontally scrolling table does not clip them;
+  // they follow their row when the page or the table scrolls.
+  function placeMenu(menu) {
+    const list = menu.querySelector(".row-menu__list");
+    const anchor = menu.querySelector("summary")?.getBoundingClientRect();
+    if (!list || !anchor) return;
+    const left = Math.min(Math.max(8, anchor.left), window.innerWidth - list.offsetWidth - 8);
+    const below = anchor.bottom + 4;
+    list.style.left = left + "px";
+    list.style.top = (below + list.offsetHeight > window.innerHeight - 8 ? Math.max(8, anchor.top - list.offsetHeight - 4) : below) + "px";
+  }
+  document.addEventListener("toggle", event => {
+    if (event.target.matches?.("details.row-menu") && event.target.open) placeMenu(event.target);
+  }, true);
+  ["scroll", "resize"].forEach(name => window.addEventListener(name, () => document.querySelectorAll("details.row-menu[open]").forEach(placeMenu), true));
+  // Activity drawers opened from a list (outside the account page) close and report like on the account page.
+  if (!document.querySelector("[data-account-id]")) {
+    document.body.addEventListener("accountChanged", event => { closeDrawer(); showToast(event.detail?.message || "ثبت شد."); });
+    document.body.addEventListener("accountError", event => showToast(event.detail?.message || "انجام نشد.", true));
+  }
+  ["leadsRefreshed", "customersRefreshed"].forEach(name =>
+    document.body.addEventListener(name, event => showToast(event.detail?.message, true)));
+
   // ───────────── Account file (پرونده حساب): tabs, lazy sections, in-place refresh ─────────────
   const accountRoot = document.querySelector("[data-account-id]");
   // Non-bubbling: a nested panel's refresh must not also reload the panel that contains it.

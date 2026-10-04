@@ -660,6 +660,15 @@ td code { color: var(--ink-2); font: 9px ui-monospace, monospace; direction: ltr
 .account-head__identity>div{min-width:0}.topbar__left .version-pill{text-decoration:none}
 @media (max-width:640px){.global-search kbd{display:none}.unified-notice{font-size:12px}}
 
+/* List kit (v1.9): tabs, tiles, sort headers and layout toggles are buttons in the preview, links in the MVC app. */
+button.list-tabs__tab, button.list-tile, button.sort-link, button.list-layout__btn, button.pager-btn { font: inherit; cursor: pointer; }
+button.list-tabs__tab { border: 0; border-bottom: 2px solid transparent; background: none; }
+button.list-tabs__tab.is-active { border-bottom-color: var(--primary-600); }
+button.list-tile { width: 100%; text-align: right; }
+button.sort-link { padding: 0; border: 0; background: none; font-weight: inherit; }
+button.list-layout__btn { border: 0; background: none; }
+button.list-layout__btn.is-active { background: var(--surface); }
+
 /* ───────────── Account file (پرونده یکپارچه حساب) ───────────── */
 .account-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 20px 22px; }
 .account-head__identity { display: flex; gap: 16px; min-width: 0; flex: 1 1 520px; }
@@ -999,11 +1008,221 @@ a.rec__title:hover { color: var(--primary-700); }
   .account-card__contacts { flex-basis: auto; padding: 14px 0 0; border-inline-start: 0; border-top: 1px solid var(--line); }
 }
 
+/* ───────────── List workspace (فهرست‌ها: سرنخ، مشتری و سایر صفحات) ───────────── */
+.list-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+.list-head__title { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.list-head__icon { display: grid; flex: 0 0 auto; place-items: center; width: 48px; height: 48px; color: var(--primary-700); border-radius: 14px; background: color-mix(in srgb, var(--primary-600) 12%, var(--surface)); }
+.list-head__icon svg { width: 23px; height: 23px; }
+.list-head h1 { margin: 0; font-size: 22px; line-height: 1.5; letter-spacing: -.4px; }
+.list-head p { margin: 2px 0 0; color: var(--ink-3); font-size: 13px; }
+.list-head__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.list-head__actions .button { min-height: 40px; font-size: 13.5px; }
+.button--outline { color: var(--primary-700); border-color: color-mix(in srgb, var(--primary-600) 45%, var(--line)); background: var(--surface); }
+.button--outline:hover { color: var(--primary-800); border-color: var(--primary-600); background: color-mix(in srgb, var(--primary-600) 7%, var(--surface)); }
+
+.list-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.list-panel { min-width: 0; overflow: hidden; }
+.list-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.list-tabs__tab { display: inline-flex; align-items: center; gap: 8px; margin-bottom: -1px; padding: 10px 14px; color: var(--ink-3); border-bottom: 2px solid transparent; font-size: 13.5px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.list-tabs__tab b { min-width: 24px; padding: 1px 7px; color: var(--ink-2); border-radius: 20px; background: var(--surface-3); font-size: 11.5px; text-align: center; }
+.list-tabs__tab:hover { color: var(--ink); }
+.list-tabs__tab.is-active { color: var(--primary-700); border-bottom-color: var(--primary-600); }
+.list-tabs__tab.is-active b { color: var(--primary-700); background: color-mix(in srgb, var(--primary-600) 14%, var(--surface)); }
+
+.list-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.list-tile { --tone: var(--green-600); display: flex; align-items: center; gap: 14px; padding: 16px 18px; color: inherit; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); text-decoration: none; transition: .18s ease; }
+.list-tile:hover { border-color: color-mix(in srgb, var(--tone) 45%, var(--line)); transform: translateY(-1px); }
+.list-tile.is-active { border-color: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 15%, transparent); }
+.list-tile--blue { --tone: #2563eb; }
+.list-tile--amber { --tone: var(--amber-600); }
+.list-tile--red { --tone: var(--red-600); }
+.list-tile__icon { display: grid; flex: 0 0 auto; place-items: center; width: 48px; height: 48px; color: var(--tone); border-radius: 14px; background: color-mix(in srgb, var(--tone) 13%, var(--surface)); }
+.list-tile__icon svg { width: 23px; height: 23px; }
+.list-tile__body { display: flex; flex-direction: column; min-width: 0; }
+.list-tile__body small { color: var(--ink-2); font-size: 13px; font-weight: 700; }
+.list-tile__body strong { color: var(--ink); font-size: 25px; line-height: 1.3; }
+.list-tile__body em { overflow: hidden; color: var(--ink-3); font-size: 11.5px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+
+.list-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.list-search { display: flex; flex: 1 1 240px; align-items: center; max-width: 340px; min-height: 40px; padding: 0 12px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.list-search:focus-within, .list-filter:focus-within { border-color: var(--primary-600); box-shadow: 0 0 0 3px rgba(13, 148, 136, .1); }
+.list-search svg { flex: 0 0 auto; width: 17px; height: 17px; }
+.list-search input { flex: 1; min-width: 0; padding: 0 8px; color: var(--ink); border: 0; outline: 0; background: transparent; font: inherit; font-size: 13px; }
+.list-filter { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px 0 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.list-filter > span { color: var(--ink-3); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.list-filter > span::after { content: ":"; }
+.list-filter select { max-width: 170px; min-height: 36px; padding: 0 4px; color: var(--ink); border: 0; border-radius: 8px; outline: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.list-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 12px; color: var(--ink-2); border: 1px dashed var(--line-strong); border-radius: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.list-chip input { width: 15px; height: 15px; accent-color: var(--primary-600); }
+.list-layout { display: inline-flex; margin-inline-start: auto; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.list-layout__btn { display: grid; place-items: center; width: 34px; height: 32px; color: var(--ink-3); border-radius: 8px; }
+.list-layout__btn svg { width: 17px; height: 17px; }
+.list-layout__btn.is-active { color: var(--primary-700); background: var(--surface); box-shadow: var(--shadow-sm); }
+
+.bulk-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--primary-600) 7%, var(--surface)); }
+.bulk-bar[hidden] { display: none; }
+.bulk-bar__count { color: var(--primary-800); font-size: 13px; font-weight: 750; }
+.bulk-bar__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bulk-bar .link-button { margin-inline-start: 6px; color: var(--ink-2); font-size: 12.5px; }
+.bulk-bar .link-button svg { width: 14px; height: 14px; }
+
+.list-table th { height: 46px; padding: 10px 14px; color: var(--ink-2); background: var(--surface-2); font-size: 12px; font-weight: 750; }
+.list-table td { height: 68px; padding: 10px 14px; color: var(--ink-2); font-size: 13px; }
+.list-table .entity-cell strong { font-size: 13.5px; }
+.list-table .entity-cell > span:last-child { min-width: 150px; max-width: 260px; white-space: normal; }
+.list-table .entity-cell small, .list-table .cell-sub { display: block; color: var(--ink-3); font-size: 11.5px; }
+.list-table .entity-avatar { width: 38px; height: 38px; border-radius: 50%; font-size: 14px; }
+.list-table__check { width: 44px; padding-inline-end: 0 !important; }
+.list-table input[type="checkbox"], .list-card input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--primary-600); cursor: pointer; }
+.list-table tbody tr.is-selected { background: color-mix(in srgb, var(--primary-600) 6%, var(--surface)); }
+.list-table__menu { width: 52px; text-align: center; }
+.sort-link { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: none; }
+.sort-link svg { width: 13px; height: 13px; opacity: .45; }
+.sort-link.is-active { color: var(--primary-700); }
+.sort-link.is-active svg { opacity: 1; }
+.cell-title { display: block; color: var(--ink); font-weight: 700; }
+.cell-icon { display: inline-flex; align-items: center; gap: 7px; }
+.cell-icon svg { flex: 0 0 auto; width: 16px; height: 16px; color: var(--ink-3); }
+.cell-flag { display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--red-700); font-size: 11px; font-weight: 700; }
+.cell-flag svg { width: 12px; height: 12px; }
+
+.pill { --tone: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; color: var(--tone); border-radius: 20px; background: color-mix(in srgb, var(--tone) 12%, var(--surface)); font-size: 12px; font-weight: 750; white-space: nowrap; }
+.pill svg { width: 14px; height: 14px; }
+.pill--sm { padding: 2px 8px; font-size: 11px; }
+.pill--success { --tone: var(--green-700); }
+.pill--info { --tone: var(--blue-700); }
+.pill--warning { --tone: var(--amber-700); }
+.pill--danger { --tone: var(--red-700); }
+.pill--violet { --tone: var(--violet-700); }
+.pill--primary { --tone: var(--primary-700); }
+
+.score-meter { --value: 0; display: inline-flex; flex-direction: column; gap: 6px; min-width: 84px; color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.score-meter b { color: var(--ink); font-size: 14px; }
+.score-meter--mid { --bar: var(--amber-600); }
+.score-meter--low { --bar: var(--red-600); }
+.score-meter::after { content: ""; height: 4px; border-radius: 4px; background: linear-gradient(to left, var(--bar, var(--primary-600)) calc(var(--value) * 1%), var(--surface-3) 0); }
+
+.due { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.due svg { width: 15px; height: 15px; }
+.due--success { color: var(--green-700); }
+.due--info { color: var(--blue-700); }
+.due--danger { color: var(--red-700); }
+.due--muted { color: var(--ink-3); font-weight: 500; }
+
+.row-menu { position: relative; display: inline-block; }
+.row-menu summary { display: grid; place-items: center; width: 34px; height: 34px; color: var(--ink-3); border-radius: 9px; cursor: pointer; list-style: none; }
+.row-menu summary::-webkit-details-marker { display: none; }
+.row-menu summary:hover, .row-menu[open] summary { color: var(--ink); background: var(--surface-3); }
+.row-menu summary svg { width: 18px; height: 18px; transform: rotate(90deg); }
+.row-menu__list { position: fixed; z-index: 60; display: grid; min-width: 190px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-lg); }
+.row-menu__list a, .row-menu__list button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; color: var(--ink-2); border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13px; font-weight: 650; text-align: right; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.row-menu__list a:hover, .row-menu__list button:hover { color: var(--ink); background: var(--surface-2); }
+.row-menu__list svg { width: 16px; height: 16px; color: var(--ink-3); }
+
+.list-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; padding: 16px; }
+.list-card { display: grid; align-content: start; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); transition: border-color .15s; }
+.list-card:hover { border-color: var(--line-strong); }
+.list-card.is-selected { border-color: var(--primary-600); box-shadow: 0 0 0 3px rgba(13, 148, 136, .1); }
+.list-card header { display: flex; align-items: center; gap: 10px; }
+.list-card header .entity-cell { flex: 1; min-width: 0; }
+.list-card .entity-cell strong { font-size: 13.5px; }
+.list-card .entity-cell small { font-size: 11.5px; }
+.list-card dl { display: grid; gap: 8px; margin: 0; }
+.list-card dl div { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; }
+.list-card dt { color: var(--ink-3); white-space: nowrap; }
+.list-card dd { display: inline-flex; align-items: center; gap: 6px; min-width: 0; margin: 0; color: var(--ink); font-weight: 650; text-align: left; }
+.list-card dd svg { flex: 0 0 auto; width: 15px; height: 15px; color: var(--ink-3); }
+.list-card footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.list-card footer .link-button { margin-inline-start: auto; }
+.list-cards > .list-empty { grid-column: 1 / -1; }
+
+.list-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 40px 16px; color: var(--ink-3); text-align: center; white-space: normal; }
+.list-empty > span { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 6px; border-radius: 50%; background: var(--surface-3); }
+.list-empty strong { color: var(--ink); font-size: 14px; }
+.list-empty p { margin: 0; font-size: 12.5px; }
+
+.list-pager { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; color: var(--ink-3); border-top: 1px solid var(--line); font-size: 12.5px; }
+.list-pager__summary b { color: var(--ink); }
+.list-pager__pages { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pager-btn { display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 6px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 13px; font-weight: 700; text-decoration: none; }
+a.pager-btn:hover { color: var(--primary-700); border-color: var(--primary-600); }
+.pager-btn.is-active { color: #fff; border-color: var(--primary-700); background: var(--primary-700); }
+.pager-btn.is-disabled { opacity: .4; }
+.pager-btn svg { width: 15px; height: 15px; }
+svg.flip { transform: scaleX(-1); }
+.pager-gap { padding: 0 4px; }
+.list-pager__size { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.show-sm { display: none !important; }
+.list-pager__size select { width: auto; min-height: 34px; padding: 0 8px; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font: inherit; font-size: 13px; }
+
+.bulk-note { display: flex; gap: 10px; margin: 0 0 14px; padding: 10px 12px; color: var(--ink-2); border-radius: 10px; background: var(--surface-2); font-size: 12.5px; line-height: 1.8; }
+.bulk-note svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; color: var(--primary-700); }
+.bulk-result__summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.bulk-result__list { display: grid; gap: 6px; max-height: 50vh; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.bulk-result__list li { padding: 8px 10px; color: var(--red-700); border-radius: 8px; background: color-mix(in srgb, var(--red-600) 7%, var(--surface)); font-size: 12.5px; }
+
+/* The same visual language for the remaining lists (quotes, orders, service, dealers, users …). */
+.page-header h1 { font-size: 22px; letter-spacing: -.4px; }
+.page-header p { font-size: 13px; }
+.mini-stats > div, .quote-stats > div { gap: 14px; min-height: 84px; padding: 16px 18px; box-shadow: var(--shadow-sm); }
+.mini-stats .mini-icon, .quote-stats .mini-icon { width: 48px; height: 48px; border-radius: 14px; }
+.mini-stats .mini-icon svg, .quote-stats .mini-icon svg { width: 23px; height: 23px; }
+.mini-stats p small, .quote-stats p small { color: var(--ink-2); font-size: 13px; font-weight: 700; }
+.mini-stats p strong, .quote-stats p strong { font-size: 23px; line-height: 1.35; }
+.mini-stats em { font-size: 11.5px; }
+.toolbar { padding: 14px 16px; }
+.table-search, .search-inline { min-height: 40px; border-radius: 10px; }
+.table-search input, .search-inline input { font-size: 13px; }
+.filter-group select, .panel select, .toolbar select { min-height: 40px; padding: 5px 10px; border-radius: 10px; font-size: 13px; }
+th { height: 46px; color: var(--ink-2); font-size: 12px; font-weight: 750; }
+td { height: 64px; font-size: 13px; }
+.entity-cell strong { font-size: 13.5px; }
+.entity-cell small, .cell-sub, .table-subline { font-size: 11.5px; }
+td code { font-size: 12px; }
+.entity-avatar { width: 38px; height: 38px; font-size: 13px; }
+.badge { gap: 6px; padding: 4px 10px; font-size: 11.5px; }
+.badge > span { width: 6px; height: 6px; }
+.tag { padding: 3px 9px; font-size: 11.5px; }
+.score { width: 36px; height: 36px; font-size: 12px; }
+.table-footer { min-height: 56px; padding: 12px 16px; font-size: 12.5px; }
+.pagination { align-items: center; gap: 6px; }
+.pagination button, .pagination a { display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 12.5px; text-decoration: none; }
+.empty-state p { font-size: 12.5px; }
+
+@media (max-width: 1100px) {
+  .list-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .list-head { align-items: stretch; flex-direction: column; }
+  .list-head h1 { font-size: 19px; }
+  .list-head__actions .button { flex: 1 1 auto; }
+  .list-tiles { gap: 10px; }
+  .list-tile { gap: 10px; padding: 12px; }
+  .list-tile__icon { width: 40px; height: 40px; border-radius: 12px; }
+  .list-tile__body strong { font-size: 20px; }
+  .list-tile__body em { display: none; }
+  .list-filters { padding: 12px; }
+  .list-search { flex-basis: 100%; max-width: none; }
+  .list-filter { flex: 1 1 calc(50% - 8px); min-width: 0; }
+  .list-filter select { flex: 1; max-width: none; min-width: 0; }
+  .list-layout { margin-inline-start: 0; }
+  .list-cards { grid-template-columns: 1fr; padding: 12px; }
+  .list-pager { flex-direction: column; align-items: stretch; }
+  .list-pager__pages, .list-pager__size { justify-content: center; }
+  .list-table .hide-sm { display: none; }
+  .list-table .show-sm { display: inline-flex !important; width: fit-content; margin-top: 4px; }
+  .list-table td { white-space: normal; }
+  .list-table th, .list-table td { padding-inline: 8px; }
+  .list-table .entity-cell > span:last-child { min-width: 0; }
+  .list-table .entity-avatar { display: none; }
+  .list-table .due { white-space: normal; }
+}
+
 </style>
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
-    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3.5 6.5 12 13l8.5-6.5"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3.5 6.5 12 13l8.5-6.5"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M4 5h16v16H4zM4 10h16M8 3v4M16 3v4M8 14h3M8 17h6"/></symbol><symbol id="i-task" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol><symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4zM16 4v4h4M8 12h8M8 16h5"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol><symbol id="i-unlink" viewBox="0 0 24 24"><path d="M18.8 13.2l1.7-1.7a5 5 0 0 0-7-7l-1.7 1.7M5.2 10.8l-1.7 1.7a5 5 0 0 0 7 7l1.7-1.7M8 2v3M2 8h3M16 22v-3M22 16h-3"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol><symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m6 17 5-5-5-5M13 17l5-5-5-5"/></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9 4.5 4h15L21 9M3 9h18M3 9v1.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9M5 13v7h14v-7M10 20v-4h4v4"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v3a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1ZM17 9a4 4 0 0 1 0 6M7 15l1 5h3"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0ZM12 9v4M12 17v.5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.5M3.5 12h.5M3.5 18h.5"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
     <symbol id="i-lead" viewBox="0 0 24 24"><path d="M12 2 3 7l9 5 9-5-9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
@@ -1079,7 +1298,7 @@ a.rec__title:hover { color: var(--primary-700); }
         </form>
         <div id="startupMessage" role="status">در حال آماده‌سازی… اگر دکمه ورود فعال نشد، فایل را دانلود و در مرورگر باز کنید.</div><noscript>اجرای JavaScript برای پیش‌نمایش لازم است. فایل را دانلود و با Chrome یا Edge باز کنید.</noscript><div class="login-note"><span class="status-dot status-dot--success"></span> محیط نمایشی آماده است؛ اطلاعات ورود از قبل تکمیل شده‌اند.</div>
       </div>
-      <p class="login-footer">ارقام CRM · نسخه v1.8.2 · 1405/07/12 · پیش‌نمایش آفلاین</p>
+      <p class="login-footer">ارقام CRM · نسخه v1.9.0 · 1405/07/12 · پیش‌نمایش آفلاین</p>
     </div>
   </section>
 
@@ -1088,7 +1307,7 @@ a.rec__title:hover { color: var(--primary-700); }
       <div class="sidebar__header">
         <div class="brand brand--light">
           <span class="brand__mark">آ</span>
-          <span><strong>ارقام CRM</strong><small>نسخه <bdi dir="ltr">1.8.2</bdi> · پیش‌نمایش</small></span>
+          <span><strong>ارقام CRM</strong><small>نسخه <bdi dir="ltr">1.9.0</bdi> · پیش‌نمایش</small></span>
         </div>
         <button class="icon-button icon-button--sidebar sidebar-close" type="button" id="sidebarClose" aria-label="بستن منو"><svg><use href="#i-close"/></svg></button>
       </div>
@@ -1130,7 +1349,7 @@ a.rec__title:hover { color: var(--primary-700); }
             <kbd>⌘ K</kbd>
           </label>
         </div>
-        <div class="topbar__left"><a class="version-pill" href="#/version" data-route="version" title="نسخه و تغییرات"><span class="version-pill__dot" aria-hidden="true"></span><span class="version-pill__label">نسخه</span><bdi dir="ltr">v1.8.2</bdi></a>
+        <div class="topbar__left"><a class="version-pill" href="#/version" data-route="version" title="نسخه و تغییرات"><span class="version-pill__dot" aria-hidden="true"></span><span class="version-pill__label">نسخه</span><bdi dir="ltr">v1.9.0</bdi></a>
           <label class="company-select">
             <svg><use href="#i-building"/></svg>
             <select id="companySelect" aria-label="شرکت جاری">
@@ -1660,7 +1879,7 @@ document.addEventListener("keydown", (event)=>{ if((event.metaKey||event.ctrlKey
 
 </script>
 <script>
-window.CRM_VERSION="1.8.2";window.CRM_RELEASES=[{"version":"1.8.2","date":"1405/07/12","title":"کارت اطلاعات حساب","changes":["کارت «اطلاعات حساب» با چیدمان جدید: نشان، نام، وضعیت، کد حساب، صنعت و منطقه در یک سو؛ تلفن، ایمیل، وب‌سایت و نشانی با آیکون در سوی دیگر.","این کارت بالای پرونده حساب و بالای فرم ویرایش مشتری نمایش داده می‌شود و در موبایل زیر هم قرار می‌گیرد.","تلفن، ایمیل و وب‌سایت قابل کلیک‌اند؛ مقادیر پوشانده‌شده (بدون مجوز) لینک نمی‌شوند.","همین کارت در پیش‌نمایش آفلاین هم اعمال شد.","عنوان کشوی فرم ویرایش و تعریف مشتری درست نمایش داده می‌شود و نشانی تکراری («تهران، تهران») حذف شد."]},{"version":"1.8.1","date":"1405/07/12","title":"به‌روزرسانی پیش‌نمایش آفلاین","changes":["پیش‌نمایش آفلاین (index.html و preview/crm-unified.html) با نسخه‌های ۱٫۱ تا ۱٫۸ هم‌سطح شد.","پرونده یکپارچه حساب در پیش‌نمایش: شش عملیات اصلی، پنل فعالیت با ثبت نتیجه و اقدام بعدی، رکوردهای مرتبط با اتصال و قطع ارتباط، و تاریخچه تغییرات.","فرم مشتری حقیقی/حقوقی با اعتبارسنجی کد ملی و شناسهٔ ملی، و صفحه‌های خدمات و SLA، کمیسیون و رتبه‌بندی، اعلان‌ها و «نسخه و تغییرات».","نسخه و فهرست تغییرات پیش‌نمایش از همان منبع برنامهٔ اصلی خوانده می‌شود و آزمون خودکار دارد."]},{"version":"1.8.0","date":"1405/07/12","title":"نسخه‌گذاری سامانه","changes":["شمارهٔ نسخه در نوار کناری، نوار بالا و صفحهٔ ورود نمایش داده می‌شود.","صفحهٔ «تغییرات نسخه» (/system/version) فهرست همهٔ نسخه‌ها و تغییرات هر کدام را نشان می‌دهد.","آزمون خودکار بررسی می‌کند که نسخهٔ برنامه و بالاترین نسخهٔ این فهرست یکی باشند.","رفع اسکرول افقی نوار بالا در موبایل."]},{"version":"1.7.0","date":"1405/07/12","title":"پرونده یکپارچه حساب","changes":["صفحهٔ واحد هر حساب با سربرگ، شاخص‌های دارای تعریف و شش عملیات اصلی (فرصت، تماس، جلسه، وظیفه، یادداشت، سرنخ).","پنل فعالیت با فیلتر، نمایش معوق‌ها، ثبت نتیجه جدا از برنامه‌ریزی و اقدام بعدی؛ یادآوری از طریق صف اعلان.","۲۷ بخش رکوردهای مرتبط با ایجاد، اتصال موجود و قطع ارتباط بدون حذف؛ پرداخت‌ها با تأیید دومرحله‌ای و جمع به تفکیک ارز.","جلوگیری از ثبت تکراری، مجوزهای جداگانه برای هر حوزه و تاریخچهٔ کامل تغییرات."]},{"version":"1.6.1","date":"1405/07/11","title":"اصلاحات ظاهری و مستندات","changes":["چک‌باکس‌ها در فرم‌ها در یک ردیف نمایش داده می‌شوند.","گزارش تحلیل و مستند فاز ۷ به‌روز شد."]},{"version":"1.6.0","date":"1405/07/11","title":"اعلان ایمیل و پیامک","changes":["صف اعلان با تلاش مجدد، جلوگیری از ارسال تکراری و تنظیمات اعلان برای هر کاربر."]},{"version":"1.5.0","date":"1405/07/11","title":"تکمیل فاز ۷ نمایندگان","changes":["تضمین‌ها و آموزش نمایندگان، تقسیم اعتبار فروش و ارسال کمیسیون تأییدشده به حسابداری."]},{"version":"1.4.0","date":"1405/07/11","title":"شکایت پرتال و شاخص‌های خدمات","changes":["شکایت ثبت‌شده در پرتال نماینده به پروندهٔ خدمات تبدیل می‌شود؛ شاخص‌های خدمات به گزارش‌ها اضافه شد."]},{"version":"1.3.0","date":"1405/07/11","title":"دوره‌های شمسی","changes":["دوره‌های کمیسیون و رتبه‌بندی بر اساس ماه‌های شمسی."]},{"version":"1.2.0","date":"1405/07/11","title":"فرم تعریف مشتری","changes":["فرم کامل مشتری حقیقی و حقوقی با افراد رابط، نشان (لوگو) و اعتبارسنجی شناسه‌های ایرانی."]},{"version":"1.1.0","date":"1405/07/11","title":"کمیسیون و رتبه‌بندی نمایندگان","changes":["محاسبه و تأیید کمیسیون، ارزیابی و رتبه‌بندی نمایندگان."]},{"version":"1.0.0","date":"1405/07/11","title":"نسخهٔ پایه","changes":["اولویت‌های ۱ تا ۱۰ نقشهٔ راه: هویت و دسترسی، ساختار چندشرکتی، مشتری ۳۶۰، سرنخ و فرصت، پیش‌فاکتور، سفارش، نمایندگان، گزارش‌ها، پرتال و موبایل، و خدمات و SLA."]}];
+window.CRM_VERSION="1.9.0";window.CRM_RELEASES=[{"version":"1.9.0","date":"1405/07/12","title":"طراحی جدید فهرست‌ها (سرنخ، مشتری و سایر صفحات)","changes":["فهرست سرنخ‌ها با چیدمان جدید: سربرگ با «سرنخ جدید» و «ورود اطلاعات»، زبانه‌های «همه سرنخ‌ها / سرنخ‌های من / بدون اقدام بعدی / معوق» با شمارنده.","چهار کاشی رنگی «سرنخ»، «نیازمند اقدام»، «معوق» و «مشکوک به تکرار»؛ کلیک روی هر کاشی فهرست را فیلتر می‌کند.","نوار فیلتر با برچسب (شعبه، کارشناس فروش، منبع، وضعیت، نمایش بسته‌ها)، جست‌وجوی زنده و تغییر نما بین فهرست و کارت.","ستون‌های جدید: منبع با آیکون، شعبه/کارشناس، وضعیت رنگی با آیکون، امتیاز «x از 100» با نوار، اقدام بعدی و سررسید نسبی («امروز، ۱۴:۳۰» سبز، «فردا» آبی، «۲ روز تأخیر» قرمز)؛ مرتب‌سازی بر اساس نام، امتیاز و سررسید.","انتخاب چند ردیف و نوار عملیات گروهی: «ارجاع» و «افزودن فعالیت» (اقدام بعدی) برای همه موارد انتخاب‌شده؛ هر مورد جداگانه کنترل و نتیجه گزارش می‌شود.","منوی «⋮» در هر ردیف (جزئیات، ارجاع، تغییر وضعیت، تبدیل به فرصت) و صفحه‌بندی شماره‌دار با «نمایش ۱ تا ۱۰ از … مورد» و انتخاب «مورد در صفحه».","«ورود اطلاعات»: بارگذاری فایل CSV سرنخ‌ها (فایل نمونه قابل دریافت) با همان قواعد ثبت دستی؛ ردیف‌های ناموفق با شماره ردیف گزارش می‌شوند.","فهرست مشتریان و حساب‌ها به همین سبک: زبانه‌های «همه / حساب‌های من / بدون پیگیری / غیرفعال»، کاشی‌های «حساب / پیگیری امروز / نیازمند تکمیل / مشکوک به تکرار»، فیلتر شعبه، نوع رابطه، شخصیت، بخش، مالک و وضعیت، کیفیت داده و پیگیری بعدی هر حساب، و «ثبت وظیفه پیگیری» گروهی.","نشانی صفحه همراه نما، فیلتر، مرتب‌سازی و صفحه به‌روز می‌شود تا قابل اشتراک و بازگشت باشد؛ همه فیلترها و شمارنده‌ها در پایگاه‌داده و در محدوده دسترسی کاربر اجرا می‌شوند.","سایر فهرست‌ها (پیشنهاد قیمت، سفارش، خدمات، نمایندگان، کاربران و …) با همان قلم، کاشی‌ها، جدول و صفحه‌بندی هماهنگ شدند؛ نسخه موبایل فهرست‌ها ستون‌های کم‌اهمیت را پنهان می‌کند.","پیش‌نمایش آفلاین (preview) هم فهرست جدید سرنخ‌ها و مشتریان را دارد."]},{"version":"1.8.2","date":"1405/07/12","title":"کارت اطلاعات حساب","changes":["کارت «اطلاعات حساب» با چیدمان جدید: نشان، نام، وضعیت، کد حساب، صنعت و منطقه در یک سو؛ تلفن، ایمیل، وب‌سایت و نشانی با آیکون در سوی دیگر.","این کارت بالای پرونده حساب و بالای فرم ویرایش مشتری نمایش داده می‌شود و در موبایل زیر هم قرار می‌گیرد.","تلفن، ایمیل و وب‌سایت قابل کلیک‌اند؛ مقادیر پوشانده‌شده (بدون مجوز) لینک نمی‌شوند.","همین کارت در پیش‌نمایش آفلاین هم اعمال شد.","عنوان کشوی فرم ویرایش و تعریف مشتری درست نمایش داده می‌شود و نشانی تکراری («تهران، تهران») حذف شد."]},{"version":"1.8.1","date":"1405/07/12","title":"به‌روزرسانی پیش‌نمایش آفلاین","changes":["پیش‌نمایش آفلاین (index.html و preview/crm-unified.html) با نسخه‌های ۱٫۱ تا ۱٫۸ هم‌سطح شد.","پرونده یکپارچه حساب در پیش‌نمایش: شش عملیات اصلی، پنل فعالیت با ثبت نتیجه و اقدام بعدی، رکوردهای مرتبط با اتصال و قطع ارتباط، و تاریخچه تغییرات.","فرم مشتری حقیقی/حقوقی با اعتبارسنجی کد ملی و شناسهٔ ملی، و صفحه‌های خدمات و SLA، کمیسیون و رتبه‌بندی، اعلان‌ها و «نسخه و تغییرات».","نسخه و فهرست تغییرات پیش‌نمایش از همان منبع برنامهٔ اصلی خوانده می‌شود و آزمون خودکار دارد."]},{"version":"1.8.0","date":"1405/07/12","title":"نسخه‌گذاری سامانه","changes":["شمارهٔ نسخه در نوار کناری، نوار بالا و صفحهٔ ورود نمایش داده می‌شود.","صفحهٔ «تغییرات نسخه» (/system/version) فهرست همهٔ نسخه‌ها و تغییرات هر کدام را نشان می‌دهد.","آزمون خودکار بررسی می‌کند که نسخهٔ برنامه و بالاترین نسخهٔ این فهرست یکی باشند.","رفع اسکرول افقی نوار بالا در موبایل."]},{"version":"1.7.0","date":"1405/07/12","title":"پرونده یکپارچه حساب","changes":["صفحهٔ واحد هر حساب با سربرگ، شاخص‌های دارای تعریف و شش عملیات اصلی (فرصت، تماس، جلسه، وظیفه، یادداشت، سرنخ).","پنل فعالیت با فیلتر، نمایش معوق‌ها، ثبت نتیجه جدا از برنامه‌ریزی و اقدام بعدی؛ یادآوری از طریق صف اعلان.","۲۷ بخش رکوردهای مرتبط با ایجاد، اتصال موجود و قطع ارتباط بدون حذف؛ پرداخت‌ها با تأیید دومرحله‌ای و جمع به تفکیک ارز.","جلوگیری از ثبت تکراری، مجوزهای جداگانه برای هر حوزه و تاریخچهٔ کامل تغییرات."]},{"version":"1.6.1","date":"1405/07/11","title":"اصلاحات ظاهری و مستندات","changes":["چک‌باکس‌ها در فرم‌ها در یک ردیف نمایش داده می‌شوند.","گزارش تحلیل و مستند فاز ۷ به‌روز شد."]},{"version":"1.6.0","date":"1405/07/11","title":"اعلان ایمیل و پیامک","changes":["صف اعلان با تلاش مجدد، جلوگیری از ارسال تکراری و تنظیمات اعلان برای هر کاربر."]},{"version":"1.5.0","date":"1405/07/11","title":"تکمیل فاز ۷ نمایندگان","changes":["تضمین‌ها و آموزش نمایندگان، تقسیم اعتبار فروش و ارسال کمیسیون تأییدشده به حسابداری."]},{"version":"1.4.0","date":"1405/07/11","title":"شکایت پرتال و شاخص‌های خدمات","changes":["شکایت ثبت‌شده در پرتال نماینده به پروندهٔ خدمات تبدیل می‌شود؛ شاخص‌های خدمات به گزارش‌ها اضافه شد."]},{"version":"1.3.0","date":"1405/07/11","title":"دوره‌های شمسی","changes":["دوره‌های کمیسیون و رتبه‌بندی بر اساس ماه‌های شمسی."]},{"version":"1.2.0","date":"1405/07/11","title":"فرم تعریف مشتری","changes":["فرم کامل مشتری حقیقی و حقوقی با افراد رابط، نشان (لوگو) و اعتبارسنجی شناسه‌های ایرانی."]},{"version":"1.1.0","date":"1405/07/11","title":"کمیسیون و رتبه‌بندی نمایندگان","changes":["محاسبه و تأیید کمیسیون، ارزیابی و رتبه‌بندی نمایندگان."]},{"version":"1.0.0","date":"1405/07/11","title":"نسخهٔ پایه","changes":["اولویت‌های ۱ تا ۱۰ نقشهٔ راه: هویت و دسترسی، ساختار چندشرکتی، مشتری ۳۶۰، سرنخ و فرصت، پیش‌فاکتور، سفارش، نمایندگان، گزارش‌ها، پرتال و موبایل، و خدمات و SLA."]}];
 /* Priority 10 visual simulation. Real authorization and persistence live in ASP.NET Core. */
 function createSelfServicePreview(ctx) {
   const {store, escapeHtml:e, header, table, button:b, showForm, amount, idFor, today, save, render, toast, download, closeDrawer} = ctx;
@@ -2150,6 +2369,270 @@ function createAccountFilePreview(ctx) {
   };
 }
 
+/* Offline preview of the v1.9 list workspace (سرنخ‌ها و مشتریان): view tabs, counter tiles, labeled filters,
+   row selection with a bulk bar, row menus, list/card layouts and numbered paging. Same markup and CSS as the MVC lists. */
+function createListPreview(ctx) {
+  'use strict';
+  const {store, escapeHtml: e, save, toast, closeDrawer} = ctx;
+  const render = () => ctx.render();
+  const names = {'sales.manager': 'مهدی نادری', 'sales.expert': 'سارا احمدی', 'finance.manager': 'لیلا کریمی', 'channel.manager': 'امیرحسین مرادی', 'reporting.ceo': 'مدیرعامل'};
+  const me = () => names[ctx.account()] || '';
+  const canAssign = () => ['sales.manager'].includes(ctx.account());
+  const canWrite = () => ['sales.manager', 'sales.expert'].includes(ctx.account());
+  const fa = n => new Intl.NumberFormat('fa-IR').format(n);
+  const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+  const jDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {year: 'numeric', month: '2-digit', day: '2-digit'});
+  const jTime = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit', hour12: false});
+  const closed = ['تبدیل‌شده', 'ردشده', 'تکراری', 'نامعتبر'];
+  const state = {
+    leads: {view: 'all', q: '', f: {}, sort: '', layout: 'table', page: 1, size: 10, selected: new Set()},
+    customers: {view: 'all', q: '', f: {}, sort: '', layout: 'table', page: 1, size: 10, selected: new Set()}
+  };
+
+  // Seeded leads carry a display text ("امروز، ۱۴:۰۰"); give them a real due time once so views and the due column agree.
+  const at = (days, hour, minute = 0) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hour, minute, 0, 0); return d.toISOString(); };
+  for (const lead of store.leads) {
+    if (lead.dueAt !== undefined) continue;
+    const clock = String(lead.date || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).match(/(\d{1,2}):(\d{2})/);
+    lead.dueAt = lead.sla === 'گذشته' ? new Date(Date.now() - 2 * 3600000).toISOString()
+      : String(lead.date).includes('امروز') ? at(0, clock ? Number(clock[1]) : 16, clock ? Number(clock[2]) : 0)
+      : String(lead.date).includes('فردا') ? at(1, clock ? Number(clock[1]) : 10) : lead.next ? at(3, 10) : null;
+  }
+  save();
+
+  const endOfToday = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+  function due(value) {
+    if (!value) return ['—', 'muted'];
+    const time = new Date(value).getTime(), now = Date.now();
+    if (time < now) { const h = (now - time) / 3600000; return [h >= 24 ? `${fa(Math.floor(h / 24))} روز تأخیر` : h >= 1 ? `${fa(Math.floor(h))} ساعت تأخیر` : 'کمتر از یک ساعت تأخیر', 'danger']; }
+    const day = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+    const days = Math.round((day(time) - day(now)) / 86400000);
+    return days === 0 ? [`امروز، ${jTime.format(time)}`, 'success'] : days === 1 ? [`فردا، ${jTime.format(time)}`, 'info'] : days < 7 ? [`${fa(days)} روز دیگر`, 'neutral'] : [jDate.format(time), 'neutral'];
+  }
+  const dueCell = value => { const [text, tone] = due(value); return `<span class="due due--${tone}">${icon(tone === 'danger' ? 'alert' : 'calendar')}${e(text)}</span>`; };
+  const sourceIcon = s => /وب|سایت/.test(s) ? 'globe' : /نمایشگاه/.test(s) ? 'store' : /معرفی/.test(s) ? 'users' : /تماس|تلفن/.test(s) ? 'phone' : /کمپین|تبلیغ/.test(s) ? 'megaphone' : /ورود/.test(s) ? 'upload' : 'link';
+  const actionIcon = s => /تماس/.test(s) ? 'phone' : /جلسه|بازدید|دمو/.test(s) ? 'calendar' : /ایمیل|ارسال/.test(s) ? 'send' : /پیشنهاد|قیمت/.test(s) ? 'file' : 'task';
+  const leadTone = s => ({'جدید': 'info', 'تخصیص‌یافته': 'violet', 'تماس‌شده': 'warning', 'واجد شرایط': 'success', 'پرورش': 'neutral', 'تبدیل‌شده': 'primary'}[s] || 'danger');
+  const leadIcon = s => ({'جدید': 'plus', 'تخصیص‌یافته': 'user', 'تماس‌شده': 'phone', 'واجد شرایط': 'check', 'پرورش': 'clock', 'تبدیل‌شده': 'target', 'تکراری': 'copy'}[s] || 'close');
+  const customerTone = s => s === 'فعال' ? 'success' : s === 'غیرفعال' ? 'neutral' : 'warning';
+  const customerIcon = s => s === 'فعال' ? 'check' : s === 'غیرفعال' ? 'close' : 'clock';
+  const relationLabel = r => ({prospect: 'مشتری بالقوه', supplier: 'تأمین‌کننده', partner: 'شریک'}[r] || 'مشتری');
+  const meter = n => `<span class="score-meter score-meter--${n < 70 ? 'low' : n < 90 ? 'mid' : 'high'}" style="--value:${Number(n) || 0}"><span><b>${fa(n)}</b> از ۱۰۰</span></span>`;
+  const opt = (items, selected) => `<option value="">همه</option>` + items.map(([v, l]) => `<option value="${e(v)}" ${String(v) === String(selected ?? '') ? 'selected' : ''}>${e(l)}</option>`).join('');
+  const uniq = values => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fa'));
+  const act = (action, id, inner, cls = '', extra = '') => `<button type="button" class="${cls}" data-u-action="${action}" data-id="${e(id)}" ${extra}>${inner}</button>`;
+
+  // ── Lead rows ──
+  const isOpen = l => !closed.includes(l.status);
+  function leadSets(all) {
+    const open = all.filter(isOpen);
+    const sameName = l => open.some(o => o.id !== l.id && o.name.trim() === l.name.trim());
+    return {
+      all: open, mine: open.filter(l => l.owner === me()), nonext: open.filter(l => !l.next),
+      overdue: open.filter(l => l.dueAt && new Date(l.dueAt).getTime() < Date.now()),
+      needs: open.filter(l => !l.next || (l.dueAt && new Date(l.dueAt).getTime() < endOfToday())),
+      duplicates: open.filter(sameName)
+    };
+  }
+  function leadsView() {
+    const s = state.leads, all = ctx.rows('leads'), sets = leadSets(all);
+    let items = (s.view === 'all' && s.f.closed ? all : sets[s.view] || sets.all).slice();
+    if (s.f.source) items = items.filter(l => l.source === s.f.source);
+    if (s.f.owner) items = items.filter(l => l.owner === s.f.owner);
+    if (s.f.branch) items = items.filter(l => (l.branch || 'مرکزی') === s.f.branch);
+    if (s.f.status) items = items.filter(l => l.status === s.f.status);
+    if (s.q) items = items.filter(l => [l.name, l.code, l.contact].some(x => String(x || '').includes(s.q)));
+    if (s.sort === 'score') items.sort((a, b) => b.score - a.score);
+    if (s.sort === 'score-asc') items.sort((a, b) => a.score - b.score);
+    if (s.sort === 'due') items.sort((a, b) => (a.dueAt ? Date.parse(a.dueAt) : Infinity) - (b.dueAt ? Date.parse(b.dueAt) : Infinity));
+    if (s.sort === 'name') items.sort((a, b) => a.name.localeCompare(b.name, 'fa'));
+    const dupIds = new Set(sets.duplicates.map(l => l.id));
+    const page = paging(s, items.length), rowsHtml = items.slice((page - 1) * s.size, page * s.size);
+    const select = canWrite();
+    const statuses = uniq(all.map(l => l.status));
+    const header = `<header class="list-head"><div class="list-head__title"><span class="list-head__icon">${icon('lead')}</span><div><h1>مدیریت سرنخ‌های فروش</h1><p>ثبت، ارجاع، پیگیری و تبدیل سرنخ‌ها به فرصت فروش؛ هر سرنخ با مالک، مهلت تماس و اقدام بعدی</p></div></div>
+      ${canWrite() ? `<div class="list-head__actions">${act('ls-import', 'leads', icon('upload') + 'ورود اطلاعات', 'button button--ghost button--outline')}<button type="button" class="button button--primary" data-action="new-lead">${icon('plus')}سرنخ جدید</button></div>` : ''}</header>`;
+    const tabs = tabBar('leads', [['all', 'همه سرنخ‌ها', sets.all.length], ['mine', 'سرنخ‌های من', sets.mine.length], ['nonext', 'بدون اقدام بعدی', sets.nonext.length], ['overdue', 'معوق', sets.overdue.length]]);
+    const tiles = tileBar('leads', [['all', 'سرنخ', sets.all.length, 'سرنخ باز قابل مشاهده', 'lead', 'green'], ['needs', 'نیازمند اقدام', sets.needs.length, 'تا پایان امروز یا بدون برنامه', 'clock', 'blue'],
+      ['overdue', 'معوق', sets.overdue.length, 'مهلت تماس یا اقدام گذشته', 'alert', 'amber'], ['duplicates', 'مشکوک به تکرار', sets.duplicates.length, 'نام یا تماس مشابه', 'copy', 'red']]);
+    const filters = filterBar('leads', 'جست‌وجوی نام، کد یا شخص تماس', [
+      ['branch', 'شعبه', uniq(all.map(l => l.branch || 'مرکزی')).map(x => [x, x])], ['owner', 'کارشناس فروش', uniq(all.map(l => l.owner)).map(x => [x, x])],
+      ['source', 'منبع', uniq(all.map(l => l.source)).map(x => [x, x])], ['status', 'وضعیت', statuses.map(x => [x, x])]],
+      `<label class="list-chip"><input type="checkbox" data-ls-check="leads:closed" ${s.f.closed ? 'checked' : ''}><span>نمایش بسته‌ها</span></label>`);
+    const bulk = select ? bulkBar('leads', (canAssign() ? act('ls-bulk-assign', 'leads', icon('send') + 'ارجاع', 'button button--ghost button--sm') : '') + act('ls-bulk-next', 'leads', icon('calendar') + 'افزودن فعالیت', 'button button--ghost button--sm')) : '';
+    const check = l => select ? `<input type="checkbox" data-ls-select="leads:${l.id}" ${s.selected.has(l.id) ? 'checked' : ''} aria-label="انتخاب ${e(l.name)}">` : '';
+    const menu = l => `<details class="row-menu"><summary aria-label="عملیات ${e(l.name)}">${icon('more')}</summary><div class="row-menu__list">
+        ${l.status === 'واجد شرایط' && canWrite() ? `<button type="button" data-action="convert-lead" data-id="${l.id}">${icon('target')}تبدیل به فرصت</button>` : ''}
+        ${canAssign() ? act('ls-row-assign', l.id, icon('send') + 'ارجاع') : ''}${canWrite() ? act('ls-row-next', l.id, icon('calendar') + 'افزودن فعالیت') : ''}</div></details>`;
+    const body = s.layout === 'cards'
+      ? `<div class="list-cards">${rowsHtml.length ? rowsHtml.map(l => `<article class="list-card ${s.selected.has(l.id) ? 'is-selected' : ''}"><header>${check(l)}<span class="entity-cell"><span class="entity-avatar entity-avatar--blue">${e(l.name.slice(0, 1))}</span><span><strong>${e(l.name)}</strong><small>${e(l.contact || l.code)}</small></span></span><span class="pill pill--${leadTone(l.status)}">${icon(leadIcon(l.status))}${e(l.status)}</span></header>
+          <dl><div><dt>منبع</dt><dd>${icon(sourceIcon(l.source))}${e(l.source)}</dd></div><div><dt>شعبه / کارشناس</dt><dd>${e(l.branch || 'مرکزی')} · ${e(l.owner)}</dd></div><div><dt>امتیاز</dt><dd>${meter(l.score)}</dd></div><div><dt>اقدام بعدی</dt><dd class="${l.next ? '' : 'muted'}">${icon(actionIcon(l.next || ''))}${e(l.next || 'تعیین نشده')}</dd></div></dl>
+          <footer>${dueCell(l.next ? l.dueAt : null)}${dupIds.has(l.id) ? `<span class="pill pill--danger pill--sm">${icon('copy')}مشکوک به تکرار</span>` : ''}</footer></article>`).join('') : empty('سرنخی با این فیلترها پیدا نشد.')}</div>`
+      : `<div class="table-wrap"><table class="list-table"><thead><tr>${select ? `<th class="list-table__check"><input type="checkbox" data-ls-all="leads" aria-label="انتخاب همه"></th>` : ''}
+          <th>${sortLink('leads', 'name', 'نام سرنخ')}</th><th class="hide-sm">منبع</th><th class="hide-sm">شعبه / کارشناس فروش</th><th class="hide-sm">وضعیت</th><th class="hide-sm">${sortLink('leads', s.sort === 'score' ? 'score-asc' : 'score', 'امتیاز', ['score', 'score-asc'])}</th><th class="hide-sm">اقدام بعدی</th><th>${sortLink('leads', 'due', 'سررسید')}</th><th><span class="sr-only">عملیات</span></th></tr></thead><tbody>
+          ${rowsHtml.length ? rowsHtml.map(l => `<tr class="${s.selected.has(l.id) ? 'is-selected' : ''}">${select ? `<td class="list-table__check">${check(l)}</td>` : ''}
+            <td><span class="entity-cell"><span class="entity-avatar entity-avatar--blue">${e(l.name.slice(0, 1))}</span><span><strong>${e(l.name)}</strong><small>${e(l.contact ? l.contact + ' · ' : '')}<bdi>${e(l.code)}</bdi></small><span class="pill pill--sm pill--${leadTone(l.status)} show-sm">${e(l.status)}</span></span></span></td>
+            <td class="hide-sm"><span class="cell-icon">${icon(sourceIcon(l.source))}${e(l.source)}</span></td><td class="hide-sm"><strong class="cell-title">${e(l.branch || 'مرکزی')}</strong><small class="cell-sub">${e(l.owner)}</small></td>
+            <td class="hide-sm"><span class="pill pill--${leadTone(l.status)}">${icon(leadIcon(l.status))}${e(l.status)}</span>${dupIds.has(l.id) ? `<small class="cell-flag">${icon('copy')}مشکوک به تکرار</small>` : ''}</td>
+            <td class="hide-sm">${meter(l.score)}</td><td class="hide-sm"><span class="cell-icon ${l.next ? '' : 'muted'}">${icon(actionIcon(l.next || ''))}${e(l.next || 'تعیین نشده')}</span></td><td>${dueCell(l.next ? l.dueAt : null)}</td><td class="list-table__menu">${menu(l)}</td></tr>`).join('')
+            : `<tr><td colspan="${select ? 9 : 8}">${empty('سرنخی با این فیلترها پیدا نشد.')}</td></tr>`}</tbody></table></div>`;
+    return header + `<div class="list-workspace" data-bulk>${tabs}${tiles}<section class="panel list-panel">${filters}${bulk}${body}${pager('leads', page, items.length)}</section></div>`;
+  }
+
+  // ── Customer rows ──
+  function customerSets(all) {
+    const planned = (store.activities || []).filter(a => a.status === 'planned');
+    const nextOf = c => planned.filter(a => a.customerId === c.id).sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0];
+    const pending = (store.duplicates || []).filter(d => d.status === 'در انتظار بررسی').flatMap(d => [d.first, d.second]);
+    const active = all.filter(c => c.status !== 'غیرفعال');
+    return {
+      nextOf, pending: new Set(pending),
+      all, mine: all.filter(c => c.owner === me()), inactive: all.filter(c => c.status === 'غیرفعال'),
+      nofollowup: active.filter(c => !nextOf(c)), followup: active.filter(c => nextOf(c) && Date.parse(nextOf(c).start) < endOfToday()),
+      incomplete: active.filter(c => !c.phone || !c.email || !c.nationalId), duplicates: all.filter(c => pending.includes(c.id))
+    };
+  }
+  function customersView() {
+    const s = state.customers, all = ctx.rows('customers'), sets = customerSets(all);
+    let items = (sets[s.view] || sets.all).slice();
+    if (s.f.branch) items = items.filter(c => c.branch === s.f.branch);
+    if (s.f.segment) items = items.filter(c => c.segment === s.f.segment);
+    if (s.f.owner) items = items.filter(c => c.owner === s.f.owner);
+    if (s.f.status) items = items.filter(c => c.status === s.f.status);
+    if (s.f.relationship) items = items.filter(c => (c.relationship || 'customer') === s.f.relationship);
+    if (s.q) items = items.filter(c => [c.name, c.code, c.city].some(x => String(x || '').includes(s.q)));
+    if (s.sort === 'name') items.sort((a, b) => a.name.localeCompare(b.name, 'fa'));
+    const page = paging(s, items.length), rowsHtml = items.slice((page - 1) * s.size, page * s.size);
+    const select = canWrite();
+    const header = `<header class="list-head"><div class="list-head__title"><span class="list-head__icon">${icon('users')}</span><div><h1>مشتریان و حساب‌ها</h1><p>پرونده یکپارچه مشتریان، مشتریان بالقوه، تأمین‌کنندگان و شرکا؛ با کیفیت داده و پیگیری بعدی هر حساب</p></div></div>
+      <div class="list-head__actions"><a class="button button--ghost" href="#/customer-quality" data-route="customer-quality">${icon('check')}کیفیت داده</a>${canWrite() ? `<button type="button" class="button button--primary" data-action="new-customer">${icon('plus')}مشتری جدید</button>` : ''}</div></header>`;
+    const tabs = tabBar('customers', [['all', 'همه حساب‌ها', sets.all.length], ['mine', 'حساب‌های من', sets.mine.length], ['nofollowup', 'بدون پیگیری', sets.nofollowup.length], ['inactive', 'غیرفعال', sets.inactive.length]]);
+    const tiles = tileBar('customers', [['all', 'حساب', sets.all.length, `${fa(all.filter(c => c.status === 'فعال').length)} حساب فعال`, 'users', 'green'],
+      ['followup', 'پیگیری امروز', sets.followup.length, 'فعالیت برنامه‌ریزی‌شده تا پایان امروز', 'calendar', 'blue'], ['incomplete', 'نیازمند تکمیل', sets.incomplete.length, 'شناسه ملی، تلفن یا ایمیل ناقص', 'alert', 'amber'],
+      ['duplicates', 'مشکوک به تکرار', sets.duplicates.length, 'در انتظار بررسی و ادغام', 'copy', 'red']]);
+    const filters = filterBar('customers', 'جست‌وجوی نام، کد یا شهر', [
+      ['branch', 'شعبه', uniq(all.map(c => c.branch)).map(x => [x, x])], ['relationship', 'نوع رابطه', [['customer', 'مشتری'], ['prospect', 'مشتری بالقوه'], ['supplier', 'تأمین‌کننده'], ['partner', 'شریک']]],
+      ['segment', 'بخش', uniq(all.map(c => c.segment)).map(x => [x, x])], ['owner', 'مالک', uniq(all.map(c => c.owner)).map(x => [x, x])], ['status', 'وضعیت', uniq(all.map(c => c.status)).map(x => [x, x])]]);
+    const bulk = select ? bulkBar('customers', act('ls-bulk-task', 'customers', icon('task') + 'ثبت وظیفه پیگیری', 'button button--ghost button--sm')) : '';
+    const check = c => select ? `<input type="checkbox" data-ls-select="customers:${c.id}" ${s.selected.has(c.id) ? 'checked' : ''} aria-label="انتخاب ${e(c.name)}">` : '';
+    const nextCell = c => { const a = sets.nextOf(c); return `<span class="cell-icon ${a ? '' : 'muted'}">${icon(a ? ({call: 'phone', meeting: 'calendar'}[a.type] || 'task') : 'task')}${e(a ? a.subject : 'برنامه‌ای ندارد')}</span>`; };
+    const menu = c => `<details class="row-menu"><summary aria-label="عملیات ${e(c.name)}">${icon('more')}</summary><div class="row-menu__list"><a href="#/customer?id=${c.id}" data-route="customer" data-record="${c.id}">${icon('file')}پرونده حساب</a>${canWrite() ? act('ls-row-task', c.id, icon('task') + 'ایجاد وظیفه') : ''}</div></details>`;
+    const body = s.layout === 'cards'
+      ? `<div class="list-cards">${rowsHtml.length ? rowsHtml.map(c => `<article class="list-card ${s.selected.has(c.id) ? 'is-selected' : ''}"><header>${check(c)}<a class="entity-cell entity-link" href="#/customer?id=${c.id}" data-route="customer" data-record="${c.id}"><span class="entity-avatar">${e(c.name.slice(0, 1))}</span><span><strong>${e(c.name)}</strong><small><bdi>${e(c.code)}</bdi> · ${e(c.city)}</small></span></a><span class="pill pill--${customerTone(c.status)}">${icon(customerIcon(c.status))}${e(c.status)}</span></header>
+          <dl><div><dt>نوع رابطه</dt><dd>${icon('building')}${relationLabel(c.relationship)} · ${e(c.type)}</dd></div><div><dt>شعبه / مالک</dt><dd>${e(c.branch)} · ${e(c.owner)}</dd></div><div><dt>کیفیت داده</dt><dd>${meter(c.quality)}</dd></div><div><dt>پیگیری بعدی</dt><dd>${nextCell(c)}</dd></div></dl>
+          <footer>${dueCell(sets.nextOf(c)?.start)}${sets.pending.has(c.id) ? `<span class="pill pill--danger pill--sm">${icon('copy')}مشکوک به تکرار</span>` : ''}</footer></article>`).join('') : empty('حسابی با این فیلترها پیدا نشد.')}</div>`
+      : `<div class="table-wrap"><table class="list-table"><thead><tr>${select ? `<th class="list-table__check"><input type="checkbox" data-ls-all="customers" aria-label="انتخاب همه"></th>` : ''}
+          <th>${sortLink('customers', s.sort === 'name' ? '' : 'name', 'حساب', ['name'])}</th><th class="hide-sm">نوع رابطه</th><th class="hide-sm">شعبه / مالک</th><th class="hide-sm">وضعیت</th><th class="hide-sm">کیفیت داده</th><th class="hide-sm">پیگیری بعدی</th><th>سررسید</th><th><span class="sr-only">عملیات</span></th></tr></thead><tbody>
+          ${rowsHtml.length ? rowsHtml.map(c => `<tr class="${s.selected.has(c.id) ? 'is-selected' : ''}">${select ? `<td class="list-table__check">${check(c)}</td>` : ''}
+            <td><a class="entity-cell entity-link" href="#/customer?id=${c.id}" data-route="customer" data-record="${c.id}"><span class="entity-avatar">${e(c.name.slice(0, 1))}</span><span><strong>${e(c.name)}</strong><small><bdi>${e(c.code)}</bdi> · ${e(c.city)}</small><span class="pill pill--sm pill--${customerTone(c.status)} show-sm">${e(c.status)}</span></span></a></td>
+            <td class="hide-sm"><span class="cell-icon">${icon('building')}${relationLabel(c.relationship)}</span><small class="cell-sub">${e(c.type)} · ${e(c.segment)}</small></td><td class="hide-sm"><strong class="cell-title">${e(c.branch)}</strong><small class="cell-sub">${e(c.owner)}</small></td>
+            <td class="hide-sm"><span class="pill pill--${customerTone(c.status)}">${icon(customerIcon(c.status))}${e(c.status)}</span>${sets.pending.has(c.id) ? `<small class="cell-flag">${icon('copy')}مشکوک به تکرار</small>` : ''}</td>
+            <td class="hide-sm">${meter(c.quality)}</td><td class="hide-sm">${nextCell(c)}</td><td>${dueCell(sets.nextOf(c)?.start)}</td><td class="list-table__menu">${menu(c)}</td></tr>`).join('')
+            : `<tr><td colspan="${select ? 9 : 8}">${empty('حسابی با این فیلترها پیدا نشد.')}</td></tr>`}</tbody></table></div>`;
+    return header + `<div class="list-workspace" data-bulk>${tabs}${tiles}<section class="panel list-panel">${filters}${bulk}${body}${pager('customers', page, items.length)}</section></div>`;
+  }
+
+  // ── Shared pieces (same classes as Views/Shared/_List*.cshtml) ──
+  function paging(s, total) { const pages = Math.max(1, Math.ceil(total / s.size)); s.page = Math.min(Math.max(1, s.page), pages); return s.page; }
+  const empty = text => `<div class="list-empty"><span>${icon('search')}</span><strong>موردی پیدا نشد</strong><p>${e(text)}</p></div>`;
+  const tabBar = (list, tabs) => `<nav class="list-tabs" aria-label="نماها">${tabs.map(([view, label, count]) => act('ls-view', `${list}:${view}`, `${e(label)}<b>${fa(count)}</b>`, `list-tabs__tab ${state[list].view === view ? 'is-active' : ''}`)).join('')}</nav>`;
+  const tileBar = (list, tiles) => `<section class="list-tiles">${tiles.map(([view, label, value, hint, ic, tone]) => {
+    const active = view !== 'all' && state[list].view === view;
+    return act('ls-view', `${list}:${active ? 'all' : view}`, `<span class="list-tile__icon">${icon(ic)}</span><span class="list-tile__body"><small>${e(label)}</small><strong>${fa(value)}</strong><em>${e(hint)}</em></span>`, `list-tile list-tile--${tone} ${active ? 'is-active' : ''}`);
+  }).join('')}</section>`;
+  const filterBar = (list, placeholder, selects, extra = '') => { const s = state[list]; return `<div class="list-filters"><label class="list-search">${icon('search')}<input type="search" data-ls-search="${list}" value="${e(s.q)}" placeholder="${e(placeholder)}" aria-label="${e(placeholder)}"></label>
+    ${selects.map(([key, label, items]) => `<label class="list-filter"><span>${e(label)}</span><select data-ls-filter="${list}:${key}">${opt(items, s.f[key])}</select></label>`).join('')}${extra}
+    <div class="list-layout" role="group" aria-label="نحوه نمایش">${act('ls-layout', `${list}:table`, icon('list'), `list-layout__btn ${s.layout === 'table' ? 'is-active' : ''}`, 'aria-label="نمای فهرست"')}${act('ls-layout', `${list}:cards`, icon('grid'), `list-layout__btn ${s.layout === 'cards' ? 'is-active' : ''}`, 'aria-label="نمای کارتی"')}</div></div>`; };
+  const bulkBar = (list, buttons) => `<div class="bulk-bar" ${state[list].selected.size ? '' : 'hidden'}><span class="bulk-bar__count"><b>${fa(state[list].selected.size)}</b> مورد انتخاب شد</span><div class="bulk-bar__actions">${buttons}${act('ls-clear', list, icon('close') + 'پاک کردن انتخاب', 'link-button')}</div></div>`;
+  const sortLink = (list, key, label, actives = [key]) => act('ls-sort', `${list}:${key}`, `${e(label)}${icon('sort')}`, `sort-link ${actives.includes(state[list].sort) ? 'is-active' : ''}`);
+  function pager(list, page, total) {
+    const s = state[list], pages = Math.max(1, Math.ceil(total / s.size));
+    const wanted = [...new Set([1, pages, page, page - 1, page + 1])].filter(x => x >= 1 && x <= pages).sort((a, b) => a - b);
+    let prev = 0, nums = '';
+    for (const n of wanted) { if (n - prev > 1) nums += '<span class="pager-gap">…</span>'; nums += n === page ? `<span class="pager-btn is-active">${fa(n)}</span>` : act('ls-page', `${list}:${n}`, fa(n), 'pager-btn'); prev = n; }
+    const btn = (n, ic, flip, label) => n >= 1 && n <= pages && n !== page ? act('ls-page', `${list}:${n}`, `<svg class="${flip ? 'flip' : ''}" aria-hidden="true"><use href="#i-${ic}"></use></svg>`, 'pager-btn', `aria-label="${label}"`) : `<span class="pager-btn is-disabled"><svg class="${flip ? 'flip' : ''}"><use href="#i-${ic}"></use></svg></span>`;
+    return `<footer class="list-pager"><span class="list-pager__summary">نمایش <b>${fa(total ? (page - 1) * s.size + 1 : 0)}</b> تا <b>${fa(Math.min(total, page * s.size))}</b> از <b>${fa(total)}</b> مورد</span>
+      <nav class="list-pager__pages" aria-label="صفحه‌بندی">${btn(1, 'chevrons', false, 'صفحه اول')}${btn(page - 1, 'chevron', false, 'صفحه قبل')}${nums}${btn(page + 1, 'chevron', true, 'صفحه بعد')}${btn(pages, 'chevrons', true, 'صفحه آخر')}</nav>
+      <label class="list-pager__size"><select data-ls-size="${list}" aria-label="تعداد در صفحه">${[10, 20, 50, 100].map(n => `<option value="${n}" ${n === s.size ? 'selected' : ''}>${fa(n)}</option>`).join('')}</select><span>مورد در صفحه</span></label></footer>`;
+  }
+
+  // ── Interaction ──
+  const split = id => { const i = String(id).indexOf(':'); return [String(id).slice(0, i), String(id).slice(i + 1)]; };
+  const selection = list => [...state[list].selected];
+  const drawer = (title, kind, id, fields) => ctx.showForm(title, fields, kind, id);
+  const ownerOptions = () => uniq([...store.leads.map(l => l.owner), 'سارا احمدی', 'مهدی نادری', 'نرگس یوسفی', 'محمد رضایی']).map(x => `<option>${e(x)}</option>`).join('');
+  function action(name, id) {
+    if (!name.startsWith('ls-')) return false;
+    if (name === 'ls-view') { const [list, view] = split(id); Object.assign(state[list], {view, page: 1}); state[list].selected.clear(); render(); return true; }
+    if (name === 'ls-layout') { const [list, layout] = split(id); state[list].layout = layout; render(); return true; }
+    if (name === 'ls-page') { const [list, page] = split(id); state[list].page = Number(page); render(); return true; }
+    if (name === 'ls-sort') { const [list, sort] = split(id); Object.assign(state[list], {sort, page: 1}); render(); return true; }
+    if (name === 'ls-clear') { state[id].selected.clear(); render(); return true; }
+    if (name === 'ls-bulk-next' || name === 'ls-row-next') {
+      const ids = name === 'ls-row-next' ? [Number(id)] : selection('leads'); if (!ids.length) return true;
+      drawer('افزودن فعالیت برای سرنخ‌ها', 'ls-next', ids.join(','), `<p class="bulk-note">${icon('calendar')}<span>برای <b>${fa(ids.length)}</b> سرنخ «اقدام بعدی» ثبت می‌شود.</span></p><label>فعالیت<input name="next" required value="تماس پیگیری" list="lsNext"></label><datalist id="lsNext"><option value="تماس پیگیری"></option><option value="ارسال پیشنهاد قیمت"></option><option value="جلسه معرفی محصول"></option></datalist><label>زمان<input type="datetime-local" name="at" required></label>`);
+      return true;
+    }
+    if (name === 'ls-bulk-assign' || name === 'ls-row-assign') {
+      const ids = name === 'ls-row-assign' ? [Number(id)] : selection('leads'); if (!ids.length) return true;
+      drawer('ارجاع سرنخ‌ها', 'ls-assign', ids.join(','), `<p class="bulk-note">${icon('send')}<span><b>${fa(ids.length)}</b> سرنخ به کارشناس انتخابی ارجاع می‌شود.</span></p><label>کارشناس مقصد<select name="owner">${ownerOptions()}</select></label><label>دلیل ارجاع<textarea name="reason" required>ارجاع گروهی</textarea></label>`);
+      return true;
+    }
+    if (name === 'ls-bulk-task' || name === 'ls-row-task') {
+      const ids = name === 'ls-row-task' ? [Number(id)] : selection('customers'); if (!ids.length) return true;
+      drawer('ثبت وظیفه پیگیری', 'ls-task', ids.join(','), `<p class="bulk-note">${icon('task')}<span>برای <b>${fa(ids.length)}</b> حساب یک وظیفه به نام شما ثبت می‌شود.</span></p><label>عنوان وظیفه<input name="subject" required value="پیگیری حساب"></label><label>مهلت<input type="datetime-local" name="at" required></label>`);
+      return true;
+    }
+    if (name === 'ls-import') {
+      drawer('ورود اطلاعات سرنخ', 'ls-import', '', `<p class="bulk-note">${icon('upload')}<span>هر سطر: نام سرنخ، شخص تماس، منبع (با ویرگول جدا شود). سطرهای بدون نام گزارش می‌شوند.</span></p><label>داده‌ها<textarea name="rows" rows="6" required>شرکت نمونه واردات، مینا شریفی، نمایشگاه</textarea></label>`);
+      return true;
+    }
+    return false;
+  }
+  function submit(kind, data, id) {
+    if (!kind.startsWith('ls-')) return false;
+    const ids = String(id || '').split(',').filter(Boolean).map(Number);
+    const future = value => { const t = Date.parse(value); if (!Number.isFinite(t) || t <= Date.now()) throw new Error('زمان باید در آینده باشد.'); return new Date(t).toISOString(); };
+    if (kind === 'ls-next') { const when = future(data.at); for (const l of store.leads.filter(x => ids.includes(x.id) && isOpen(x))) Object.assign(l, {next: String(data.next).trim(), dueAt: when}); state.leads.selected.clear(); }
+    if (kind === 'ls-assign') { if (!String(data.reason || '').trim()) throw new Error('دلیل ارجاع الزامی است.'); for (const l of store.leads.filter(x => ids.includes(x.id) && isOpen(x))) Object.assign(l, {owner: data.owner, status: l.status === 'جدید' ? 'تخصیص‌یافته' : l.status}); state.leads.selected.clear(); }
+    if (kind === 'ls-task') { const when = future(data.at); store.activities ??= []; for (const cid of ids) store.activities.push({id: Math.max(0, ...store.activities.map(a => a.id)) + 1, customerId: cid, type: 'task', subject: String(data.subject).trim(), owner: me(), start: when, status: 'planned', priority: 'عادی'}); state.customers.selected.clear(); }
+    if (kind === 'ls-import') {
+      let ok = 0; const failures = [];
+      String(data.rows).split(/\r?\n/).forEach((line, i) => { if (!line.trim()) return; const [name, contact, source] = line.split(/[,،]/).map(x => x?.trim()); if (!name) { failures.push(`ردیف ${fa(i + 1)}: نام سرنخ الزامی است.`); return; }
+        const nid = Math.max(0, ...store.leads.map(l => l.id)) + 1; store.leads.push({id: nid, code: 'LD-DEMO-' + nid, name, contact: contact || '', source: source || 'ورود اطلاعات', owner: me() || 'سارا احمدی', score: 40, age: 0, status: 'جدید', sla: 'در مهلت', next: 'تماس اولیه', dueAt: new Date(Date.now() + 4 * 3600000).toISOString(), branch: 'مرکزی'}); ok++; });
+      save(); closeDrawer(); render(); toast(failures.length ? `${fa(ok)} سرنخ ثبت شد؛ ${failures.join(' ')}` : `${fa(ok)} سرنخ از داده‌ها ثبت شد.`, failures.length ? 'warning' : undefined); return true;
+    }
+    save(); closeDrawer(); render(); toast('عملیات گروهی ثبت شد.'); return true;
+  }
+  // Filters, search, selection and page size (re-render keeps the search box focused).
+  document.addEventListener('change', event => {
+    const t = event.target;
+    if (t.dataset.lsFilter) { const [list, key] = split(t.dataset.lsFilter); state[list].f[key] = t.value; state[list].page = 1; render(); }
+    else if (t.dataset.lsCheck) { const [list, key] = split(t.dataset.lsCheck); state[list].f[key] = t.checked; state[list].page = 1; render(); }
+    else if (t.dataset.lsSize) { state[t.dataset.lsSize].size = Number(t.value); state[t.dataset.lsSize].page = 1; render(); }
+    else if (t.dataset.lsSelect) { const [list, raw] = split(t.dataset.lsSelect); const sel = state[list].selected; if (t.checked) sel.add(Number(raw)); else sel.delete(Number(raw)); render(); }
+    else if (t.dataset.lsAll) { const list = t.dataset.lsAll; document.querySelectorAll(`[data-ls-select^="${list}:"]`).forEach(x => { const n = Number(split(x.dataset.lsSelect)[1]); if (t.checked) state[list].selected.add(n); else state[list].selected.delete(n); }); render(); }
+  }, true);
+  let timer = 0;
+  document.addEventListener('input', event => {
+    const t = event.target; if (!t.dataset?.lsSearch) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => { const list = t.dataset.lsSearch; state[list].q = t.value.trim(); state[list].page = 1; render();
+      const box = document.querySelector(`[data-ls-search="${list}"]`); if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); } }, 250);
+  });
+  document.addEventListener('click', event => {
+    document.querySelectorAll('details.row-menu[open]').forEach(menu => { if (!menu.contains(event.target) || event.target.closest('.row-menu__list button, .row-menu__list a')) menu.open = false; });
+  });
+  document.addEventListener('toggle', event => {
+    const menu = event.target; if (!menu.matches?.('details.row-menu') || !menu.open) return;
+    const list = menu.querySelector('.row-menu__list'), r = menu.querySelector('summary').getBoundingClientRect();
+    list.style.left = Math.min(Math.max(8, r.left), innerWidth - list.offsetWidth - 8) + 'px';
+    list.style.top = (r.bottom + 4 + list.offsetHeight > innerHeight - 8 ? Math.max(8, r.top - list.offsetHeight - 4) : r.bottom + 4) + 'px';
+  }, true);
+
+  return {views: {leads: leadsView, customers: customersView}, action, submit, reset: list => { state[list].selected.clear(); }};
+}
+
 /* Offline demonstration only. The MVC application remains the authorization boundary. */
 (() => {
   'use strict';
@@ -2256,13 +2739,14 @@ function createAccountFilePreview(ctx) {
   const selfService=createSelfServicePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,today,save,render:()=>render(),toast,download,closeDrawer,account:()=>account,visible});
   const af=createAccountFilePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,save,render:()=>render(),toast,closeDrawer,link,statusBadge,account:()=>account,visible,
     navigate:(route,id)=>navigate(route,id),selected:()=>state.selectedCustomerId,releases:window.CRM_RELEASES||[],version:window.CRM_VERSION||''});
+  const lists=createListPreview({store,escapeHtml,save,toast,closeDrawer,showForm,rows,render:()=>render(),account:()=>account});
   const allowedRoute=route=>af.allowed(route)&&(route==='version'||selfService.allowed(route));
   const knownRoutes=[...af.routes,'dashboard','customers','customer','customer-quality','customer-duplicates','leads','opportunities','quotes','orders','dealers','workqueue','reports','report-detail','identity','organization','portal','partner-requests','mobile'];
   render = function(){if(!signedIn)return;
     for(const key of ['opportunities','quotes'])for(const record of store[key])record.branch??=store.customers.find(c=>c.name===record.customer)?.branch||scope||'مرکزی';
     const source={};for(const k of ['customers','leads','opportunities','quotes','tasks']){source[k]=store[k];store[k]=rows(k);}
     try {
-      const views={orders:ordersView,dealers:dealersView,reports:reportsView,'report-detail':drillView,organization:organizationView,...selfService.views,...af.views};
+      const views={orders:ordersView,dealers:dealersView,reports:reportsView,'report-detail':drillView,organization:organizationView,...selfService.views,...af.views,...lists.views};
       if(!allowedRoute(state.route))$('#viewHost').innerHTML=header('این صفحه برای نقش فعلی فعال نیست','از منوی مجاز استفاده کنید.');
       else if(!knownRoutes.includes(state.route))$('#viewHost').innerHTML=header('صفحه پیدا نشد','از منوی اصلی یک صفحه را انتخاب کنید.',link('dashboard','مرکز عملیات'));
       else if(state.route==='customer'&&!store.customers.some(x=>x.id===state.selectedCustomerId))$('#viewHost').innerHTML=header('مشتری در این دامنه موجود نیست','',link('customers','فهرست مشتریان'));
@@ -2297,6 +2781,7 @@ function createAccountFilePreview(ctx) {
   function userAction(action,id){
     if(selfService.action(action,id))return;
     if(af.action(action,id))return;
+    if(lists.action(action,id))return;
     if(action==='close-drawer'){closeDrawer();return;}
     if(action==='logout'){if(selfService.pending()&&!window.confirm('صف ارسال‌نشده با خروج پاک می‌شود. ادامه می‌دهید؟'))return;selfService.reset();signedIn=false;account='';try{sessionStorage.removeItem('crm-unified-session');}catch{}$('#appShell').hidden=true;$('#loginScreen').hidden=false;$('#loginSubmit').disabled=false;return;}
     if(action==='reset-data'){openModal('بازنشانی داده نمونه','<p>تغییرات همین پیش‌نمایش پاک و داده اولیه بازگردانده شود؟</p>','بازنشانی',()=>{storageSet('argham-crm-unified-v1','');location.reload();});return;}
@@ -2324,7 +2809,7 @@ function createAccountFilePreview(ctx) {
     if(form.id==='loginForm'){event.preventDefault();event.stopImmediatePropagation();const data=new FormData(form),user=String(data.get('username')||'').trim();if(!accounts[user]||data.get('password')!=='Demo@1405'){$('#startupMessage').textContent='نام کاربری یا رمز نمونه نادرست است. sales.manager / Demo@1405';return;}enter(user);return;}
     if(!form.dataset.uForm)return;event.preventDefault();event.stopImmediatePropagation();if(!form.reportValidity())return;
     const data=Object.fromEntries(new FormData(form));
-    try{if(selfService.submit(form.dataset.uForm,data,form.dataset.id))return;if(af.submit(form.dataset.uForm,data,form.dataset.id))return;}catch(error){form.querySelector('.u-form-error').textContent=error.message;return;}
+    try{if(selfService.submit(form.dataset.uForm,data,form.dataset.id))return;if(af.submit(form.dataset.uForm,data,form.dataset.id))return;if(lists.submit(form.dataset.uForm,data,form.dataset.id))return;}catch(error){form.querySelector('.u-form-error').textContent=error.message;return;}
     if(form.dataset.uForm==='report'){const days=(Date.parse(data.to+'T00:00:00Z')-Date.parse(data.from+'T00:00:00Z'))/86400000;if(!Number.isFinite(days)||days<0||days>365||data.from<'2000-01-01'){$('#reportErrors').innerHTML='<p class="u-error">بازه باید از سال ۲۰۰۰ به بعد و بین ۱ تا ۳۶۶ روز باشد.</p>';return;}reportFilter=data;render();return;}
     if(form.dataset.uForm==='order'){const q=store.quotes.find(x=>x.id===Number(data.quoteId)&&visible(x)&&x.status==='تأییدشده');if(!q||store.orders.some(x=>x.quoteId===q.id))return;const id=idFor('orders');store.orders.push({id,code:'ORD-DEMO-'+id,quoteId:q.id,customer:q.customer,amount:q.amount*(1-q.discount/100),status:'پیش‌نویس',erp:'',history:['ایجاد از '+q.code]});}
     if(form.dataset.uForm==='dealer'){const target=Number(data.target);if(!Number.isFinite(target)||target<=0)return;const d=store.dealers.find(x=>x.id===Number(form.dataset.id));if(d)Object.assign(d,{name:data.name,branch:data.branch,contract:data.contract,target});else{const id=idFor('dealers');store.dealers.push({id,code:'DLR-DEMO-'+id,name:data.name,branch:data.branch,contract:data.contract,target,actual:0,status:'در بررسی',customers:[],synced:today,periodFrom:monthStart,periodTo:nextMonth});}}

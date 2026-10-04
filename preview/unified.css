@@ -26,3 +26,12 @@
 .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px 18px;margin:0}.info-grid dt{color:var(--ink-3);font-size:12px}.info-grid dd{margin:2px 0 0;font-weight:650}
 .account-head__identity>div{min-width:0}.topbar__left .version-pill{text-decoration:none}
 @media (max-width:640px){.global-search kbd{display:none}.unified-notice{font-size:12px}}
+
+/* List kit (v1.9): tabs, tiles, sort headers and layout toggles are buttons in the preview, links in the MVC app. */
+button.list-tabs__tab, button.list-tile, button.sort-link, button.list-layout__btn, button.pager-btn { font: inherit; cursor: pointer; }
+button.list-tabs__tab { border: 0; border-bottom: 2px solid transparent; background: none; }
+button.list-tabs__tab.is-active { border-bottom-color: var(--primary-600); }
+button.list-tile { width: 100%; text-align: right; }
+button.sort-link { padding: 0; border: 0; background: none; font-weight: inherit; }
+button.list-layout__btn { border: 0; background: none; }
+button.list-layout__btn.is-active { background: var(--surface); }

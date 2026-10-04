@@ -2,6 +2,7 @@ using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
 using Crm.Application.Services;
 using Crm.Domain.Sales;
+using Crm.Web.Presentation;
 using Crm.Web.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,16 +17,174 @@ public sealed class LeadsController(
     IOrganizationContextService organization) : Controller
 {
     [HttpGet("/leads")]
-    public async Task<IActionResult> Index(string? q = null, LeadStatus? status = null, bool includeClosed = false, int page = 1,
+    public async Task<IActionResult> Index(string? view = null, string? q = null, LeadStatus? status = null, string? branchId = null, string? source = null,
+        Guid? owner = null, bool includeClosed = false, string? sort = null, string? layout = null, int page = 1, int pageSize = 10,
         CancellationToken cancellationToken = default) =>
-        View(await pipeline.GetLeadsAsync(current.CrmUserId, current.RequiredOrganization(), q, status, includeClosed, page,
-            cancellationToken: cancellationToken));
+        View(await LoadList(new LeadListQuery(view, q, status, branchId, source, owner, includeClosed, page, pageSize, sort), layout, cancellationToken));
 
+    /// <summary>The list workspace fragment (tabs, counters, filters, rows, pager); the address bar follows the state.</summary>
     [HttpGet("/leads/table")]
-    public async Task<IActionResult> Table(string? q = null, LeadStatus? status = null, bool includeClosed = false, int page = 1,
-        CancellationToken cancellationToken = default) =>
-        PartialView("_Table", await pipeline.GetLeadsAsync(current.CrmUserId, current.RequiredOrganization(), q, status, includeClosed,
-            page, cancellationToken: cancellationToken));
+    public async Task<IActionResult> Table(string? view = null, string? q = null, LeadStatus? status = null, string? branchId = null, string? source = null,
+        Guid? owner = null, bool includeClosed = false, string? sort = null, string? layout = null, int page = 1, int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var model = await LoadList(new LeadListQuery(view, q, status, branchId, source, owner, includeClosed, page, pageSize, sort), layout, cancellationToken);
+        Response.Headers["HX-Replace-Url"] = model.State.Href();
+        return PartialView("_List", model);
+    }
+
+    private async Task<LeadListPage> LoadList(LeadListQuery query, string? layout, CancellationToken cancellationToken)
+    {
+        var list = await pipeline.GetLeadListAsync(current.CrmUserId, current.RequiredOrganization(), query, cancellationToken: cancellationToken);
+        var context = organization.GetCurrent(current.CrmUserId, current.SessionId);
+        return LeadListPage.Create(list, context?.Branches ?? [], layout, DateTimeOffset.UtcNow);
+    }
+
+    [Authorize(Policy = "perm:Lead.Assign")]
+    [HttpGet("/leads/bulk/assign")]
+    public IActionResult BulkAssign([FromQuery] Guid[] ids)
+    {
+        if (ids.Length == 0) return BulkEmpty();
+        ViewBag.Owners = BulkOwners();
+        return PartialView("_BulkAssignForm", new BulkLeadFormModel(ids, null, "ارجاع گروهی توسط سرپرست", null, null, null));
+    }
+
+    [Authorize(Policy = "perm:Lead.Assign")]
+    [HttpPost("/leads/bulk/assign")]
+    [ValidateAntiForgeryToken]
+    public IActionResult BulkAssign(BulkLeadFormModel form)
+    {
+        if (form.OwnerUserId is not { } ownerId || ownerId == Guid.Empty) ModelState.AddModelError(nameof(form.OwnerUserId), "کارشناس مقصد را انتخاب کنید.");
+        if (string.IsNullOrWhiteSpace(form.Reason)) ModelState.AddModelError(nameof(form.Reason), "دلیل ارجاع الزامی است.");
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var result = pipeline.BulkAssignLeads(current.CrmUserId, current.RequiredOrganization(),
+                    new BulkLeadAssignCommand(form.Ids, form.OwnerUserId!.Value, form.Reason!, DateTimeOffset.UtcNow.AddHours(Math.Clamp(form.DueHours, 1, 72))),
+                    DateTimeOffset.UtcNow);
+                return BulkDone(result, "ارجاع گروهی", $"{result.Succeeded} سرنخ ارجاع شد.");
+            }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (InvalidOperationException exception) { ModelState.AddModelError(string.Empty, exception.Message); }
+        }
+        ViewBag.Owners = BulkOwners();
+        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        return PartialView("_BulkAssignForm", form);
+    }
+
+    [Authorize(Policy = "perm:Lead.Update")]
+    [HttpGet("/leads/bulk/next-action")]
+    public IActionResult BulkNextAction([FromQuery] Guid[] ids)
+    {
+        if (ids.Length == 0) return BulkEmpty();
+        var tomorrow = DateTimeOffset.UtcNow.AddDays(1);
+        return PartialView("_BulkNextActionForm", new BulkLeadFormModel(ids, null, null, "تماس پیگیری",
+            Crm.Domain.Common.TehranTime.Date(tomorrow), "10:00"));
+    }
+
+    [Authorize(Policy = "perm:Lead.Update")]
+    [HttpPost("/leads/bulk/next-action")]
+    [ValidateAntiForgeryToken]
+    public IActionResult BulkNextAction(BulkLeadFormModel form)
+    {
+        if (string.IsNullOrWhiteSpace(form.NextAction)) ModelState.AddModelError(nameof(form.NextAction), "عنوان فعالیت الزامی است.");
+        DateTimeOffset? at = null;
+        try { at = Crm.Domain.Common.TehranTime.ToUtc(form.DueDate, string.IsNullOrWhiteSpace(form.DueTime) ? "09:00" : form.DueTime, "تاریخ فعالیت"); }
+        catch (InvalidOperationException exception) { ModelState.AddModelError(nameof(form.DueDate), exception.Message); }
+        if (at is null && ModelState.IsValid) ModelState.AddModelError(nameof(form.DueDate), "تاریخ فعالیت را به شکل ۱۴۰۵/۰۷/۲۰ وارد کنید.");
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var result = pipeline.BulkPlanLeadNextAction(current.CrmUserId, current.RequiredOrganization(),
+                    new BulkLeadNextActionCommand(form.Ids, form.NextAction!, at!.Value), DateTimeOffset.UtcNow);
+                return BulkDone(result, "افزودن فعالیت", $"برای {result.Succeeded} سرنخ فعالیت بعدی برنامه‌ریزی شد.");
+            }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (InvalidOperationException exception) { ModelState.AddModelError(string.Empty, exception.Message); }
+        }
+        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        return PartialView("_BulkNextActionForm", form);
+    }
+
+    [Authorize(Policy = "perm:Lead.Create")]
+    [HttpGet("/leads/import")]
+    public IActionResult Import()
+    {
+        ViewBag.BranchId = PrepareBranches();
+        return PartialView("_ImportForm");
+    }
+
+    [Authorize(Policy = "perm:Lead.Create")]
+    [HttpGet("/leads/import/template")]
+    public IActionResult ImportTemplate() =>
+        File(System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(
+            "نام سرنخ,شخص تماس,تلفن,ایمیل,منبع\r\nشرکت نمونه,علی رضایی,02112345678,info@example.com,نمایشگاه\r\n")).ToArray(),
+            "text/csv; charset=utf-8", "leads-template.csv");
+
+    [Authorize(Policy = "perm:Lead.Create")]
+    [HttpPost("/leads/import")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(2 * 1024 * 1024)]
+    public async Task<IActionResult> Import(IFormFile? file, string? branchId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) ModelState.AddModelError("branchId", "شعبه الزامی است.");
+        if (file is null || file.Length == 0) ModelState.AddModelError("file", "فایل CSV را انتخاب کنید.");
+        else if (file.Length > 1024 * 1024) ModelState.AddModelError("file", "حجم فایل حداکثر ۱ مگابایت است.");
+        IReadOnlyList<LeadImportRow> rows = [];
+        if (ModelState.IsValid)
+        {
+            using var reader = new StreamReader(file!.OpenReadStream(), System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            rows = LeadImportCsv.Parse(await reader.ReadToEndAsync(cancellationToken), out var error);
+            if (error is not null) ModelState.AddModelError("file", error);
+        }
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var result = pipeline.ImportLeads(current.CrmUserId, current.RequiredOrganization(), rows, branchId!, DateTimeOffset.UtcNow);
+                return BulkDone(result, "ورود اطلاعات سرنخ", $"{result.Succeeded} سرنخ از فایل ثبت شد.");
+            }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (InvalidOperationException exception) { ModelState.AddModelError(string.Empty, exception.Message); }
+        }
+        ViewBag.BranchId = branchId ?? PrepareBranches();
+        PrepareBranches();
+        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        return PartialView("_ImportForm");
+    }
+
+    /// <summary>All rows succeeded: close the drawer and refresh the list. Otherwise show what failed and refresh the list behind it.</summary>
+    private IActionResult BulkDone(BulkResultDto result, string title, string message)
+    {
+        if (result.Failures.Count == 0)
+        {
+            Response.Trigger("leadChanged", message);
+            return Request.IsHtmx() ? NoContent() : RedirectToAction(nameof(Index));
+        }
+        Response.Trigger("leadsRefreshed", message);
+        return PartialView("_BulkResult", new BulkResultView(title, result.Succeeded, result.Failures));
+    }
+
+    private IActionResult BulkEmpty()
+    {
+        Response.Trigger("leadsRefreshed", "ابتدا حداقل یک سرنخ را انتخاب کنید.");
+        return PartialView("_BulkResult", new BulkResultView("عملیات گروهی", 0, ["هیچ سرنخی انتخاب نشده است."]));
+    }
+
+    private IReadOnlyList<SalesOwnerOptionDto> BulkOwners()
+    {
+        var context = organization.GetCurrent(current.CrmUserId, current.SessionId);
+        var branches = current.SelectedBranchId is { } selected ? [selected] : (context?.Branches.Select(x => x.Id).ToList() ?? []);
+        var owners = new List<SalesOwnerOptionDto>();
+        foreach (var branch in branches)
+        {
+            try { owners.AddRange(pipeline.GetEligibleOwners(current.CrmUserId, current.RequiredOrganization(), branch)); }
+            catch (UnauthorizedAccessException) { }
+        }
+        return owners.GroupBy(x => x.UserId).Select(x => x.First()).OrderBy(x => x.DisplayName).ToList();
+    }
 
     [HttpGet("/leads/{id:guid}")]
     public IActionResult Details(Guid id)

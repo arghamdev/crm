@@ -353,6 +353,8 @@ public sealed class CrmApplicationService(ICrmDataStore store, IAccessSnapshotSe
             x.NationalId, x.PrimaryPhone, x.PrimaryEmail, x.DataSource, x.LastSynchronizedAtUtc,
             x.Version, CustomerDataQualityRules.Score(issues)).Mask(snapshot);
     }
+    internal static CustomerDto ToDto(Customer x, bool hasActiveContact, bool hasActiveAddress, AccessSnapshot snapshot) =>
+        Map(x, hasActiveContact, hasActiveAddress, snapshot);
     private static CustomerDto Map(Customer x, bool hasActiveContact, bool hasActiveAddress, AccessSnapshot snapshot)
     {
         var issues = CustomerDataQualityRules.Issues(x, hasActiveContact, hasActiveAddress);

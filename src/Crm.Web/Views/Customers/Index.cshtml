@@ -1,24 +1,14 @@
-@model PagedResult<CustomerDto>
-@{
-    ViewData["Title"] = "مشتریان";
-    var active = Model.Items.Count(x => x.Status == CustomerStatus.Active);
-    var query = Context.Request.Query["q"].ToString();
-}
-<header class="page-header">
-    <div><span class="eyebrow">مدیریت ارتباط با مشتری</span><h1>مشتریان</h1><p>نمای یکپارچه مشتریان نمونه و وضعیت اعتباری آن‌ها</p></div>
-    <div class="page-actions"><a class="button button--ghost" href="/customers/data-quality">کیفیت داده</a>@if (ViewBag.CanReviewDuplicates == true) { <a class="button button--ghost" href="/customers/duplicates">رکوردهای مشابه</a> }<a class="button button--primary" href="/customers/create" hx-get="/customers/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg> مشتری جدید</a></div>
+@model CustomerListPage
+@{ ViewData["Title"] = "مشتریان و حساب‌ها"; }
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-users"/></svg></span>
+        <div><h1>مشتریان و حساب‌ها</h1><p>پرونده یکپارچه مشتریان، مشتریان بالقوه، تأمین‌کنندگان و شرکا؛ با کیفیت داده و پیگیری بعدی هر حساب</p></div>
+    </div>
+    <div class="list-head__actions">
+        <a class="button button--ghost" href="/customers/data-quality"><svg><use href="#i-check"/></svg>کیفیت داده</a>
+        @if (Model.List.CanReviewDuplicates) { <a class="button button--ghost" href="/customers/duplicates"><svg><use href="#i-copy"/></svg>رکوردهای مشابه</a> }
+        @if (Model.List.CanCreate) { <a class="button button--primary" href="/customers/create" hx-get="/customers/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg>مشتری جدید</a> }
+    </div>
 </header>
-<section class="mini-stats">
-    <div><span class="mini-icon"><svg><use href="#i-users"/></svg></span><p><small>کل مشتریان</small><strong>@Model.TotalCount</strong></p></div>
-    <div><span class="mini-icon mini-icon--green"><svg><use href="#i-check"/></svg></span><p><small>فعال در این صفحه</small><strong>@active</strong></p></div>
-    <div><span class="mini-icon mini-icon--amber"><svg><use href="#i-file"/></svg></span><p><small>مانده این صفحه</small><strong>@(Model.Items.Any(x => x.FinancialMasked) ? "محرمانه" : $"{Model.Items.Sum(x => x.Balance) / 1_000_000_000m:N1} میلیارد")</strong></p></div>
-</section>
-<section class="panel table-panel">
-    <div class="toolbar">
-        <label class="table-search"><svg><use href="#i-search"/></svg><input name="q" value="@query" placeholder="نام یا کد مشتری..." hx-get="/customers/table" hx-trigger="input changed delay:350ms, search" hx-target="#customerTable" hx-include="this" /></label>
-        <span class="muted">Customer Master نمونه با کنترل کیفیت و Duplicate.</span>
-    </div>
-    <div id="customerTable" hx-get="/customers/table" hx-trigger="customerChanged from:body" hx-swap="innerHTML">
-        <partial name="_Table" model="Model" />
-    </div>
-</section>
+<partial name="_List" model="Model" />

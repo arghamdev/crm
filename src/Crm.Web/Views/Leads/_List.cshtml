@@ -1,0 +1,126 @@
+@model LeadListPage
+@{
+    var list = Model.List;
+    var s = Model.State;
+    var selectable = Model.CanSelect;
+    var columns = selectable ? 9 : 8;
+    string SortLink(string key, string? descending = null) => list.Sort == key && descending is not null ? descending : key;
+}
+<div id="@LeadListPage.Target" class="list-workspace" data-bulk hx-get="@s.Table()" hx-trigger="leadChanged from:body, leadsRefreshed from:body" hx-target="this" hx-swap="outerHTML">
+    <partial name="_ListTabs" model='new ListTabsModel(s, [
+        new ListTab("همه سرنخ‌ها", list.VisibleOpenCount, "all", list.View == "all"),
+        new ListTab("سرنخ‌های من", list.MineCount, "mine", list.View == "mine"),
+        new ListTab("بدون اقدام بعدی", list.NoNextActionCount, "nonext", list.View == "nonext"),
+        new ListTab("معوق", list.OverdueCount, "overdue", list.View == "overdue")], "نماهای سرنخ")' />
+
+    <partial name="_ListTiles" model='new ListTilesModel(s, [
+        new ListTile("سرنخ", list.VisibleOpenCount, "سرنخ باز قابل مشاهده", "i-lead", "green", "all", false),
+        new ListTile("نیازمند اقدام", list.NeedsActionCount, "تا پایان امروز یا بدون برنامه", "i-clock", "blue", "needs", list.View == "needs"),
+        new ListTile("معوق", list.OverdueCount, "مهلت تماس یا اقدام گذشته", "i-alert", "amber", "overdue", list.View == "overdue"),
+        new ListTile("مشکوک به تکرار", list.DuplicateCount, "تلفن، ایمیل یا نام مشابه", "i-copy", "red", "duplicates", list.View == "duplicates")])' />
+
+    <section class="panel list-panel">
+        <form id="@LeadListPage.FormId" class="list-filters" method="get" action="/leads" hx-get="/leads/table" hx-trigger="submit, change">
+            <input type="hidden" name="view" value="@s["view"]" />
+            <input type="hidden" name="sort" value="@s["sort"]" />
+            <input type="hidden" name="layout" value="@s["layout"]" />
+            <label class="list-search"><svg><use href="#i-search"/></svg><input id="leadSearch" name="q" value="@list.Query" type="search" placeholder="جست‌وجوی نام، کد، شخص تماس یا تلفن" aria-label="جست‌وجوی سرنخ" hx-preserve="true" hx-get="/leads/table" hx-include="#@LeadListPage.FormId" hx-trigger="input changed delay:400ms, search" /></label>
+            <label class="list-filter"><span>شعبه</span><select name="branchId"><option value="">همه</option>@foreach (var branch in Model.BranchNames) { <option value="@branch.Key" selected="@(string.Equals(list.BranchId, branch.Key, StringComparison.OrdinalIgnoreCase))">@branch.Value</option> }</select></label>
+            <label class="list-filter"><span>کارشناس فروش</span><select name="owner"><option value="">همه</option>@foreach (var owner in list.Owners) { <option value="@owner.Id" selected="@(list.OwnerUserId == owner.Id)">@owner.Name</option> }</select></label>
+            <label class="list-filter"><span>منبع</span><select name="source"><option value="">همه</option>@foreach (var source in list.Sources) { <option value="@source" selected="@(list.Source == source)">@source</option> }</select></label>
+            <label class="list-filter"><span>وضعیت</span><select name="status"><option value="">همه</option>@foreach (var status in Enum.GetValues<LeadStatus>()) { <option value="@status" selected="@(list.Status == status)">@LeadLabels.Status(status)</option> }</select></label>
+            <label class="list-chip"><input type="checkbox" name="includeClosed" value="true" checked="@list.IncludeClosed" /><span>نمایش بسته‌ها</span></label>
+            <div class="list-layout" role="group" aria-label="نحوه نمایش">
+                <a class="list-layout__btn@(Model.Layout == "table" ? " is-active" : "")" href="@s.Href(("layout", null))" hx-get="@s.Table(("layout", null))" aria-label="نمای فهرست" title="نمای فهرست"><svg><use href="#i-list"/></svg></a>
+                <a class="list-layout__btn@(Model.Layout == "cards" ? " is-active" : "")" href="@s.Href(("layout", "cards"))" hx-get="@s.Table(("layout", "cards"))" aria-label="نمای کارتی" title="نمای کارتی"><svg><use href="#i-grid"/></svg></a>
+            </div>
+        </form>
+
+        @if (selectable)
+        {
+            <div class="bulk-bar" data-bulk-bar hidden>
+                <span class="bulk-bar__count"><b data-bulk-count>0</b> مورد انتخاب شد</span>
+                <div class="bulk-bar__actions">
+                    @if (list.CanAssign) { <button type="button" class="button button--ghost button--sm" hx-get="/leads/bulk/assign" hx-include="#@LeadListPage.Target [data-bulk-item]" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع</button> }
+                    @if (list.CanUpdate) { <button type="button" class="button button--ghost button--sm" hx-get="/leads/bulk/next-action" hx-include="#@LeadListPage.Target [data-bulk-item]" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>افزودن فعالیت</button> }
+                    <button type="button" class="link-button" data-bulk-clear><svg><use href="#i-close"/></svg>پاک کردن انتخاب</button>
+                </div>
+            </div>
+        }
+
+        @if (Model.Layout == "cards")
+        {
+            <div class="list-cards">
+                @if (list.Items.Count == 0) { <partial name="_ListEmpty" model='"سرنخی با این فیلترها پیدا نشد."' /> }
+                @foreach (var item in list.Items)
+                {
+                    var step = LeadListPage.NextStep(item);
+                    var due = ListFormat.Due(step.DueAtUtc, Model.NowUtc);
+                    <article class="list-card">
+                        <header>
+                            @if (selectable) { <input type="checkbox" name="ids" value="@item.Id" data-bulk-item aria-label="انتخاب @item.Name" /> }
+                            <a class="entity-cell entity-link" href="/leads/@item.Id"><span class="entity-avatar entity-avatar--blue">@ListFormat.Initial(item.Name)</span><span><strong>@item.Name</strong><small>@(string.IsNullOrWhiteSpace(item.Contact) ? item.Code : item.Contact)</small></span></a>
+                            <span class="pill pill--@LeadLabels.StatusTone(item.Status)"><svg><use href="#@LeadLabels.StatusIcon(item.Status)"/></svg>@LeadLabels.Status(item.Status)</span>
+                        </header>
+                        <dl>
+                            <div><dt>منبع</dt><dd><svg><use href="#@ListFormat.SourceIcon(item.Source)"/></svg>@item.Source</dd></div>
+                            <div><dt>شعبه / کارشناس</dt><dd>@Model.BranchName(item.BranchId) · @item.Owner</dd></div>
+                            <div><dt>امتیاز</dt><dd><span class="score-meter" style="--value:@item.Score"><span><b>@item.Score</b> از 100</span></span></dd></div>
+                            <div><dt>اقدام بعدی</dt><dd class="@(step.Planned ? "" : "muted")"><svg><use href="#@ListFormat.ActionIcon(step.Text)"/></svg>@step.Text</dd></div>
+                        </dl>
+                        <footer><span class="due due--@due.Item2"><svg><use href="#@(due.Item2 == "danger" ? "i-alert" : "i-calendar")"/></svg>@due.Item1</span>@if (list.DuplicateIds.Contains(item.Id)) { <span class="pill pill--danger pill--sm"><svg><use href="#i-copy"/></svg>مشکوک به تکرار</span> }<a class="link-button" href="/leads/@item.Id">جزئیات</a></footer>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="list-table">
+                    <thead><tr>
+                        @if (selectable) { <th class="list-table__check"><input type="checkbox" data-bulk-all aria-label="انتخاب همه سرنخ‌های این صفحه" /></th> }
+                        <th><a class="sort-link@(list.Sort == "name" ? " is-active" : "")" href="@s.Href(("sort", "name"))" hx-get="@s.Table(("sort", "name"))">نام سرنخ<svg><use href="#i-sort"/></svg></a></th>
+                        <th class="hide-sm">منبع</th>
+                        <th class="hide-sm">شعبه / کارشناس فروش</th>
+                        <th class="hide-sm">وضعیت</th>
+                        <th class="hide-sm"><a class="sort-link@(list.Sort is "score" or "score-asc" ? " is-active" : "")" href="@s.Href(("sort", SortLink("score", "score-asc")))" hx-get="@s.Table(("sort", SortLink("score", "score-asc")))">امتیاز<svg><use href="#i-sort"/></svg></a></th>
+                        <th class="hide-sm">اقدام بعدی</th>
+                        <th><a class="sort-link@(list.Sort == "due" ? " is-active" : "")" href="@s.Href(("sort", "due"))" hx-get="@s.Table(("sort", "due"))">سررسید<svg><use href="#i-sort"/></svg></a></th>
+                        <th><span class="sr-only">عملیات</span></th>
+                    </tr></thead>
+                    <tbody>
+                        @if (list.Items.Count == 0) { <tr><td colspan="@columns"><partial name="_ListEmpty" model='"سرنخی با این فیلترها پیدا نشد."' /></td></tr> }
+                        @foreach (var item in list.Items)
+                        {
+                            var step = LeadListPage.NextStep(item);
+                            var due = ListFormat.Due(step.DueAtUtc, Model.NowUtc);
+                            <tr>
+                                @if (selectable) { <td class="list-table__check"><input type="checkbox" name="ids" value="@item.Id" data-bulk-item aria-label="انتخاب @item.Name" /></td> }
+                                <td><a class="entity-cell entity-link" href="/leads/@item.Id"><span class="entity-avatar entity-avatar--blue">@ListFormat.Initial(item.Name)</span><span><strong>@item.Name</strong><small>@(string.IsNullOrWhiteSpace(item.Contact) ? "" : item.Contact + " · ")<bdi>@item.Code</bdi></small><span class="pill pill--sm pill--@LeadLabels.StatusTone(item.Status) show-sm">@LeadLabels.Status(item.Status)</span></span></a></td>
+                                <td class="hide-sm"><span class="cell-icon"><svg><use href="#@ListFormat.SourceIcon(item.Source)"/></svg>@item.Source</span></td>
+                                <td class="hide-sm"><strong class="cell-title">@Model.BranchName(item.BranchId)</strong><small class="cell-sub">@item.Owner</small></td>
+                                <td class="hide-sm"><span class="pill pill--@LeadLabels.StatusTone(item.Status)"><svg><use href="#@LeadLabels.StatusIcon(item.Status)"/></svg>@LeadLabels.Status(item.Status)</span>@if (list.DuplicateIds.Contains(item.Id)) { <small class="cell-flag"><svg><use href="#i-copy"/></svg>مشکوک به تکرار</small> }</td>
+                                <td class="hide-sm"><span class="score-meter" style="--value:@item.Score"><span><b>@item.Score</b> از 100</span></span></td>
+                                <td class="hide-sm"><span class="cell-icon@(step.Planned ? "" : " muted")"><svg><use href="#@ListFormat.ActionIcon(step.Text)"/></svg>@step.Text</span></td>
+                                <td><span class="due due--@due.Item2"><svg><use href="#@(due.Item2 == "danger" ? "i-alert" : "i-calendar")"/></svg>@due.Item1</span></td>
+                                <td class="list-table__menu">
+                                    <details class="row-menu">
+                                        <summary aria-label="عملیات @item.Name"><svg><use href="#i-more"/></svg></summary>
+                                        <div class="row-menu__list">
+                                            <a href="/leads/@item.Id"><svg><use href="#i-file"/></svg>مشاهده جزئیات</a>
+                                            @if (list.CanAssign) { <a href="/leads/@item.Id/assign" hx-get="/leads/@item.Id/assign" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع</a> }
+                                            @if (list.CanUpdate) { <a href="/leads/@item.Id/transition" hx-get="/leads/@item.Id/transition" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-edit"/></svg>تغییر وضعیت</a> }
+                                            @if (list.CanConvert && item.Status == LeadStatus.Qualified) { <a href="/leads/@item.Id/convert" hx-get="/leads/@item.Id/convert" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-target"/></svg>تبدیل به فرصت</a> }
+                                        </div>
+                                    </details>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <partial name="_ListPager" model='new ListPagerModel(s, list.Page, list.PageSize, list.TotalCount, list.TotalPages, LeadListPage.FormId, "مورد")' />
+    </section>
+</div>

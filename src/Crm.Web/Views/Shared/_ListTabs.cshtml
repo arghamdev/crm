@@ -1,0 +1,9 @@
+@model ListTabsModel
+<nav class="list-tabs" aria-label="@Model.Label">
+    @foreach (var tab in Model.Tabs)
+    {
+        <a class="list-tabs__tab@(tab.Active ? " is-active" : "")" href="@Model.State.Href(("view", tab.View == "all" ? null : tab.View))" hx-get="@Model.State.Table(("view", tab.View == "all" ? null : tab.View))" aria-current="@(tab.Active ? "page" : null)">
+            @tab.Label@if (tab.Count is { } count) { <b>@count.ToString("N0")</b> }
+        </a>
+    }
+</nav>

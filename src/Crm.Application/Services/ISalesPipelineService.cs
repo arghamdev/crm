@@ -10,6 +10,11 @@ public interface ISalesPipelineService
     Task<LeadListDto> GetLeadsAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
         Crm.Domain.Sales.LeadStatus? status = null, bool includeClosed = false, int page = 1, int pageSize = PageRequest.DefaultPageSize,
         DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default);
+    Task<LeadListDto> GetLeadListAsync(Guid currentUserId, OrganizationSelection organization, LeadListQuery query, DateTimeOffset? nowUtc = null,
+        CancellationToken cancellationToken = default);
+    BulkResultDto BulkAssignLeads(Guid currentUserId, OrganizationSelection organization, BulkLeadAssignCommand command, DateTimeOffset nowUtc);
+    BulkResultDto BulkPlanLeadNextAction(Guid currentUserId, OrganizationSelection organization, BulkLeadNextActionCommand command, DateTimeOffset nowUtc);
+    BulkResultDto ImportLeads(Guid currentUserId, OrganizationSelection organization, IReadOnlyList<LeadImportRow> rows, string branchId, DateTimeOffset nowUtc);
     LeadDetailsDto? GetLead(Guid currentUserId, OrganizationSelection organization, Guid id, DateTimeOffset? nowUtc = null);
     IReadOnlyList<SalesOwnerOptionDto> GetEligibleOwners(Guid currentUserId, OrganizationSelection organization, string branchId);
     LeadDto CreateLead(Guid currentUserId, OrganizationSelection organization, CreateLeadCommand command, DateTimeOffset nowUtc);

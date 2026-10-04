@@ -1,0 +1,16 @@
+@model BulkResultView
+<div class="bulk-result">
+    <section class="form-section">
+        <h3 data-drawer-title>@Model.Title</h3>
+        <div class="bulk-result__summary">
+            <span class="pill pill--success"><svg><use href="#i-check"/></svg>@Model.Succeeded.ToString("N0") مورد انجام شد</span>
+            @if (Model.Failures.Count > 0) { <span class="pill pill--danger"><svg><use href="#i-alert"/></svg>@Model.Failures.Count.ToString("N0") مورد انجام نشد</span> }
+        </div>
+        @if (Model.Failures.Count > 0)
+        {
+            <ul class="bulk-result__list">@foreach (var failure in Model.Failures.Take(100)) { <li>@failure</li> }</ul>
+            @if (Model.Failures.Count > 100) { <p class="muted">و @(Model.Failures.Count - 100) مورد دیگر…</p> }
+        }
+    </section>
+    <div class="drawer-actions"><button class="button button--primary" type="button" data-drawer-close>بستن</button></div>
+</div>

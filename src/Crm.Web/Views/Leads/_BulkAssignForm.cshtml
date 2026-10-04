@@ -1,0 +1,17 @@
+@model BulkLeadFormModel
+@{ var owners = ViewBag.Owners as IReadOnlyList<SalesOwnerOptionDto> ?? []; }
+<form class="drawer-form" method="post" action="/leads/bulk/assign" hx-post="/leads/bulk/assign" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    @foreach (var id in Model.Ids) { <input type="hidden" name="Ids" value="@id" /> }
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section">
+        <h3 data-drawer-title>ارجاع گروهی سرنخ‌ها</h3>
+        <p class="bulk-note"><svg><use href="#i-send"/></svg><span><b>@Model.Ids.Length</b> سرنخ انتخاب شده است. هر سرنخ جداگانه بررسی می‌شود؛ سرنخ‌های بسته یا خارج از دسترسی در گزارش نتیجه می‌آیند.</span></p>
+        <div class="form-grid">
+            <label class="field field--full"><span>کارشناس مقصد *</span><select name="OwnerUserId"><option value="">انتخاب کنید</option>@foreach (var owner in owners) { <option value="@owner.UserId" selected="@(Model.OwnerUserId == owner.UserId)">@owner.DisplayName — @owner.RoleLabel</option> }</select><span asp-validation-for="OwnerUserId" class="field-error"></span></label>
+            <label class="field"><span>مهلت تماس اولیه</span><select name="DueHours">@foreach (var hours in new[] { 2, 4, 8, 24, 48 }) { <option value="@hours" selected="@(Model.DueHours == hours)">@hours ساعت پس از ارجاع</option> }</select></label>
+            <label class="field field--full"><span>دلیل ارجاع *</span><textarea name="Reason" rows="3">@Model.Reason</textarea><span asp-validation-for="Reason" class="field-error"></span></label>
+        </div>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ارجاع @Model.Ids.Length سرنخ</button></div>
+</form>

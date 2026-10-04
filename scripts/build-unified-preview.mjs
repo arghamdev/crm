@@ -12,12 +12,14 @@ for (const line of readFileSync(resolve(root, 'CHANGELOG.md'), 'utf8').split(/\r
 }
 if (releases[0]?.version !== version) throw new Error(`CHANGELOG.md top entry (${releases[0]?.version}) must equal <Version> ${version}.`);
 const versionScript = `window.CRM_VERSION=${JSON.stringify(version)};window.CRM_RELEASES=${JSON.stringify(releases)};`;
-const script = versionScript + '\n' + readFileSync(resolve(root, 'preview/self-service.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/account-file.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/unified.js'), 'utf8');
+const script = versionScript + '\n' + readFileSync(resolve(root, 'preview/self-service.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/account-file.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/list-kit.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/unified.js'), 'utf8');
 // The account-file and version styles are taken from the MVC stylesheet so both look the same.
 const siteCss = readFileSync(resolve(root, 'src/Crm.Web/wwwroot/css/site.css'), 'utf8');
 const start = siteCss.indexOf('/* ───────────── Account file'), end = siteCss.length;
 if (start < 0) throw new Error('Account-file CSS markers not found in site.css.');
 const css = readFileSync(resolve(root, 'preview/unified.css'), 'utf8') + '\n' + siteCss.slice(start, end);
+const layoutSymbols = [...readFileSync(resolve(root, 'src/Crm.Web/Views/Shared/_Layout.cshtml'), 'utf8').matchAll(/<symbol id="(i-[a-z-]+)"[\s\S]*?<\/symbol>/g)]
+  .map(m => ({id: m[1], markup: m[0]}));
 // One document, one store and one shell. No iframe, fetch, CDN or separate-page dependency.
 html = html.replace('<title>راهکار CRM سازمانی | مدل نمایشی</title>', '<title>ارقام CRM | نسخه یکپارچه آزمایشی</title>')
   .replaceAll('argham-crm-demo', 'argham-crm-unified-v1')
@@ -44,6 +46,8 @@ const saved = candidate && typeof candidate === "object" && !Array.isArray(candi
   .replace('<main class="view-host"', '<div class="unified-notice">نسخه آزمایشی یکپارچه · همه صفحات از داده مشترک استفاده می‌کنند. امنیت سازمانی در پروژه MVC اجرا می‌شود.</div><main class="view-host"')
   .replace('<symbol id="i-grid"', () => '<symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3.5 6.5 12 13l8.5-6.5"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol><symbol id="i-grid"')
   .replace('</style>', () => css + '\n</style>')
+  // Icons the MVC layout has and the legacy preview sprite lacks (list kit: store, megaphone, upload, send …).
+  .replace('<symbol id="i-grid"', () => layoutSymbols.filter(x => !html.includes(`<symbol id="${x.id}"`) && !['i-phone', 'i-mail', 'i-globe', 'i-pin'].includes(x.id)).map(x => x.markup).join('') + '<symbol id="i-grid"')
   .replace('</body>', () => '<script>\n' + script + '\n</script>\n</body>');
 // Inline script boundaries must remain intact, including user-facing strings.
 for (const match of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(match[1]);

@@ -83,6 +83,16 @@ public sealed class Lead(
         Touch();
     }
 
+    /// <summary>Plans (or replaces) the next action of an open lead without changing its status.</summary>
+    public void PlanNextAction(string nextAction, DateTimeOffset nextActionAtUtc, DateTimeOffset nowUtc)
+    {
+        EnsureOpen();
+        if (nextActionAtUtc <= nowUtc) throw new InvalidOperationException("زمان اقدام بعدی باید در آینده باشد.");
+        NextAction = Required(nextAction, nameof(nextAction));
+        NextActionAtUtc = nextActionAtUtc;
+        Touch();
+    }
+
     public void Qualify(int score, string reason = "Qualification completed")
     {
         EnsureOpen();

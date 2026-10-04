@@ -1,0 +1,11 @@
+@model ListTilesModel
+<section class="list-tiles" aria-label="شمارنده‌ها">
+    @foreach (var tile in Model.Tiles)
+    {
+        var view = tile.Active || tile.View is null ? null : tile.View;
+        <a class="list-tile list-tile--@tile.Tone@(tile.Active ? " is-active" : "")" href="@Model.State.Href(("view", view))" hx-get="@Model.State.Table(("view", view))" title="@(tile.Active ? "نمایش همه" : $"فیلتر: {tile.Label}")">
+            <span class="list-tile__icon"><svg><use href="#@tile.Icon"/></svg></span>
+            <span class="list-tile__body"><small>@tile.Label</small><strong>@tile.Value.ToString("N0")</strong><em>@tile.Hint</em></span>
+        </a>
+    }
+</section>

@@ -237,6 +237,43 @@ static async Task VerifyLeadForm(IPage page, string baseUrl)
         new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     Assert(await page.GetByText(leadName, new PageGetByTextOptions { Exact = true }).CountAsync() == 1,
         "Created Lead was not visible after the HTMX submission.");
+
+    // List workspace: select a row, the bulk bar appears, «افزودن فعالیت» plans the next action in place.
+    var bulkBar = page.Locator("[data-bulk-bar]");
+    Assert(!await bulkBar.IsVisibleAsync(), "The bulk bar must stay hidden until a row is selected.");
+    await page.Locator("#leadList [data-bulk-item]").First.CheckAsync();
+    await bulkBar.WaitForAsync();
+    Assert((await page.Locator("[data-bulk-count]").InnerTextAsync()).Trim() == "1", "The bulk bar must count the selected rows.");
+    await bulkBar.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "افزودن فعالیت" }).ClickAsync();
+    var bulkForm = page.Locator("#drawerBody form[action='/leads/bulk/next-action']");
+    await bulkForm.WaitForAsync();
+    Assert(await bulkForm.Locator("input[name='Ids']").CountAsync() == 1, "The bulk drawer must carry the selected lead.");
+    await bulkForm.Locator("input[name='NextAction']").FillAsync("ارسال پیشنهاد قیمت مرورگر");
+    await bulkForm.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت فعالیت" }).ClickAsync();
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
+    await page.Locator("#leadList").GetByText("ارسال پیشنهاد قیمت مرورگر").WaitForAsync();
+    Assert(!await page.Locator("[data-bulk-bar]").IsVisibleAsync(), "The refreshed list must clear the selection.");
+
+    // Tabs, sort and layout are links that update the list in place and the address bar.
+    await page.Locator(".list-tabs__tab", new PageLocatorOptions { HasText = "سرنخ‌های من" }).ClickAsync();
+    await page.WaitForURLAsync(url => url.Contains("view=mine", StringComparison.Ordinal));
+    await page.Locator(".list-tabs__tab.is-active", new PageLocatorOptions { HasText = "سرنخ‌های من" }).WaitForAsync();
+    await page.Locator(".list-layout__btn[aria-label='نمای کارتی']").ClickAsync();
+    await page.Locator("#leadList .list-cards").WaitForAsync();
+    Assert(page.Url.Contains("layout=cards", StringComparison.Ordinal), "The card layout must be kept in the URL.");
+    await page.GotoAsync(baseUrl + "/leads", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    await page.Locator("#leadList details.row-menu summary").First.ClickAsync();
+    await page.Locator("#leadList details.row-menu[open] .row-menu__list").WaitForAsync();
+    await page.Locator(".list-head h1").ClickAsync();
+    Assert(await page.Locator("details.row-menu[open]").CountAsync() == 0, "A row menu must close on an outside click.");
+
+    // Customers use the same list kit: a counter tile filters the list.
+    await page.GotoAsync(baseUrl + "/customers", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    await page.Locator(".list-tile", new PageLocatorOptions { HasText = "نیازمند تکمیل" }).ClickAsync();
+    await page.WaitForURLAsync(url => url.Contains("view=incomplete", StringComparison.Ordinal));
+    await page.Locator(".list-tile.is-active", new PageLocatorOptions { HasText = "نیازمند تکمیل" }).WaitForAsync();
+    await page.Locator("#customerFilters select[name='kind']").SelectOptionAsync("Legal");
+    await page.WaitForURLAsync(url => url.Contains("kind=Legal", StringComparison.Ordinal));
 }
 
 static async Task VerifyOpportunityForm(IPage page, string baseUrl)

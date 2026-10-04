@@ -12,20 +12,77 @@ namespace Crm.Web.Controllers;
 public sealed class CustomersController(
     ICrmApplicationService crm,
     ICustomer360Service customer360,
+    ICustomerListService customerList,
     IAccessSnapshotService access,
     ICurrentUserContext current,
     IOrganizationContextService organization) : Controller
 {
     [HttpGet("/customers")]
-    public IActionResult Index(string? q = null, int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(string? view = null, string? q = null, string? branchId = null, Crm.Domain.Customers.CustomerKind? kind = null,
+        Crm.Domain.Accounts.AccountRelationship? relationship = null, string? segment = null, Crm.Domain.Customers.CustomerStatus? status = null,
+        string? owner = null, string? sort = null, string? layout = null, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default) =>
+        View(await LoadList(new CustomerListQuery(view, q, branchId, kind, relationship, segment, status, owner, sort, page, pageSize), layout, cancellationToken));
+
+    /// <summary>The list workspace fragment (tabs, counters, filters, rows, pager); the address bar follows the state.</summary>
+    [HttpGet("/customers/table")]
+    public async Task<IActionResult> Table(string? view = null, string? q = null, string? branchId = null, Crm.Domain.Customers.CustomerKind? kind = null,
+        Crm.Domain.Accounts.AccountRelationship? relationship = null, string? segment = null, Crm.Domain.Customers.CustomerStatus? status = null,
+        string? owner = null, string? sort = null, string? layout = null, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
-        SetCustomerCapabilities();
-        return View(crm.SearchCustomers(current.CrmUserId, current.RequiredOrganization(), q, page, pageSize));
+        var model = await LoadList(new CustomerListQuery(view, q, branchId, kind, relationship, segment, status, owner, sort, page, pageSize), layout, cancellationToken);
+        Response.Headers["HX-Replace-Url"] = model.State.Href();
+        return PartialView("_List", model);
     }
 
-    [HttpGet("/customers/table")]
-    public IActionResult Table(string? q = null, int page = 1, int pageSize = 20) =>
-        PartialView("_Table", crm.SearchCustomers(current.CrmUserId, current.RequiredOrganization(), q, page, pageSize));
+    private async Task<CustomerListPage> LoadList(CustomerListQuery query, string? layout, CancellationToken cancellationToken)
+    {
+        SetCustomerCapabilities();
+        var list = await customerList.GetAsync(current.CrmUserId, current.RequiredOrganization(), query, cancellationToken: cancellationToken);
+        var context = organization.GetCurrent(current.CrmUserId, current.SessionId);
+        return CustomerListPage.Create(list, context?.Branches ?? [], layout, DateTimeOffset.UtcNow);
+    }
+
+    [Authorize(Policy = "perm:Activity.Create")]
+    [HttpGet("/customers/bulk/task")]
+    public IActionResult BulkTask([FromQuery] Guid[] ids)
+    {
+        if (ids.Length == 0)
+        {
+            Response.Trigger("customersRefreshed", "ابتدا حداقل یک حساب را انتخاب کنید.");
+            return PartialView("_BulkResult", new BulkResultView("عملیات گروهی", 0, ["هیچ حسابی انتخاب نشده است."]));
+        }
+        return PartialView("_BulkTaskForm", new BulkAccountTaskFormModel(ids, "پیگیری حساب",
+            Crm.Domain.Common.TehranTime.Date(DateTimeOffset.UtcNow.AddDays(1)), "10:00"));
+    }
+
+    [Authorize(Policy = "perm:Activity.Create")]
+    [HttpPost("/customers/bulk/task")]
+    [ValidateAntiForgeryToken]
+    public IActionResult BulkTask(BulkAccountTaskFormModel form)
+    {
+        if (string.IsNullOrWhiteSpace(form.Subject)) ModelState.AddModelError(nameof(form.Subject), "عنوان وظیفه الزامی است.");
+        if (string.IsNullOrWhiteSpace(form.DueDate)) ModelState.AddModelError(nameof(form.DueDate), "تاریخ مهلت الزامی است.");
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var result = customerList.PlanTasks(current.CrmUserId, current.RequiredOrganization(),
+                    new BulkAccountTaskCommand(form.Ids, form.Subject!, form.DueDate, form.DueTime, form.Priority), DateTimeOffset.UtcNow);
+                var message = $"برای {result.Succeeded} حساب وظیفه پیگیری ثبت شد.";
+                if (result.Failures.Count == 0)
+                {
+                    Response.Trigger("customerChanged", message);
+                    return Request.IsHtmx() ? NoContent() : RedirectToAction(nameof(Index));
+                }
+                Response.Trigger("customersRefreshed", message);
+                return PartialView("_BulkResult", new BulkResultView("ثبت وظیفه گروهی", result.Succeeded, result.Failures));
+            }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (InvalidOperationException exception) { ModelState.AddModelError(string.Empty, exception.Message); }
+        }
+        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        return PartialView("_BulkTaskForm", form);
+    }
 
     [HttpGet("/customers/{id:guid}/activity")]
     public IActionResult Activity(Guid id)

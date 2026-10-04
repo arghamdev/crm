@@ -1,5 +1,6 @@
 using Crm.Application.Abstractions;
 using Crm.Application.Contracts;
+using Crm.Domain.Common;
 using Crm.Domain.Customers;
 using Crm.Domain.Identity;
 using Crm.Domain.Organization;
@@ -18,17 +19,23 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
         GetLeadsAsync(currentUserId, organization, query, status, includeClosed, 1, PageRequest.MaxPageSize, nowUtc)
             .GetAwaiter().GetResult();
 
+    public Task<LeadListDto> GetLeadsAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
+        LeadStatus? status = null, bool includeClosed = false, int page = 1, int pageSize = PageRequest.DefaultPageSize,
+        DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default) =>
+        GetLeadListAsync(currentUserId, organization, new LeadListQuery(Query: query, Status: status, IncludeClosed: includeClosed, Page: page,
+            PageSize: pageSize), nowUtc, cancellationToken);
+
     /// <summary>
-    /// Filters, SLA-orders and pages leads inside the data source (SQL for the EF store) and computes the KPI tiles
+    /// Filters, SLA-orders and pages leads inside the data source (SQL for the EF store) and computes the counters
     /// with aggregate queries, so neither the table nor its history is loaded into memory.
     /// </summary>
-    public async Task<LeadListDto> GetLeadsAsync(Guid currentUserId, OrganizationSelection organization, string? query = null,
-        LeadStatus? status = null, bool includeClosed = false, int page = 1, int pageSize = PageRequest.DefaultPageSize,
+    public async Task<LeadListDto> GetLeadListAsync(Guid currentUserId, OrganizationSelection organization, LeadListQuery request,
         DateTimeOffset? nowUtc = null, CancellationToken cancellationToken = default)
     {
         var snapshot = RequiredSnapshot(currentUserId);
         var now = nowUtc ?? DateTimeOffset.UtcNow;
         var dueSoon = now.AddHours(2);
+        var endOfToday = TehranTime.ToUtc(JalaliDate.Format(TehranTime.Today(now).AddDays(1)), "00:00", "") ?? now.AddDays(1);
         var source = querySource ?? store as ICrmQuerySource ??
             throw new InvalidOperationException("No query source is configured for lead lists.");
 
@@ -39,12 +46,33 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             var myName = users.SingleOrDefault()?.DisplayName ?? "\0";
             visible = visible.Where(x => x.OwnerUserId == currentUserId || x.OwnerUserId == null && x.Owner == myName);
         }
+        var open = visible.Where(x => !ClosedLeadStatuses.Contains(x.Status));
+        // Same phone, email or name as another open lead the user can see.
+        var duplicates = open.Where(x => open.Any(y => y.Id != x.Id && (x.Phone != null && y.Phone == x.Phone || x.Email != null && y.Email == x.Email || y.Name == x.Name)));
+        var overdue = open.Where(x => x.FirstContactAtUtc == null && x.FirstContactDueAtUtc < now || x.NextActionAtUtc < now);
+        var needsAction = open.Where(x => x.NextAction == null || x.NextActionAtUtc < endOfToday || x.FirstContactAtUtc == null && x.FirstContactDueAtUtc <= dueSoon);
 
-        var filtered = includeClosed ? visible : visible.Where(x => !ClosedLeadStatuses.Contains(x.Status));
-        if (status.HasValue) filtered = filtered.Where(x => x.Status == status.Value);
-        if (!string.IsNullOrWhiteSpace(query))
+        var view = request.View?.Trim().ToLowerInvariant() switch
         {
-            var term = query.Trim();
+            "mine" or "nonext" or "overdue" or "needs" or "duplicates" => request.View!.Trim().ToLowerInvariant(),
+            _ => "all"
+        };
+        var filtered = view switch
+        {
+            "mine" => (request.IncludeClosed ? visible : open).Where(x => x.OwnerUserId == currentUserId),
+            "nonext" => open.Where(x => x.NextAction == null),
+            "overdue" => overdue,
+            "needs" => needsAction,
+            "duplicates" => duplicates,
+            _ => request.IncludeClosed ? visible : open
+        };
+        if (request.Status.HasValue) filtered = filtered.Where(x => x.Status == request.Status.Value);
+        if (!string.IsNullOrWhiteSpace(request.BranchId)) filtered = filtered.Where(x => x.BranchId == request.BranchId);
+        if (!string.IsNullOrWhiteSpace(request.Source)) filtered = filtered.Where(x => x.Source == request.Source);
+        if (request.OwnerUserId is { } owner) filtered = filtered.Where(x => x.OwnerUserId == owner);
+        if (!string.IsNullOrWhiteSpace(request.Query))
+        {
+            var term = request.Query.Trim();
             // Phone search is limited to users who may see phone numbers, so masking cannot be bypassed by probing.
             filtered = HasPermission(snapshot, organization.CompanyId, FieldMasking.ContactPermission)
                 ? filtered.Where(x => x.Name.Contains(term) || x.Code.Contains(term) || x.Contact.Contains(term) ||
@@ -52,21 +80,129 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
                 : filtered.Where(x => x.Name.Contains(term) || x.Code.Contains(term) || x.Contact.Contains(term));
         }
 
-        // Same order as the SLA badge: overdue, due soon, on track, then completed/closed.
-        var ordered = filtered
-            .OrderBy(x => x.FirstContactAtUtc != null || ClosedLeadStatuses.Contains(x.Status) ? 3
-                : x.FirstContactDueAtUtc < now ? 0
-                : x.FirstContactDueAtUtc <= dueSoon ? 1 : 2)
-            .ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id);
-        var pageResult = await ordered.ToPageAsync(source, PageRequest.Of(page, pageSize), x => Map(x, now, snapshot), query?.Trim(), cancellationToken);
+        var sort = request.Sort is "score" or "score-asc" or "due" or "name" ? request.Sort : "sla";
+        var ordered = sort switch
+        {
+            "score" => filtered.OrderByDescending(x => x.Score).ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id),
+            "score-asc" => filtered.OrderBy(x => x.Score).ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id),
+            "name" => filtered.OrderBy(x => x.Name).ThenBy(x => x.Id),
+            // The due column shows the next action, or the first-contact deadline while no contact was made.
+            "due" => filtered.OrderBy(x => x.NextActionAtUtc == null && x.FirstContactAtUtc != null ? 1 : 0)
+                .ThenBy(x => x.NextActionAtUtc ?? x.FirstContactDueAtUtc).ThenBy(x => x.Id),
+            // Same order as the SLA badge: overdue, due soon, on track, then completed/closed.
+            _ => filtered
+                .OrderBy(x => x.FirstContactAtUtc != null || ClosedLeadStatuses.Contains(x.Status) ? 3
+                    : x.FirstContactDueAtUtc < now ? 0
+                    : x.FirstContactDueAtUtc <= dueSoon ? 1 : 2)
+                .ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.Id)
+        };
+        var pageSize = request.PageSize is 10 or 20 or 50 or 100 ? request.PageSize : Math.Clamp(request.PageSize, 1, PageRequest.MaxPageSize);
+        var pageResult = await ordered.ToPageAsync(source, PageRequest.Of(request.Page, pageSize), x => Map(x, now, snapshot), request.Query?.Trim(), cancellationToken);
+        var pageIds = pageResult.Items.Select(x => x.Id).ToArray();
+        var duplicateIds = pageIds.Length == 0 ? [] : (await source.ToListAsync(duplicates.Where(x => pageIds.Contains(x.Id)).Select(x => x.Id), cancellationToken)).ToHashSet();
 
-        var open = visible.Where(x => !ClosedLeadStatuses.Contains(x.Status));
         var openCount = await source.CountAsync(open, cancellationToken);
         var qualified = await source.CountAsync(open.Where(x => x.Status == LeadStatus.Qualified), cancellationToken);
-        var overdue = await source.CountAsync(open.Where(x => x.FirstContactAtUtc == null && x.FirstContactDueAtUtc < now), cancellationToken);
+        var slaOverdue = await source.CountAsync(open.Where(x => x.FirstContactAtUtc == null && x.FirstContactDueAtUtc < now), cancellationToken);
         var average = await source.AverageAsync(open.Select(x => x.Score), cancellationToken);
-        return new LeadListDto(pageResult.Items, query?.Trim(), status, includeClosed, openCount, qualified, overdue,
-            average is null ? 0 : Math.Round((decimal)average.Value, 1), pageResult.Page, pageResult.PageSize, pageResult.TotalCount);
+        var sources = (await source.ToListAsync(visible.Select(x => x.Source).Distinct(), cancellationToken)).OrderBy(x => x).ToList();
+        var owners = (await source.ToListAsync(visible.Where(x => x.OwnerUserId != null).Select(x => new { Id = x.OwnerUserId!.Value, x.Owner }).Distinct(), cancellationToken))
+            .GroupBy(x => x.Id).Select(g => (g.Key, g.First().Owner)).OrderBy(x => x.Owner).ToList();
+        return new LeadListDto(pageResult.Items, request.Query?.Trim(), request.Status, request.IncludeClosed, openCount, qualified, slaOverdue,
+            average is null ? 0 : Math.Round((decimal)average.Value, 1), pageResult.Page, pageResult.PageSize, pageResult.TotalCount)
+        {
+            View = view,
+            Sort = sort,
+            BranchId = string.IsNullOrWhiteSpace(request.BranchId) ? null : request.BranchId,
+            Source = string.IsNullOrWhiteSpace(request.Source) ? null : request.Source,
+            OwnerUserId = request.OwnerUserId,
+            VisibleOpenCount = openCount,
+            NeedsActionCount = await source.CountAsync(needsAction, cancellationToken),
+            DuplicateCount = await source.CountAsync(duplicates, cancellationToken),
+            MineCount = await source.CountAsync(open.Where(x => x.OwnerUserId == currentUserId), cancellationToken),
+            NoNextActionCount = await source.CountAsync(open.Where(x => x.NextAction == null), cancellationToken),
+            OverdueCount = await source.CountAsync(overdue, cancellationToken),
+            DuplicateIds = duplicateIds,
+            Sources = sources,
+            Owners = owners,
+            CanCreate = HasPermission(snapshot, organization.CompanyId, "Lead.Create"),
+            CanAssign = HasPermission(snapshot, organization.CompanyId, "Lead.Assign"),
+            CanUpdate = HasPermission(snapshot, organization.CompanyId, "Lead.Update"),
+            CanConvert = HasPermission(snapshot, organization.CompanyId, "Lead.Convert")
+        };
+    }
+
+    /// <summary>Assigns several leads at once; each lead is checked and saved on its own, failures are reported per lead.</summary>
+    public BulkResultDto BulkAssignLeads(Guid currentUserId, OrganizationSelection organization, BulkLeadAssignCommand command, DateTimeOffset nowUtc)
+    {
+        if (command.LeadIds.Count == 0) throw new InvalidOperationException("هیچ سرنخی انتخاب نشده است.");
+        if (command.LeadIds.Count > 200) throw new InvalidOperationException("حداکثر ۲۰۰ سرنخ در هر عملیات گروهی.");
+        EnsureText(command.Reason, "دلیل ارجاع الزامی است.");
+        var snapshot = RequiredSnapshot(currentUserId);
+        RequirePermission(snapshot, organization.CompanyId, "Lead.Assign");
+        return RunBulk(command.LeadIds, id =>
+        {
+            var version = store.Read(data => data.Find<Lead>(x => x.Id == id).Select(x => x.Version).FirstOrDefault());
+            AssignLead(currentUserId, organization, id, new AssignLeadCommand(command.OwnerUserId, command.FirstContactDueAtUtc, command.Reason, version), nowUtc);
+        });
+    }
+
+    /// <summary>Plans the same next action on several open leads the user may update.</summary>
+    public BulkResultDto BulkPlanLeadNextAction(Guid currentUserId, OrganizationSelection organization, BulkLeadNextActionCommand command, DateTimeOffset nowUtc)
+    {
+        if (command.LeadIds.Count == 0) throw new InvalidOperationException("هیچ سرنخی انتخاب نشده است.");
+        if (command.LeadIds.Count > 200) throw new InvalidOperationException("حداکثر ۲۰۰ سرنخ در هر عملیات گروهی.");
+        EnsureText(command.NextAction, "عنوان اقدام بعدی الزامی است.");
+        if (command.NextActionAtUtc <= nowUtc) throw new InvalidOperationException("زمان اقدام بعدی باید در آینده باشد.");
+        var snapshot = RequiredSnapshot(currentUserId);
+        RequirePermission(snapshot, organization.CompanyId, "Lead.Update");
+        return RunBulk(command.LeadIds, id => store.Write(data =>
+        {
+            var lead = RequiredLead(data, snapshot, currentUserId, organization, id, "Lead.Update");
+            lead.PlanNextAction(command.NextAction, command.NextActionAtUtc, nowUtc);
+            data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId, lead.TerritoryId, lead.Id,
+                lead.Status, lead.Status, "اقدام بعدی: " + command.NextAction.Trim(), currentUserId, nowUtc));
+            return true;
+        }));
+    }
+
+    /// <summary>Creates leads from imported rows through the normal create rules (scope, owner, duplicate check), one row at a time.</summary>
+    public BulkResultDto ImportLeads(Guid currentUserId, OrganizationSelection organization, IReadOnlyList<LeadImportRow> rows, string branchId, DateTimeOffset nowUtc)
+    {
+        if (rows.Count == 0) throw new InvalidOperationException("فایل ردیف داده‌ای ندارد.");
+        if (rows.Count > 500) throw new InvalidOperationException("حداکثر ۵۰۰ ردیف در هر بار ورود اطلاعات.");
+        var ok = 0;
+        var failures = new List<string>();
+        foreach (var row in rows)
+        {
+            try
+            {
+                CreateLead(currentUserId, organization, new CreateLeadCommand(row.Name?.Trim() ?? "", row.Contact?.Trim(),
+                    string.IsNullOrWhiteSpace(row.Source) ? "ورود اطلاعات" : row.Source.Trim(), null, branchId, currentUserId, row.Phone?.Trim(), row.Email?.Trim(),
+                    organization.TerritoryId), nowUtc);
+                ok++;
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException or ArgumentException)
+            {
+                failures.Add($"ردیف {row.Line}: {exception.Message}");
+            }
+        }
+        return new BulkResultDto(ok, failures);
+    }
+
+    private static BulkResultDto RunBulk(IEnumerable<Guid> ids, Action<Guid> action)
+    {
+        var ok = 0;
+        var failures = new List<string>();
+        foreach (var id in ids.Distinct())
+        {
+            try { action(id); ok++; }
+            catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or UnauthorizedAccessException)
+            {
+                failures.Add(exception.Message);
+            }
+        }
+        return new BulkResultDto(ok, failures);
     }
 
     private static bool ManagesAllSalesRecords(AccessSnapshot snapshot, string companyId) =>

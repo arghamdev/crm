@@ -1,0 +1,130 @@
+@model CustomerListPage
+@{
+    var list = Model.List;
+    var s = Model.State;
+    var selectable = list.CanPlanActivities;
+    var canEdit = ViewBag.CanUpdateCustomer == true;
+    var columns = selectable ? 9 : 8;
+}
+<div id="@CustomerListPage.Target" class="list-workspace" data-bulk hx-get="@s.Table()" hx-trigger="customerChanged from:body, customersRefreshed from:body, accountChanged from:body" hx-target="this" hx-swap="outerHTML">
+    <partial name="_ListTabs" model='new ListTabsModel(s, [
+        new ListTab("همه حساب‌ها", list.VisibleCount, "all", list.View == "all"),
+        new ListTab("حساب‌های من", list.MineCount, "mine", list.View == "mine"),
+        new ListTab("بدون پیگیری", list.NoFollowUpCount, "nofollowup", list.View == "nofollowup"),
+        new ListTab("غیرفعال", list.InactiveCount, "inactive", list.View == "inactive")], "نماهای حساب")' />
+
+    <partial name="_ListTiles" model='new ListTilesModel(s, [
+        new ListTile("حساب", list.VisibleCount, $"{list.ActiveCount:N0} حساب فعال", "i-users", "green", "all", false),
+        new ListTile("پیگیری امروز", list.FollowUpDueCount, "فعالیت برنامه‌ریزی‌شده تا پایان امروز", "i-calendar", "blue", "followup", list.View == "followup"),
+        new ListTile("نیازمند تکمیل", list.IncompleteCount, "شناسه ملی، تلفن یا ایمیل ناقص", "i-alert", "amber", "incomplete", list.View == "incomplete"),
+        new ListTile("مشکوک به تکرار", list.DuplicateCount, "در انتظار بررسی و ادغام", "i-copy", "red", "duplicates", list.View == "duplicates")])' />
+
+    <section class="panel list-panel">
+        <form id="@CustomerListPage.FormId" class="list-filters" method="get" action="/customers" hx-get="/customers/table" hx-trigger="submit, change">
+            <input type="hidden" name="view" value="@s["view"]" />
+            <input type="hidden" name="sort" value="@s["sort"]" />
+            <input type="hidden" name="layout" value="@s["layout"]" />
+            <label class="list-search"><svg><use href="#i-search"/></svg><input id="customerSearch" name="q" value="@list.Query" type="search" placeholder="جست‌وجوی نام، کد یا شهر" aria-label="جست‌وجوی حساب" hx-preserve="true" hx-get="/customers/table" hx-include="#@CustomerListPage.FormId" hx-trigger="input changed delay:400ms, search" /></label>
+            <label class="list-filter"><span>شعبه</span><select name="branchId"><option value="">همه</option>@foreach (var branch in Model.Branches) { <option value="@branch.Id" selected="@(string.Equals(list.BranchId, branch.Id, StringComparison.OrdinalIgnoreCase))">@branch.Name</option> }</select></label>
+            <label class="list-filter"><span>نوع رابطه</span><select name="relationship"><option value="">همه</option>@foreach (var item in Enum.GetValues<AccountRelationship>()) { <option value="@item" selected="@(list.Relationship == item)">@AccountRecordService.RelationshipLabel(item)</option> }</select></label>
+            <label class="list-filter"><span>شخصیت</span><select name="kind"><option value="">همه</option>@foreach (var item in Enum.GetValues<CustomerKind>()) { <option value="@item" selected="@(list.Kind == item)">@CustomerLabels.Kind(item)</option> }</select></label>
+            <label class="list-filter"><span>بخش</span><select name="segment"><option value="">همه</option>@foreach (var item in list.Segments) { <option value="@item" selected="@(list.Segment == item)">@item</option> }</select></label>
+            <label class="list-filter"><span>مالک</span><select name="owner"><option value="">همه</option>@foreach (var item in list.Owners) { <option value="@item" selected="@(list.Owner == item)">@item</option> }</select></label>
+            <label class="list-filter"><span>وضعیت</span><select name="status"><option value="">همه</option>@foreach (var item in Enum.GetValues<CustomerStatus>()) { <option value="@item" selected="@(list.Status == item)">@CustomerLabels.Status(item)</option> }</select></label>
+            <div class="list-layout" role="group" aria-label="نحوه نمایش">
+                <a class="list-layout__btn@(Model.Layout == "table" ? " is-active" : "")" href="@s.Href(("layout", null))" hx-get="@s.Table(("layout", null))" aria-label="نمای فهرست" title="نمای فهرست"><svg><use href="#i-list"/></svg></a>
+                <a class="list-layout__btn@(Model.Layout == "cards" ? " is-active" : "")" href="@s.Href(("layout", "cards"))" hx-get="@s.Table(("layout", "cards"))" aria-label="نمای کارتی" title="نمای کارتی"><svg><use href="#i-grid"/></svg></a>
+            </div>
+        </form>
+
+        @if (selectable)
+        {
+            <div class="bulk-bar" data-bulk-bar hidden>
+                <span class="bulk-bar__count"><b data-bulk-count>0</b> مورد انتخاب شد</span>
+                <div class="bulk-bar__actions">
+                    <button type="button" class="button button--ghost button--sm" hx-get="/customers/bulk/task" hx-include="#@CustomerListPage.Target [data-bulk-item]" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-task"/></svg>ثبت وظیفه پیگیری</button>
+                    <button type="button" class="link-button" data-bulk-clear><svg><use href="#i-close"/></svg>پاک کردن انتخاب</button>
+                </div>
+            </div>
+        }
+
+        @if (Model.Layout == "cards")
+        {
+            <div class="list-cards">
+                @if (list.Items.Count == 0) { <partial name="_ListEmpty" model='"حسابی با این فیلترها پیدا نشد."' /> }
+                @foreach (var row in list.Items)
+                {
+                    var c = row.Customer;
+                    var due = ListFormat.Due(row.NextActivityAtUtc, Model.NowUtc);
+                    <article class="list-card">
+                        <header>
+                            @if (selectable) { <input type="checkbox" name="ids" value="@c.Id" data-bulk-item aria-label="انتخاب @c.Name" /> }
+                            <a class="entity-cell entity-link" href="/customers/@c.Id"><span class="entity-avatar">@ListFormat.Initial(c.Name)</span><span><strong>@c.Name</strong><small><bdi>@c.Code</bdi> · @c.City</small></span></a>
+                            <span class="pill pill--@CustomerLabels.StatusTone(c.Status)"><svg><use href="#@CustomerLabels.StatusIcon(c.Status)"/></svg>@CustomerLabels.Status(c.Status)</span>
+                        </header>
+                        <dl>
+                            <div><dt>نوع رابطه</dt><dd><svg><use href="#@CustomerLabels.RelationshipIcon(row.Relationship)"/></svg>@AccountRecordService.RelationshipLabel(row.Relationship) · @CustomerLabels.Kind(c.Kind)</dd></div>
+                            <div><dt>شعبه / مالک</dt><dd>@c.Branch · @c.Owner</dd></div>
+                            <div><dt>کیفیت داده</dt><dd><span class="score-meter" style="--value:@c.DataQualityScore"><span><b>@c.DataQualityScore</b> از 100</span></span></dd></div>
+                            <div><dt>پیگیری بعدی</dt><dd class="@(row.NextActivity is null ? "muted" : "")"><svg><use href="#@CustomerLabels.ActivityIcon(row.NextActivityType)"/></svg>@(row.NextActivity ?? (list.CanReadActivities ? "برنامه‌ای ندارد" : "—"))</dd></div>
+                        </dl>
+                        <footer><span class="due due--@due.Item2"><svg><use href="#@(due.Item2 == "danger" ? "i-alert" : "i-calendar")"/></svg>@due.Item1</span>@if (row.PendingDuplicate) { <span class="pill pill--danger pill--sm"><svg><use href="#i-copy"/></svg>مشکوک به تکرار</span> }<a class="link-button" href="/customers/@c.Id">پرونده حساب</a></footer>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="list-table">
+                    <thead><tr>
+                        @if (selectable) { <th class="list-table__check"><input type="checkbox" data-bulk-all aria-label="انتخاب همه حساب‌های این صفحه" /></th> }
+                        <th><a class="sort-link@(list.Sort == "name" ? " is-active" : "")" href="@s.Href(("sort", list.Sort == "name" ? null : "name"))" hx-get="@s.Table(("sort", list.Sort == "name" ? null : "name"))">حساب<svg><use href="#i-sort"/></svg></a></th>
+                        <th class="hide-sm">نوع رابطه</th>
+                        <th class="hide-sm">شعبه / مالک</th>
+                        <th class="hide-sm">وضعیت</th>
+                        <th class="hide-sm">کیفیت داده</th>
+                        <th class="hide-sm">پیگیری بعدی</th>
+                        <th>سررسید</th>
+                        <th><span class="sr-only">عملیات</span></th>
+                    </tr></thead>
+                    <tbody>
+                        @if (list.Items.Count == 0) { <tr><td colspan="@columns"><partial name="_ListEmpty" model='"حسابی با این فیلترها پیدا نشد."' /></td></tr> }
+                        @foreach (var row in list.Items)
+                        {
+                            var c = row.Customer;
+                            var due = ListFormat.Due(row.NextActivityAtUtc, Model.NowUtc);
+                            <tr>
+                                @if (selectable) { <td class="list-table__check"><input type="checkbox" name="ids" value="@c.Id" data-bulk-item aria-label="انتخاب @c.Name" /></td> }
+                                <td><a class="entity-cell entity-link" href="/customers/@c.Id"><span class="entity-avatar">@ListFormat.Initial(c.Name)</span><span><strong>@c.Name</strong><small><bdi>@c.Code</bdi> · @c.City</small><span class="pill pill--sm pill--@CustomerLabels.StatusTone(c.Status) show-sm">@CustomerLabels.Status(c.Status)</span></span></a></td>
+                                <td class="hide-sm"><span class="cell-icon"><svg><use href="#@CustomerLabels.RelationshipIcon(row.Relationship)"/></svg>@AccountRecordService.RelationshipLabel(row.Relationship)</span><small class="cell-sub">@CustomerLabels.Kind(c.Kind) · @c.Segment</small></td>
+                                <td class="hide-sm"><strong class="cell-title">@c.Branch</strong><small class="cell-sub">@c.Owner</small></td>
+                                <td class="hide-sm"><span class="pill pill--@CustomerLabels.StatusTone(c.Status)"><svg><use href="#@CustomerLabels.StatusIcon(c.Status)"/></svg>@CustomerLabels.Status(c.Status)</span>@if (row.PendingDuplicate) { <small class="cell-flag"><svg><use href="#i-copy"/></svg>مشکوک به تکرار</small> }</td>
+                                <td class="hide-sm"><span class="score-meter score-meter--@(c.DataQualityScore < 70 ? "low" : c.DataQualityScore < 90 ? "mid" : "high")" style="--value:@c.DataQualityScore"><span><b>@c.DataQualityScore</b> از 100</span></span></td>
+                                <td class="hide-sm"><span class="cell-icon@(row.NextActivity is null ? " muted" : "")"><svg><use href="#@CustomerLabels.ActivityIcon(row.NextActivityType)"/></svg>@(row.NextActivity ?? (list.CanReadActivities ? "برنامه‌ای ندارد" : "—"))</span></td>
+                                <td><span class="due due--@due.Item2"><svg><use href="#@(due.Item2 == "danger" ? "i-alert" : "i-calendar")"/></svg>@due.Item1</span></td>
+                                <td class="list-table__menu">
+                                    <details class="row-menu">
+                                        <summary aria-label="عملیات @c.Name"><svg><use href="#i-more"/></svg></summary>
+                                        <div class="row-menu__list">
+                                            <a href="/customers/@c.Id"><svg><use href="#i-file"/></svg>پرونده حساب</a>
+                                            @if (canEdit) { <a href="/customers/@c.Id/edit" hx-get="/customers/@c.Id/edit" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-edit"/></svg>ویرایش حساب</a> }
+                                            @if (list.CanPlanActivities && c.Status != CustomerStatus.Inactive)
+                                            {
+                                                <a href="/customers/@c.Id/activities/new/Call" hx-get="/customers/@c.Id/activities/new/Call" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-phone"/></svg>برنامه‌ریزی تماس</a>
+                                                <a href="/customers/@c.Id/activities/new/Task" hx-get="/customers/@c.Id/activities/new/Task" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-task"/></svg>ایجاد وظیفه</a>
+                                            }
+                                            <a href="/customers/@c.Id?tab=related"><svg><use href="#i-link"/></svg>رکوردهای مرتبط</a>
+                                        </div>
+                                    </details>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <partial name="_ListPager" model='new ListPagerModel(s, list.Page, list.PageSize, list.TotalCount, list.TotalPages, CustomerListPage.FormId, "حساب")' />
+    </section>
+</div>

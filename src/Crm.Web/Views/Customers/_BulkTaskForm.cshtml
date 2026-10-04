@@ -1,0 +1,22 @@
+@model BulkAccountTaskFormModel
+<form class="drawer-form" method="post" action="/customers/bulk/task" hx-post="/customers/bulk/task" hx-target="#drawerBody" hx-swap="innerHTML">
+    @Html.AntiForgeryToken()
+    @foreach (var id in Model.Ids) { <input type="hidden" name="Ids" value="@id" /> }
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section">
+        <h3 data-drawer-title>ثبت وظیفه پیگیری برای حساب‌های انتخاب‌شده</h3>
+        <p class="bulk-note"><svg><use href="#i-task"/></svg><span>برای هر یک از <b>@Model.Ids.Length</b> حساب یک وظیفه به نام شما ثبت می‌شود و در پرونده حساب و کارتابل دیده می‌شود.</span></p>
+        <div class="form-grid">
+            <label class="field field--full"><span>عنوان وظیفه *</span><input name="Subject" value="@Model.Subject" maxlength="200" /><span asp-validation-for="Subject" class="field-error"></span></label>
+            <label class="field"><span>تاریخ مهلت *</span><input name="DueDate" value="@Model.DueDate" placeholder="۱۴۰۵/۰۷/۲۰" inputmode="numeric" data-jalali /><span asp-validation-for="DueDate" class="field-error"></span></label>
+            <label class="field"><span>ساعت مهلت</span><input name="DueTime" value="@Model.DueTime" placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></label>
+            <label class="field"><span>اولویت</span><select name="Priority">
+                <option value="Low" selected="@(Model.Priority == ActivityPriority.Low)">کم</option>
+                <option value="Normal" selected="@(Model.Priority == ActivityPriority.Normal)">عادی</option>
+                <option value="High" selected="@(Model.Priority == ActivityPriority.High)">بالا</option>
+                <option value="Urgent" selected="@(Model.Priority == ActivityPriority.Urgent)">فوری</option>
+            </select></label>
+        </div>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت وظیفه</button></div>
+</form>
