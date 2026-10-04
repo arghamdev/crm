@@ -1,0 +1,50 @@
+@model AccountFileDto
+@{
+    var basePath = $"/customers/{Model.Account.Id}";
+}
+@if (Model.Sections.Count == 0)
+{
+    <p class="state-denied"><svg><use href="#i-shield"/></svg>بخش مرتبطی برای سطح دسترسی شما وجود ندارد.</p>
+}
+@foreach (var group in Model.Sections.GroupBy(x => x.Group))
+{
+    <div class="section-group" data-section-group>
+        <h3 class="section-group__title">@group.Key</h3>
+        @foreach (var s in group)
+        {
+            <details class="acc-section" id="sec-@s.Key" data-section="@s.Key" data-title="@s.Title" data-lazy-section>
+                <summary>
+                    <span class="acc-section__icon"><svg><use href="#@s.Icon"/></svg></span>
+                    <span class="acc-section__title">@s.Title</span>
+                    <b class="acc-section__count" aria-label="تعداد">@s.Count</b>
+                    <span class="acc-section__tools">
+                        @if (s.CanCreate) { <button type="button" class="tool-button" data-no-toggle hx-get="@CreateUrl(s.Key)" hx-target="#drawerBody" title="ایجاد در @s.Title" aria-label="ایجاد در @s.Title"><svg><use href="#i-plus"/></svg></button> }
+                        @if (s.CanLink) { <button type="button" class="tool-button" data-no-toggle hx-get="@basePath/records/@s.Key/link" hx-target="#drawerBody" title="اتصال رکورد موجود" aria-label="اتصال رکورد موجود به @s.Title"><svg><use href="#i-link"/></svg></button> }
+                    </span>
+                    <svg class="chev"><use href="#i-chevron"/></svg>
+                </summary>
+                <div class="acc-section__body" data-account-refresh data-lazy hx-get="@basePath/sections/@s.Key" hx-trigger="refresh" hx-swap="innerHTML">
+                    <p class="state-loading">در حال بارگذاری…</p>
+                </div>
+            </details>
+        }
+    </div>
+}
+@functions {
+    private string CreateUrl(string key)
+    {
+        var id = Model.Account.Id;
+        return key switch
+        {
+            "contacts" => $"/customers/{id}/contacts/create",
+            "opportunities" => $"/customers/{id}/quick/opportunity",
+            "leads" => $"/customers/{id}/quick/lead",
+            "quotes" => $"/quotes/create?customerId={id}",
+            "serviceCases" => $"/service/create?customerId={id}",
+            "branches" => $"/customers/{id}/addresses/create?type=Branch",
+            "serviceCenters" => $"/customers/{id}/addresses/create?type=ServiceCenter",
+            "salesCenters" => $"/customers/{id}/addresses/create?type=SalesCenter",
+            _ => $"/customers/{id}/records/{key}/new"
+        };
+    }
+}

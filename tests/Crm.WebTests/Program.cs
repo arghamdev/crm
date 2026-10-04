@@ -67,6 +67,7 @@ internal static partial class TestRunner
         await CheckDealerIncentives(channelManager, financeUser, expert, dealerUser);
         await CheckDealerAssurance(channelManager, financeUser, expert);
         await CheckNotificationSettings(expert);
+        await CheckAccountFile(serviceManager, expert, financeUser, dealerUser);
 
         using var secondNode = new DemoWebFactory(keyRingPath, sharedStore);
         await CheckSharedKeyRing(secondNode, managerCookie);
@@ -250,10 +251,10 @@ internal static partial class TestRunner
         {
             var html = await details.Content.ReadAsStringAsync();
             CheckHtml(details.StatusCode == HttpStatusCode.OK &&
-                  HtmlContains(html, "نمای ۳۶۰ مشتری") &&
-                  HtmlContains(html, "رابط‌های مشتری") &&
-                  HtmlContains(html, "Timeline یکپارچه"),
-                "Customer details must render the aggregated Customer 360 view.", "customer-360", html);
+                  HtmlContains(html, "پرونده حساب") &&
+                  HtmlContains(html, "افراد رابط") &&
+                  HtmlContains(html, "رکوردهای مرتبط"),
+                "Customer details must render the account file (پرونده حساب).", "customer-360", html);
         }
 
         using (var request = new HttpRequestMessage(HttpMethod.Get, $"/customers/{customerId}/activity"))

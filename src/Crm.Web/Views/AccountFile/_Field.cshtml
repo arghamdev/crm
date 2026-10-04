@@ -1,0 +1,34 @@
+@model AccountFormField
+@{
+    var f = Model;
+    var css = f.Wide || f.Type is "textarea" or "file" ? "field--full" : null;
+    var label = f.Required ? $"{f.Label} *" : f.Label;
+}
+@switch (f.Type)
+{
+    case "hidden":
+        <input type="hidden" name="@f.Name" value="@f.Value" />
+        break;
+    case "checkbox":
+        <label class="consent-row @css"><input type="checkbox" name="@f.Name" value="true" checked="@(f.Value is "true" or "on" or "True")" /><span>@f.Label</span></label>
+        break;
+    case "select":
+        <label class="@css"><span>@label</span><select name="@f.Name" required="@f.Required">
+            @foreach (var option in f.Options ?? [])
+            {
+                <option value="@option.Value" selected="@(option.Value == f.Value)">@option.Label</option>
+            }
+        </select>@if (f.Help is not null) { <small class="field-help">@f.Help</small> }</label>
+        break;
+    case "textarea":
+        <label class="@css"><span>@label</span><textarea name="@f.Name" rows="3" required="@f.Required" placeholder="@f.Placeholder">@f.Value</textarea>@if (f.Help is not null) { <small class="field-help">@f.Help</small> }</label>
+        break;
+    case "file":
+        <label class="@css"><span>@label</span><input type="file" name="@f.Name" required="@f.Required" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.docx,.xlsx" />@if (f.Help is not null) { <small class="field-help">@f.Help</small> }</label>
+        break;
+    default:
+        var inputType = f.Type is "number" ? "number" : "text";
+        var mode = f.Type switch { "money" => "decimal", "date" or "time" => "numeric", _ => null };
+        <label class="@css"><span>@label</span><input type="@inputType" name="@f.Name" value="@f.Value" required="@f.Required" placeholder="@(f.Placeholder ?? (f.Type == "date" ? "۱۴۰۵/۰۷/۱۲" : f.Type == "time" ? "۱۰:۳۰" : null))" dir="@(f.Ltr || f.Type is "money" or "time" ? "ltr" : null)" inputmode="@mode" data-money="@(f.Type == "money" ? "true" : null)" data-jalali="@(f.Type == "date" ? "true" : null)" />@if (f.Help is not null) { <small class="field-help">@f.Help</small> }</label>
+        break;
+}

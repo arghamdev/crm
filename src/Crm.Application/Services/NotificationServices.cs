@@ -11,7 +11,7 @@ namespace Crm.Application.Services;
 public static class NotificationOutbox
 {
     public static int Enqueue(CrmDataSet data, string companyId, Guid userId, NotificationCategory category, string subject, string body,
-        string? sourceReference, string dedupKey, DateTimeOffset nowUtc)
+        string? sourceReference, string dedupKey, DateTimeOffset nowUtc, DateTimeOffset? deliverAtUtc = null)
     {
         var user = data.Find<CrmUser>(x => x.Id == userId).SingleOrDefault();
         if (user is null || !user.IsActiveAt(nowUtc)) return 0;
@@ -25,7 +25,7 @@ public static class NotificationOutbox
         foreach (var (channel, address) in targets.Where(x => !existing.Contains(x.Channel)))
         {
             data.Append(new NotificationMessage(Guid.NewGuid(), companyId, userId, channel, address, category, subject,
-                channel == NotificationChannel.Sms ? $"{subject}\n{body}" : body, sourceReference, dedupKey, nowUtc));
+                channel == NotificationChannel.Sms ? $"{subject}\n{body}" : body, sourceReference, dedupKey, nowUtc, deliverAtUtc));
             added++;
         }
         return added;
@@ -85,15 +85,24 @@ public sealed class NotificationDispatcher(ICrmDataStore store, IEnumerable<INot
         var added = 0;
         foreach (var companyGroup in expiring.GroupBy(x => x.CompanyId))
         {
-            var recipients = NotificationOutbox.UsersWithPermission(data, companyGroup.Key, "Dealer.Guarantee.Manage", nowUtc);
-            var dealerIds = companyGroup.Select(x => x.DealerId).Distinct().ToArray();
+            var dealerIds = companyGroup.Where(x => x.DealerId is not null).Select(x => x.DealerId!.Value).Distinct().ToArray();
+            var accountIds = companyGroup.Where(x => x.CustomerId is not null).Select(x => x.CustomerId!.Value).Distinct().ToArray();
             var dealers = data.Find<Dealer>(x => dealerIds.Contains(x.Id)).ToDictionary(x => x.Id, x => x.TradeName);
+            var accounts = data.Find<Crm.Domain.Customers.Customer>(x => accountIds.Contains(x.Id)).ToDictionary(x => x.Id, x => x.Name);
+            // Dealer guarantees go to dealer-guarantee managers, account guarantees to account-guarantee managers.
+            var dealerRecipients = NotificationOutbox.UsersWithPermission(data, companyGroup.Key, "Dealer.Guarantee.Manage", nowUtc);
+            var accountRecipients = NotificationOutbox.UsersWithPermission(data, companyGroup.Key, "Account.Guarantee.Manage", nowUtc);
             foreach (var guarantee in companyGroup)
+            {
+                var (owner, link, recipients) = guarantee.DealerId is { } dealerId
+                    ? ($"نماینده {dealers.GetValueOrDefault(dealerId, "—")}", $"/dealers/{dealerId}#assurance", dealerRecipients)
+                    : ($"حساب {accounts.GetValueOrDefault(guarantee.CustomerId!.Value, "—")}", $"/customers/{guarantee.CustomerId}?tab=related#section-guarantees", accountRecipients);
                 foreach (var user in recipients)
                     added += NotificationOutbox.Enqueue(data, guarantee.CompanyId, user, NotificationCategory.GuaranteeExpiry,
                         $"سررسید تضمین {guarantee.Number}",
-                        $"تضمین {guarantee.Number} نماینده {dealers.GetValueOrDefault(guarantee.DealerId, "—")} به مبلغ {guarantee.Amount:N0} ریال در {JalaliDate.Format(guarantee.ExpiresOn!.Value)} سررسید می‌شود.",
-                        $"/dealers/{guarantee.DealerId}#assurance", $"guarantee-expiry:{guarantee.Id:N}:{guarantee.ExpiresOn:yyyyMMdd}", nowUtc);
+                        $"تضمین {guarantee.Number} {owner} به مبلغ {guarantee.Amount:N0} ریال در {JalaliDate.Format(guarantee.ExpiresOn!.Value)} سررسید می‌شود.",
+                        link, $"guarantee-expiry:{guarantee.Id:N}:{guarantee.ExpiresOn:yyyyMMdd}", nowUtc);
+            }
         }
         return added;
     });

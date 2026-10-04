@@ -1,0 +1,26 @@
+@model NoteFormModel
+@{
+    var c = Model.Command;
+    var action = Model.NoteId is { } id ? $"/customers/{Model.AccountId}/notes/{id}/edit" : $"/customers/{Model.AccountId}/notes";
+}
+<form class="drawer-form account-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-encoding="multipart/form-data" enctype="multipart/form-data" hx-disabled-elt="find button[type=submit]">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OperationId" value="@c.OperationId" />
+    @if (Model.AccountName is not null) { <div class="form-context"><svg><use href="#i-building"/></svg><span>حساب: <b>@Model.AccountName</b></span></div> }
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>@(Model.NoteId is null ? "ایجاد یادداشت" : "ویرایش یادداشت")</h3>
+        <div class="form-grid">
+            <label class="field--full"><span>عنوان *</span><input name="Title" value="@c.Title" required maxlength="200" /></label>
+            <label class="field--full"><span>متن یادداشت *</span><textarea name="Body" rows="6" required maxlength="8000">@c.Body</textarea></label>
+            <label><span>سطح دسترسی</span><select name="Visibility">
+                <option value="Public" selected="@(c.Visibility == NoteVisibility.Public)">عمومی (همهٔ کاربران مجاز حساب)</option>
+                <option value="Restricted" selected="@(c.Visibility == NoteVisibility.Restricted)">محدود (نویسنده و مدیران)</option>
+                <option value="Private" selected="@(c.Visibility == NoteVisibility.Private)">خصوصی (فقط نویسنده)</option>
+            </select></label>
+            <label><span>پیوست (اختیاری، حداکثر ۵ فایل)</span><input type="file" name="attachments" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.docx,.xlsx" /></label>
+            @if (Model.Attachments.Count > 0) { <p class="field-help field--full">پیوست‌های فعلی: @string.Join("، ", Model.Attachments.Select(x => x.Name))</p> }
+            <p class="field-help field--full">نویسنده و زمان ثبت به‌طور خودکار ذخیره می‌شود. پیوست‌ها در بخش «اسناد و پیوست‌ها» هم دیده می‌شوند.</p>
+        </div>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیره</button></div>
+</form>

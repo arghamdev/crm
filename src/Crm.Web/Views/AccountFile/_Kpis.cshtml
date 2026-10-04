@@ -1,0 +1,16 @@
+@model AccountFileDto
+@if (Model.Kpis.Count == 0)
+{
+    <p class="state-denied">شاخصی برای نمایش با سطح دسترسی شما وجود ندارد.</p>
+}
+@foreach (var k in Model.Kpis)
+{
+    <article class="kpi kpi--@k.Tone" data-kpi="@k.Key">
+        <div class="kpi__head">
+            <span class="kpi__label">@k.Label</span>
+            <details class="kpi__def"><summary aria-label="تعریف شاخص @k.Label" title="@k.Definition"><svg><use href="#i-info"/></svg></summary><p>@k.Definition</p></details>
+        </div>
+        @if (k.Url is not null) { <a class="kpi__value" href="@k.Url" data-goto><bdi dir="ltr">@k.Value</bdi></a> } else { <strong class="kpi__value"><bdi dir="ltr">@k.Value</bdi></strong> }
+        @if (k.Detail is not null) { <small class="kpi__detail">@k.Detail</small> }
+    </article>
+}

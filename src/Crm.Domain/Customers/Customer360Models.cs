@@ -3,7 +3,7 @@ using Crm.Domain.Common;
 namespace Crm.Domain.Customers;
 
 public enum ContactConsentStatus { Unknown, Granted, Revoked }
-public enum CustomerAddressType { Registered, Billing, Shipping, Visit }
+public enum CustomerAddressType { Registered, Billing, Shipping, Visit, Branch, ServiceCenter, SalesCenter }
 public enum CustomerTimelineType
 {
     Created,
@@ -18,7 +18,16 @@ public enum CustomerTimelineType
     LeadConverted,
     OpportunityChanged,
     VisitCompleted,
-    ServiceCase
+    ServiceCase,
+    Activity,
+    Note,
+    Document,
+    RelationChanged,
+    Payment,
+    Contract,
+    Project,
+    Marketing,
+    StatusChanged
 }
 public enum DuplicateReviewStatus { Pending, Confirmed, Dismissed }
 public enum CustomerMergeStatus { Merged, Reverted }

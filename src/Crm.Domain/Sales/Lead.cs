@@ -138,6 +138,14 @@ public sealed class Lead(
         Touch();
     }
 
+    /// <summary>Removes the link to an account; a converted lead keeps it because conversion created the account relation.</summary>
+    public void DetachCustomer()
+    {
+        if (Status == LeadStatus.Converted) throw new InvalidOperationException("سرنخ تبدیل‌شده به حساب و فرصت متصل می‌ماند تا منشأ آن حفظ شود.");
+        CustomerId = null;
+        Touch();
+    }
+
     public void ReassignCustomer(Guid customerId)
     {
         if (customerId == Guid.Empty) throw new ArgumentException("CustomerId is required.", nameof(customerId));

@@ -370,7 +370,8 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
                 PortalRequests = data.PortalRequests.Where(x=>x.CustomerId==merged.Id).Select(x=>x.Id).ToArray(),
                 ServiceCases = data.ServiceCases.Where(x => x.CustomerId == merged.Id).Select(x => x.Id).ToArray(),
                 PrimaryContacts = data.CustomerContacts.Where(x => x.CustomerId == merged.Id && x.IsPrimary).Select(x => x.Id).ToArray(),
-                PrimaryAddresses = data.CustomerAddresses.Where(x => x.CustomerId == merged.Id && x.IsPrimary).Select(x => x.Id).ToArray()
+                PrimaryAddresses = data.CustomerAddresses.Where(x => x.CustomerId == merged.Id && x.IsPrimary).Select(x => x.Id).ToArray(),
+                AccountRecords = AccountMerge.Collect(data, merged.Id, survivor.Id)
             };
             if (data.CustomerContacts.Any(x => x.CustomerId == survivor.Id && x.IsPrimary && x.IsActive))
                 foreach (var item in data.CustomerContacts.Where(x => manifest.PrimaryContacts.Contains(x.Id))) item.SetPrimary(false);
@@ -386,6 +387,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             foreach(var item in data.MobileVisits.Where(x=>manifest.MobileVisits.Contains(x.Id)))item.ReassignCustomer(survivor.Id);
             foreach(var item in data.PortalRequests.Where(x=>manifest.PortalRequests.Contains(x.Id)))item.ReassignCustomer(survivor.Id);
             foreach (var item in data.ServiceCases.Where(x => manifest.ServiceCases.Contains(x.Id))) item.ReassignCustomer(survivor.Id);
+            AccountMerge.Move(data, manifest.AccountRecords, survivor.Id);
             var previousStatus = merged.Status;
             merged.MergeInto();
             var operation = new CustomerMergeOperation(Guid.NewGuid(), merged.CompanyId, candidate.Id, survivor.Id,
@@ -452,6 +454,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             foreach(var item in data.MobileVisits.Where(x=>manifest.MobileVisits.Contains(x.Id)))item.ReassignCustomer(merged.Id);
             foreach(var item in data.PortalRequests.Where(x=>manifest.PortalRequests.Contains(x.Id)))item.ReassignCustomer(merged.Id);
             foreach (var item in data.ServiceCases.Where(x => manifest.ServiceCases.Contains(x.Id))) item.ReassignCustomer(merged.Id);
+            AccountMerge.Move(data, manifest.AccountRecords, merged.Id);
             foreach (var item in data.CustomerContacts.Where(x => manifest.PrimaryContacts.Contains(x.Id))) item.SetPrimary(true);
             foreach (var item in data.CustomerAddresses.Where(x => manifest.PrimaryAddresses.Contains(x.Id))) item.SetPrimary(true);
             merged.RestoreAfterMerge(operation.MergedCustomerPreviousStatus);
@@ -660,5 +663,6 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
         public Guid[] PortalRequests { get; init; } = [];
         public Guid[] PrimaryContacts { get; init; } = [];
         public Guid[] PrimaryAddresses { get; init; } = [];
+        public Dictionary<string, Guid[]> AccountRecords { get; init; } = [];
     }
 }

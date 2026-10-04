@@ -109,8 +109,18 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
         var snapshot = RequiredSnapshot(currentUserId);
         return store.Write(data =>
         {
+            if (ClientOperations.Existing(data, currentUserId, command.OperationId) is { } replayed)
+                return Map(data.Find<Lead>(x => x.Id == replayed).Single(), nowUtc, snapshot);
             var scope = ResolveWriteScope(data, snapshot, organization, "Lead.Create", command.BranchId, command.TerritoryId);
             EnsureText(command.Name, "نام سرنخ الزامی است.");
+            // A lead raised from an account file (new demand of an existing account) stays linked to that account.
+            Customer? account = null;
+            if (command.CustomerId is { } accountId)
+            {
+                account = data.Find<Customer>(x => x.Id == accountId).SingleOrDefault(x => x.Status != CustomerStatus.Inactive &&
+                    InContext(snapshot, organization, "Customer.Read", x)) ?? throw new InvalidOperationException("حساب فعال و مجاز انتخاب نشده است.");
+                if (!Same(account.BranchId, scope.BranchId)) throw new InvalidOperationException("شعبه سرنخ باید با شعبه حساب یکسان باشد.");
+            }
             if (string.IsNullOrWhiteSpace(command.Contact) && string.IsNullOrWhiteSpace(command.Phone) && string.IsNullOrWhiteSpace(command.Email))
                 throw new InvalidOperationException("حداقل نام تماس، تلفن یا ایمیل الزامی است.");
             EnsureNoOpenDuplicate(data, organization.CompanyId, command.Name, command.Phone, command.Email);
@@ -120,10 +130,14 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             var owner = RequiredOwner(data, organization.CompanyId, scope.BranchId, ownerId, nowUtc);
             var lead = new Lead(Guid.NewGuid(), NextLeadCode(data, nowUtc), command.Name, command.Contact ?? string.Empty,
                 string.IsNullOrWhiteSpace(command.Source) ? "نامشخص" : command.Source, owner.DisplayName,
-                organization.CompanyId, scope.BranchId, scope.TerritoryId, ownerUserId: owner.UserId,
+                organization.CompanyId, scope.BranchId, scope.TerritoryId, customerId: account?.Id, ownerUserId: owner.UserId,
                 phone: command.Phone, email: command.Email, firstContactDueAtUtc: nowUtc.AddHours(4));
             lead.ApplyScore(ScoreLead(command));
             data.Leads.Add(lead);
+            ClientOperations.Record(data, currentUserId, command.OperationId, "Lead", lead.Id);
+            if (account is not null)
+                data.Append(new CustomerTimelineEvent(Guid.NewGuid(), account.CompanyId, account.Id, CustomerTimelineType.RelationChanged,
+                    $"سرنخ {lead.Code} برای حساب ثبت شد", lead.Name, nowUtc, "CRM", lead.Code, currentUserId));
             data.Append<Crm.Domain.Sales.LeadStatusHistory>(new LeadStatusHistory(Guid.NewGuid(), lead.CompanyId, lead.BranchId,
                 lead.TerritoryId, lead.Id, null, LeadStatus.New, "ثبت سرنخ", currentUserId, nowUtc));
             var from = lead.Status;
@@ -294,6 +308,8 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
         RequirePermission(snapshot, organization.CompanyId, "Opportunity.Create");
         return store.Write(data =>
         {
+            if (ClientOperations.Existing(data, currentUserId, command.OperationId) is { } replayed)
+                return Map(data.Find<Opportunity>(x => x.Id == replayed).Single());
             var scope = ResolveWriteScope(data, snapshot, organization, "Opportunity.Create", command.BranchId, command.TerritoryId);
             var customer = data.Customers.SingleOrDefault(x => x.Id == command.CustomerId && x.Status != CustomerStatus.Inactive &&
                 InContext(snapshot, organization, "Customer.Read", x)) ?? throw new InvalidOperationException("مشتری فعال و مجاز انتخاب نشده است.");
@@ -304,9 +320,17 @@ public sealed class SalesPipelineService(ICrmDataStore store, IAccessSnapshotSer
             var opportunity = new Opportunity(Guid.NewGuid(), NextOpportunityCode(data, nowUtc), command.Title,
                 customer.Name, customer.Id, command.Value, owner.DisplayName, organization.CompanyId, scope.BranchId,
                 scope.TerritoryId, owner.UserId, null, command.ExpectedCloseAtUtc, command.Source);
+            if (command.InitialStage is { } stage && stage != OpportunityStage.Identified) opportunity.StartAt(stage);
+            if (command.ContactId is { } contactId && !data.Find<CustomerContact>(x => x.Id == contactId && x.CustomerId == customer.Id && x.IsActive).Any())
+                throw new InvalidOperationException("فرد رابط انتخاب‌شده به این حساب تعلق ندارد.");
             opportunity.Update(command.Title, command.Value, command.ExpectedCloseAtUtc, command.Source,
                 command.Competitor, command.RiskLevel, command.NextAction, command.NextActionAtUtc);
+            opportunity.SetContactAndCurrency(command.ContactId, command.CurrencyCode);
+            if (command.Probability is { } probability && probability != opportunity.Probability) opportunity.SetProbability(probability);
             data.Opportunities.Add(opportunity);
+            ClientOperations.Record(data, currentUserId, command.OperationId, "Opportunity", opportunity.Id);
+            data.Append(new CustomerTimelineEvent(Guid.NewGuid(), customer.CompanyId, customer.Id, CustomerTimelineType.OpportunityChanged,
+                $"فرصت {opportunity.Code} ایجاد شد", $"{opportunity.Title} · {opportunity.Value:N0} {opportunity.CurrencyCode}", nowUtc, "CRM", opportunity.Code, currentUserId));
             data.Append<Crm.Domain.Sales.OpportunityStageHistory>(new OpportunityStageHistory(Guid.NewGuid(), opportunity.CompanyId,
                 opportunity.BranchId, opportunity.TerritoryId, opportunity.Id, null, opportunity.Stage,
                 opportunity.Probability, "ایجاد فرصت", currentUserId, nowUtc));

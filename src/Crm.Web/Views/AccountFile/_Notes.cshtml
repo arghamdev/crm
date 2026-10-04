@@ -1,0 +1,30 @@
+@model IReadOnlyList<NoteDto>
+@{
+    var accountId = (Guid)ViewBag.AccountId;
+    var basePath = $"/customers/{accountId}";
+    string Visibility(NoteVisibility v) => v switch { NoteVisibility.Public => "عمومی", NoteVisibility.Restricted => "محدود", _ => "خصوصی" };
+}
+<form class="act-filter act-filter--single" hx-get="@basePath/notes" hx-target="#notesPanel" hx-swap="innerHTML" hx-trigger="input changed delay:450ms from:find input, submit" role="search">
+    <input type="search" name="q" value="@ViewBag.Query" placeholder="جست‌وجو در یادداشت‌ها" aria-label="جست‌وجو در یادداشت‌ها" />
+</form>
+@if (Model.Count == 0)
+{
+    <p class="state-empty">@(ViewBag.Query is string { Length: > 0 } ? "یادداشتی با این عبارت پیدا نشد." : "یادداشتی ثبت نشده است.")</p>
+}
+@foreach (var n in Model)
+{
+    <article class="note">
+        <header><strong>@n.Title</strong><span class="badge badge--@(n.Visibility == NoteVisibility.Public ? "neutral" : "warning")">@Visibility(n.Visibility)</span></header>
+        <p class="pre">@n.Body</p>
+        @if (n.Attachments.Count > 0)
+        {
+            <div class="note__files">@foreach (var file in n.Attachments) { <a href="@basePath/documents/@file.Id"><svg><use href="#i-download"/></svg>@file.Name</a> }</div>
+        }
+        <footer><span>@n.Author · @n.CreatedAt</span>
+            @if (n.CanEdit)
+            {
+                <span class="note__actions"><button type="button" class="link-button" hx-get="@basePath/notes/@n.Id/edit" hx-target="#drawerBody">ویرایش</button><form method="post" action="@basePath/notes/@n.Id/delete" hx-post="@basePath/notes/@n.Id/delete" hx-swap="none" data-confirm="این یادداشت حذف شود؟">@Html.AntiForgeryToken()<button type="submit" class="link-button link-button--danger">حذف</button></form></span>
+            }
+        </footer>
+    </article>
+}

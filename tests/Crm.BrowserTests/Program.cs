@@ -38,6 +38,7 @@ try
     await VerifyOrderForm(page, baseUrl);
     await VerifyDealerForm(page, baseUrl);
     await VerifyActivityForm(page, baseUrl);
+    await VerifyAccountFile(page, baseUrl);
     await VerifyServiceDesk(page, baseUrl, artifacts);
     await VerifyReporting(page, baseUrl);
     await VerifyPortalAndMobile(page, baseUrl, artifacts);
@@ -257,6 +258,90 @@ static async Task VerifyOpportunityForm(IPage page, string baseUrl)
         new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     Assert(await page.GetByText(title, new PageGetByTextOptions { Exact = true }).CountAsync() == 1,
         "Created Opportunity was not visible after the HTMX submission.");
+}
+
+static async Task VerifyAccountFile(IPage page, string baseUrl)
+{
+    const string accountPath = "/customers/20000000-0000-4000-8000-000000000001";
+    var stamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    var callSubject = "تماس مرورگر " + stamp;
+    await page.GotoAsync(baseUrl + accountPath, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    var panel = page.Locator("#activityPanel");
+    await panel.Locator(".act-group").First.WaitForAsync();
+
+    // Quick action «برنامه‌ریزی تماس»: the account is preselected; a double click saves once and the panel refreshes in place.
+    await page.Locator(".quick-action", new PageLocatorOptions { HasText = "برنامه‌ریزی تماس" }).ClickAsync();
+    var form = page.Locator("#drawerBody form[action$='/activities']");
+    await form.WaitForAsync();
+    Assert(await page.Locator("#drawerBody .form-context").InnerTextAsync() is var context && context.Contains("صنایع غذایی سپهر"),
+        "Account file call form does not show the preselected account.");
+    await form.Locator("input[name='Subject']").FillAsync(callSubject);
+    await form.Locator("button[type='submit']").DblClickAsync();
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
+    await panel.GetByText(callSubject).First.WaitForAsync();
+    Assert(await panel.GetByText(callSubject).CountAsync() == 1, "Double-clicked call was listed more than once.");
+    await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    await panel.GetByText(callSubject).First.WaitForAsync();
+
+    // Record the outcome separately from planning, with a next action.
+    var item = panel.Locator("article.act", new LocatorLocatorOptions { HasText = callSubject });
+    await item.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت نتیجه" }).ClickAsync();
+    var complete = page.Locator("#drawerBody form[action$='/complete']");
+    await complete.WaitForAsync();
+    await complete.Locator("select[name='CallResult']").SelectOptionAsync("Answered");
+    await complete.Locator("textarea[name='Outcome']").FillAsync("مشتری درخواست نمونه داد");
+    await complete.Locator("select[name='NextType']").SelectOptionAsync("Task");
+    await complete.Locator("input[name='NextSubject']").FillAsync("ارسال نمونه " + stamp);
+    await complete.Locator("input[name='NextDate']").FillAsync(JalaliInDays(2));
+    await complete.Locator("button[type='submit']").ClickAsync();
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
+    await panel.GetByText("ارسال نمونه " + stamp).First.WaitForAsync();
+    await panel.Locator("article.act", new LocatorLocatorOptions { HasText = "مشتری درخواست نمونه داد" }).First.WaitForAsync();
+
+    // Note from the quick actions.
+    await page.Locator(".quick-action", new PageLocatorOptions { HasText = "ایجاد یادداشت" }).ClickAsync();
+    var note = page.Locator("#drawerBody form[action$='/notes']");
+    await note.WaitForAsync();
+    await note.Locator("input[name='Title']").FillAsync("یادداشت مرورگر " + stamp);
+    await note.Locator("textarea[name='Body']").FillAsync("متن آزمون");
+    await note.Locator("button[type='submit']").ClickAsync();
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
+    await page.Locator("[data-tab='side-notes']").ClickAsync();
+    await page.Locator("#notesPanel").GetByText("یادداشت مرورگر " + stamp).WaitForAsync();
+
+    // Related records: create a payment from its section, then cancel it through the reason prompt.
+    await page.Locator("[data-tab='related']").ClickAsync();
+    await page.Locator("#sec-payments .acc-section__title").ClickAsync();
+    var payments = page.Locator("#sec-payments .acc-section__body");
+    await payments.Locator(".rec-list").WaitForAsync();
+    await payments.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "ثبت پرداخت / دریافت" }).ClickAsync();
+    var payment = page.Locator("#drawerBody form[action$='/records/payments/new']");
+    await payment.WaitForAsync();
+    await payment.Locator("input[name='amount']").FillAsync("7770000");
+    Assert(await payment.Locator("input[name='amount']").InputValueAsync() == "7,770,000", "Amount input is not formatted with thousands separators.");
+    await payment.Locator("input[name='reference']").FillAsync("BRW-" + stamp);
+    await payment.Locator("button[type='submit']").ClickAsync();
+    await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
+    var row = payments.Locator("li.rec", new LocatorLocatorOptions { HasText = "BRW-" + stamp });
+    await row.WaitForAsync();
+    Assert((await row.InnerTextAsync()).Contains("ثبت‌شده"), "New payment is not in the «ثبت‌شده» status.");
+    page.Dialog += Accept;
+    await row.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "لغو" }).ClickAsync();
+    await payments.Locator("li.rec", new LocatorLocatorOptions { HasText = "BRW-" + stamp }).Filter(new LocatorFilterOptions { HasText = "لغوشده" }).WaitForAsync();
+    page.Dialog -= Accept;
+
+    // History tab shows who did what.
+    await page.Locator("[data-tab='history']").ClickAsync();
+    await page.Locator("[data-tab-panel='history'] .timeline").GetByText("لغوشده").First.WaitForAsync();
+
+    static string JalaliInDays(int days)
+    {
+        var tehran = DateTime.UtcNow.AddHours(3.5).AddDays(days);
+        var calendar = new System.Globalization.PersianCalendar();
+        return $"{calendar.GetYear(tehran):0000}/{calendar.GetMonth(tehran):00}/{calendar.GetDayOfMonth(tehran):00}";
+    }
+
+    static async void Accept(object? sender, IDialog dialog) => await dialog.AcceptAsync(dialog.Type == DialogType.Prompt ? "ثبت تکراری" : null);
 }
 
 static async Task VerifyActivityForm(IPage page, string baseUrl)

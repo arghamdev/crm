@@ -3,8 +3,8 @@ using Crm.Domain.Common;
 namespace Crm.Domain.Notifications;
 
 public enum NotificationChannel { Email, Sms }
-public enum NotificationStatus { Pending, Sent, DeadLetter }
-public enum NotificationCategory { ServiceEscalation, CommissionApproval, GuaranteeExpiry }
+public enum NotificationStatus { Pending, Sent, DeadLetter, Withdrawn }
+public enum NotificationCategory { ServiceEscalation, CommissionApproval, GuaranteeExpiry, ActivityReminder }
 
 /// <summary>A user's delivery settings. Email is on by default; SMS needs a verified-format mobile number.</summary>
 public sealed class NotificationPreference : Entity
@@ -47,7 +47,8 @@ public sealed class NotificationMessage : Entity
     public const int MaxAttempts = 6;
 
     public NotificationMessage(Guid id, string companyId, Guid recipientUserId, NotificationChannel channel, string address,
-        NotificationCategory category, string subject, string body, string? sourceReference, string dedupKey, DateTimeOffset nowUtc) : base(id)
+        NotificationCategory category, string subject, string body, string? sourceReference, string dedupKey, DateTimeOffset nowUtc,
+        DateTimeOffset? deliverAtUtc = null) : base(id)
     {
         CompanyId = companyId;
         RecipientUserId = recipientUserId;
@@ -58,7 +59,7 @@ public sealed class NotificationMessage : Entity
         Body = Limit(body, 1000) ?? throw new ArgumentException("Body required.", nameof(body));
         SourceReference = Limit(sourceReference, 120);
         DedupKey = Limit(dedupKey, 160) ?? throw new ArgumentException("Dedup key required.", nameof(dedupKey));
-        NextAttemptAtUtc = nowUtc;
+        NextAttemptAtUtc = deliverAtUtc is { } at && at > nowUtc ? at : nowUtc;
     }
 
     private NotificationMessage() : base(Guid.Empty)
@@ -91,6 +92,15 @@ public sealed class NotificationMessage : Entity
         SentAtUtc = nowUtc;
         NextAttemptAtUtc = null;
         LastError = null;
+        Touch();
+    }
+
+    /// <summary>Takes back a scheduled message that is no longer relevant (e.g. the activity was rescheduled or done).</summary>
+    public void Withdraw()
+    {
+        if (Status != NotificationStatus.Pending) return;
+        Status = NotificationStatus.Withdrawn;
+        NextAttemptAtUtc = null;
         Touch();
     }
 

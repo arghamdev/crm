@@ -44,6 +44,37 @@ public sealed class Opportunity(
     public OpportunityRiskLevel RiskLevel { get; private set; } = OpportunityRiskLevel.Medium;
     public string? OutcomeReason { get; private set; }
     public DateTimeOffset? ClosedAtUtc { get; private set; }
+    /// <summary>Contact person of the account who is the counterpart for this deal.</summary>
+    public Guid? ContactId { get; private set; }
+    public string CurrencyCode { get; private set; } = "IRR";
+
+    public void SetContactAndCurrency(Guid? contactId, string currencyCode)
+    {
+        EnsureOpen();
+        var code = currencyCode?.Trim().ToUpperInvariant();
+        if (code is not { Length: 3 } || !code.All(char.IsAsciiLetterUpper)) throw new InvalidOperationException("واحد پول باید کد سه‌حرفی (مثل IRR) باشد.");
+        ContactId = contactId;
+        CurrencyCode = code;
+        Touch();
+    }
+
+    /// <summary>Overrides the stage's default win probability (a stage change resets it to the stage default).</summary>
+    public void SetProbability(int probability)
+    {
+        EnsureOpen();
+        if (probability is < 1 or > 99) throw new InvalidOperationException("احتمال موفقیت فرصت باز باید بین ۱ تا ۹۹ درصد باشد.");
+        Probability = probability;
+        Touch();
+    }
+
+    /// <summary>Starts a new opportunity at a later open stage (e.g. an inbound request that is already qualified).</summary>
+    public void StartAt(OpportunityStage stage)
+    {
+        if (Version != 1 || Stage != OpportunityStage.Identified) throw new InvalidOperationException("مرحلهٔ شروع فقط هنگام ایجاد قابل تعیین است.");
+        if (stage is OpportunityStage.Won or OpportunityStage.Lost) throw new InvalidOperationException("فرصت جدید باید در یک مرحلهٔ باز باشد.");
+        Stage = stage;
+        Probability = ProbabilityFor(stage);
+    }
 
     private Opportunity() : this(Guid.Empty, "EF", "EF", "EF", Guid.Empty, 0, string.Empty, "EF", "EF", null) { }
 

@@ -34,13 +34,15 @@ public sealed class QuotesController(
 
     [Authorize(Policy = "perm:Quote.Create")]
     [HttpGet("/quotes/create")]
-    public IActionResult Create()
+    public IActionResult Create(Guid? customerId = null, Guid? opportunityId = null)
     {
         var branchId = PrepareBranches();
-        PrepareRelations();
+        // Opened from an account file: the account (and opportunity) are preselected; the lists still come from the user's scope.
+        var customer = customerId is { } id ? crm.GetCustomer(current.CrmUserId, current.RequiredOrganization(), id) : null;
+        PrepareRelations(customer?.Id ?? Guid.Empty);
         PrepareProducts();
-        return PartialView("_Form", new CreateQuoteDraftCommand(Guid.Empty, Guid.Empty, branchId, "IRR",
-            DateTimeOffset.UtcNow.AddDays(30), "تسویه ۳۰ روزه", "PRD-1001", 1, 5));
+        return PartialView("_Form", new CreateQuoteDraftCommand(customer?.Id ?? Guid.Empty, customer is null ? Guid.Empty : opportunityId ?? Guid.Empty,
+            customer?.BranchId ?? branchId, "IRR", DateTimeOffset.UtcNow.AddDays(30), "تسویه ۳۰ روزه", "PRD-1001", 1, 5));
     }
 
     [Authorize(Policy = "perm:Quote.Create")]

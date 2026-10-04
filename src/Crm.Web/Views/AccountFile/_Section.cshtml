@@ -1,0 +1,96 @@
+@model AccountSectionDto
+@{
+    var accountId = (Guid)ViewBag.AccountId;
+    var url = $"/customers/{accountId}/sections/{Model.Key}";
+    string Money(MoneyDto m) => $"{m.Amount:N0} {m.Currency}";
+}
+<div class="sec-toolbar">
+    <form class="sec-filter" hx-get="@url" hx-target="closest .acc-section__body" hx-swap="innerHTML" hx-trigger="submit, input changed delay:450ms from:find input[name=q], change from:find select" role="search">
+        <label class="sec-filter__search"><svg><use href="#i-search"/></svg><input type="search" name="q" value="@Model.Query" placeholder="جست‌وجو در @Model.Title" aria-label="جست‌وجو در @Model.Title" /></label>
+        @if (Model.StatusOptions.Count > 0)
+        {
+            <select name="status" aria-label="فیلتر وضعیت">
+                <option value="">همهٔ وضعیت‌ها</option>
+                @foreach (var option in Model.StatusOptions) { <option value="@option.Value" selected="@(option.Value == Model.Status)">@option.Label</option> }
+            </select>
+        }
+    </form>
+    <div class="sec-actions">
+        @if (Model.CreatePath is not null) { <button type="button" class="button button--soft button--sm" hx-get="@Model.CreatePath" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg>@Model.CreateLabel</button> }
+        @if (Model.LinkPath is not null) { <button type="button" class="button button--ghost button--sm" hx-get="@Model.LinkPath" hx-target="#drawerBody"><svg><use href="#i-link"/></svg>@Model.LinkLabel</button> }
+    </div>
+</div>
+@if (Model.Note is not null) { <p class="sec-note"><svg><use href="#i-info"/></svg>@Model.Note</p> }
+@if (Model.Totals.Count > 0)
+{
+    <div class="sec-totals"><span>@Model.TotalsLabel:</span>@foreach (var total in Model.Totals) { <b dir="ltr">@Money(total)</b> }</div>
+}
+@if (Model.Rows.Count == 0)
+{
+    <p class="state-empty">@(Model.Query is not null || Model.Status is not null ? "موردی با این جست‌وجو یا فیلتر پیدا نشد." : Model.EmptyText)</p>
+}
+else
+{
+    <ul class="rec-list">
+        @foreach (var row in Model.Rows)
+        {
+            <li class="rec">
+                <div class="rec__main">
+                    @if (row.Url is { } link)
+                    {
+                        if (link.Contains("/documents/")) { <a class="rec__title" href="@link"><svg><use href="#i-download"/></svg>@row.Title</a> }
+                        else { <a class="rec__title" href="@link">@row.Title</a> }
+                    }
+                    else { <span class="rec__title">@row.Title</span> }
+                    @if (!string.IsNullOrWhiteSpace(row.Subtitle)) { <small>@row.Subtitle</small> }
+                    @if (row.Extra is { Count: > 0 } extra)
+                    {
+                        <small class="rec__extra">@foreach (var item in extra.Where(x => !string.IsNullOrWhiteSpace(x) && x != "—")) { <span>@item</span> }</small>
+                    }
+                </div>
+                <div class="rec__meta">
+                    @if (row.Status is not null) { <span class="badge badge--@row.Tone"><span></span>@row.Status</span> }
+                    @if (row.Amount is { } amount) { <b class="rec__amount" dir="ltr">@Money(amount)</b> }
+                    @if (row.Date is not null) { <span class="rec__date">@row.Date</span> }
+                    @if (row.Owner is not null) { <span class="rec__owner"><svg><use href="#i-users"/></svg>@row.Owner</span> }
+                </div>
+                @if (row.Actions.Count > 0)
+                {
+                    <div class="rec__actions">
+                        @foreach (var action in row.Actions)
+                        {
+                            if (action.Drawer)
+                            {
+                                <button type="button" class="chip-action" hx-get="@action.Path" hx-target="#drawerBody">@action.Label</button>
+                            }
+                            else if (action.Fields is null && action.Path.Contains('?'))
+                            {
+                                <a class="chip-action" href="@action.Path">@action.Label</a>
+                            }
+                            else
+                            {
+                                <form method="post" action="@action.Path" hx-post="@action.Path" hx-swap="none" data-confirm="@action.Confirm" data-prompt="@action.Prompt">
+                                    @Html.AntiForgeryToken()
+                                    @if (action.Fields is not null) { foreach (var field in action.Fields) { <input type="hidden" name="@field.Key" value="@field.Value" /> } }
+                                    <button type="submit" class="chip-action @(action.Danger ? "chip-action--danger" : "")">@if (action.Path.EndsWith("/unlink") || action.Path.Contains("/unlink-")) { <svg><use href="#i-unlink"/></svg> }@action.Label</button>
+                                </form>
+                            }
+                        }
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}
+@if (Model.TotalPages > 1)
+{
+    <nav class="sec-pager" aria-label="صفحه‌بندی">
+        <button type="button" class="button button--ghost button--sm" disabled="@(Model.Page <= 1)" hx-get="@url?page=@(Model.Page - 1)&q=@Uri.EscapeDataString(Model.Query ?? "")&status=@Model.Status" hx-target="closest .acc-section__body">قبلی</button>
+        <span>صفحهٔ @Model.Page از @Model.TotalPages · @Model.Total مورد</span>
+        <button type="button" class="button button--ghost button--sm" disabled="@(Model.Page >= Model.TotalPages)" hx-get="@url?page=@(Model.Page + 1)&q=@Uri.EscapeDataString(Model.Query ?? "")&status=@Model.Status" hx-target="closest .acc-section__body">بعدی</button>
+    </nav>
+}
+else if (Model.Total > 0)
+{
+    <p class="sec-count">@Model.Total مورد</p>
+}

@@ -1,0 +1,12 @@
+@model AccountLinkFormDto
+<div class="drawer-form account-form">
+    <div class="form-context"><svg><use href="#i-link"/></svg><span>حساب: <b>@Model.AccountName</b></span></div>
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>@Model.Title</h3>
+        <label class="related-search"><svg><use href="#i-search"/></svg><input type="search" name="q" value="@Model.Query" placeholder="جست‌وجو با نام یا کد" aria-label="جست‌وجو"
+            hx-get="@Model.Action" hx-target="#linkOptions" hx-swap="innerHTML" hx-trigger="input changed delay:400ms, search" /></label>
+        @if (Model.Note is not null) { <p class="field-help"><svg><use href="#i-info"/></svg>@Model.Note</p> }
+        <div id="linkOptions"><partial name="_LinkOptions" model="Model" /></div>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>بستن</button></div>
+</div>

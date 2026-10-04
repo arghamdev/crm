@@ -1,5 +1,6 @@
 using System.Threading;
 using Crm.Application.Abstractions;
+using Crm.Domain.Accounts;
 using Crm.Domain.Commercial;
 using Crm.Domain.Channel;
 using Crm.Domain.Customers;
@@ -74,7 +75,78 @@ internal static class SampleData
         SeedSelfService(data);
         SeedServiceCases(data);
         SeedWorkItems(data);
+        SeedAccountFile(data);
         return data;
+    }
+
+    /// <summary>Account-file sample for «صنایع غذایی سپهر»: planned/overdue/completed activities, a note, payments, contract, project, marketing.</summary>
+    private static void SeedAccountFile(CrmDataSet data)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var today = Crm.Domain.Common.TehranTime.Today(now);
+        var sepehr = data.Customers.Single(x => x.Id == Guid.Parse("20000000-0000-4000-8000-000000000001"));
+        var rostegar = Guid.Parse("21000000-0000-4000-8000-000000000001");
+        var opportunity = Guid.Parse("40000000-0000-4000-8000-000000000001");
+        sepehr.Classify(AccountRelationship.Customer, ["کلیدی", "صنایع غذایی"]);
+        static Guid Id(int n) => Guid.Parse($"60000000-0000-4000-8000-{n:000000000000}");
+        var done = new CrmActivity(Id(1), "C01", sepehr.Id, ActivityType.Call, "پیگیری نیاز خرید فصل", null, rostegar, DemoExpertId,
+            new ActivitySchedule(now.AddDays(-5), DurationMinutes: 15, Direction: CallDirection.Outbound), ActivityRelatedKind.Opportunity, opportunity, DemoExpertId);
+        done.Complete("نیاز ۲۰ تن کنسانتره تأیید شد؛ منتظر پیش‌فاکتور هستند.", CallResult.Answered, DemoExpertId, now.AddDays(-5).AddMinutes(20), 18);
+        data.Table<CrmActivity>().AddRange([
+            done,
+            new CrmActivity(Id(2), "C01", sepehr.Id, ActivityType.Call, "تماس پیگیری پرداخت فاکتور", "یادآوری سررسید فاکتور مهر", Guid.Parse("21000000-0000-4000-8000-000000000002"),
+                DemoExpertId, new ActivitySchedule(now.AddDays(-1), DurationMinutes: 10, Direction: CallDirection.Outbound, Priority: ActivityPriority.High),
+                ActivityRelatedKind.None, null, DemoManagerId),
+            new CrmActivity(Id(3), "C01", sepehr.Id, ActivityType.Meeting, "جلسهٔ ارائهٔ راهکار بسته‌بندی", "دستور جلسه: نمونه‌ها، زمان‌بندی تحویل، شرایط پرداخت", rostegar,
+                DemoExpertId, new ActivitySchedule(now.AddDays(1).AddHours(2), now.AddDays(1).AddHours(3), Location: "دفتر مرکزی سپهر", ReminderMinutesBefore: 30),
+                ActivityRelatedKind.Opportunity, opportunity, DemoExpertId),
+            new CrmActivity(Id(4), "C01", sepehr.Id, ActivityType.Task, "ارسال پیش‌فاکتور اصلاحی", "اعمال تخفیف حجمی مصوب", null, DemoExpertId,
+                new ActivitySchedule(now.AddDays(3), Priority: ActivityPriority.High), ActivityRelatedKind.Opportunity, opportunity, DemoManagerId)
+        ]);
+        data.Table<ActivityParticipant>().Add(new ActivityParticipant(Id(5), Id(3), ParticipantKind.Contact, rostegar, "علی رستگار"));
+        data.Table<AccountNote>().Add(new AccountNote(Id(10), "C01", sepehr.Id, "ترجیحات خرید", "تحویل فقط صبح‌ها در انبار کرج؛ هماهنگی با آقای رستگار.",
+            NoteVisibility.Public, DemoManagerId));
+        var approved = new AccountPayment(Id(20), "C01", sepehr.Id, PaymentDirection.Receipt, 1_200_000_000m, "IRR", today.AddDays(-20), PaymentMethod.BankTransfer,
+            "TRX-558812", "INV-1405-0712", "تسویه بخشی از فاکتور شهریور", DemoExpertId, today);
+        approved.Approve(DemoFinanceManagerId, now.AddDays(-19));
+        var returned = new AccountPayment(Id(21), "C01", sepehr.Id, PaymentDirection.Receipt, 300_000_000m, "IRR", today.AddDays(-12), PaymentMethod.Cheque,
+            "CHQ-771245", null, "چک مدت‌دار", DemoExpertId, today);
+        returned.Approve(DemoFinanceManagerId, now.AddDays(-11));
+        returned.MarkReturned(DemoFinanceManagerId, "برگشت چک به دلیل کسری موجودی", now.AddDays(-2));
+        data.Table<AccountPayment>().AddRange([approved, returned,
+            new AccountPayment(Id(22), "C01", sepehr.Id, PaymentDirection.Receipt, 450_000_000m, "IRR", today.AddDays(-1), PaymentMethod.Cheque, "CHQ-771300", "INV-1405-0731",
+                "چک جایگزین", DemoExpertId, today),
+            new AccountPayment(Id(23), "C01", sepehr.Id, PaymentDirection.Receipt, 12_000m, "USD", today.AddDays(-30), PaymentMethod.BankTransfer, "SWIFT-2291", null,
+                "پیش‌پرداخت ماشین‌آلات وارداتی", DemoExpertId, today)]);
+        data.Table<AccountBankAccount>().Add(new AccountBankAccount(Id(30), "C01", sepehr.Id, "بانک ملت", "IR160120000000001234567890", "1234567890",
+            "صنایع غذایی سپهر", true));
+        data.DealerGuarantees.Add(DealerGuarantee.ForAccount(Id(31), sepehr.Id, "C01", "B01", "T01", DealerGuaranteeType.Cheque, "CHQ-GR-1405-11", "بانک ملت",
+            2_000_000_000m, today.AddMonths(-2), today.AddMonths(4), "تضمین حسن انجام تعهدات خرید", DemoManagerId));
+        var contract = new AccountContract(Id(40), "C01", sepehr.Id, ContractKind.Service, "SV-1405-001", "پشتیبانی خط بسته‌بندی", today.AddMonths(-3), today.AddMonths(9),
+            900_000_000m, "IRR", null, "طلایی · پاسخ ۴ ساعته", DemoManagerId);
+        contract.Activate();
+        data.Table<AccountContract>().Add(contract);
+        var project = new AccountProject(Id(41), "C01", sepehr.Id, "PRJ-1405-001", "استقرار خط کنسرو جدید", today.AddMonths(-1), today.AddMonths(2), DemoExpertId,
+            opportunity, null, 3_000_000_000m, "IRR");
+        project.ChangeStatus(ProjectStatus.Active);
+        data.Table<AccountProject>().Add(project);
+        var campaign = new Campaign(Id(50), "C01", "نمایشگاه ایران‌فودتک ۱۴۰۵", CampaignType.Event, today.AddDays(-10), today.AddDays(20), DemoManagerId);
+        campaign.ChangeStatus(CampaignStatus.Active);
+        data.Table<Campaign>().AddRange([campaign, new Campaign(Id(51), "C01", "پیامک جشنواره پاییز", CampaignType.Sms, today, today.AddDays(30), DemoManagerId)]);
+        var member = new CampaignMember(Id(52), campaign.Id, "C01", sepehr.Id, rostegar, DemoManagerId);
+        member.ChangeStatus(CampaignMemberStatus.Responded);
+        data.Table<CampaignMember>().Add(member);
+        var list = new TargetList(Id(53), "C01", "مشتریان کلیدی صنایع غذایی", "برای دعوت به رویدادهای تخصصی", DemoManagerId);
+        data.Table<TargetList>().AddRange([list, new TargetList(Id(54), "C01", "مشتریان بالقوهٔ استان البرز", null, DemoManagerId)]);
+        data.Table<TargetListMember>().Add(new TargetListMember(Id(55), list.Id, "C01", sepehr.Id, DemoManagerId));
+        var survey = new Survey(Id(56), "C01", "رضایت از تحویل سفارش", SurveyKind.Csat, DemoManagerId);
+        data.Table<Survey>().AddRange([survey, new Survey(Id(57), "C01", "شاخص خالص ترویج (NPS)", SurveyKind.Nps, DemoManagerId)]);
+        data.Table<SurveyResponse>().Add(new SurveyResponse(Id(58), survey, sepehr.Id, rostegar, 4, "تحویل به‌موقع بود؛ بسته‌بندی قابل بهبود است.", today.AddDays(-7),
+            DemoExpertId, today));
+        data.Table<AccountParticipation>().Add(new AccountParticipation(Id(60), "C01", sepehr.Id, ParticipationKind.Event, "نمایشگاه ایران‌فودتک ۱۴۰۵", "غرفه‌دار مشترک",
+            today.AddDays(15), today.AddDays(18), "غرفهٔ مشترک در سالن ۵"));
+        data.Table<AccountAllocation>().Add(new AccountAllocation(Id(61), "C01", sepehr.Id, AllocationKind.Sample, "PKG-220", "نمونه قوطی دوجداره ۴۰۰ گرمی", 20,
+            today.AddDays(-4), "برای تست خط پرکنی"));
     }
 
     private static void SeedOrganization(CrmDataSet data)

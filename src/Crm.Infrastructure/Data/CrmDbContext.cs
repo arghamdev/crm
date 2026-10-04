@@ -77,6 +77,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         ConfigureCustomerAddress(modelBuilder.Entity<CustomerAddress>());
         ConfigureCustomerProfile(modelBuilder);
         ConfigureNotifications(modelBuilder);
+        ConfigureAccountFile(modelBuilder);
         ConfigureCustomerTimeline(modelBuilder.Entity<CustomerTimelineEvent>());
         ConfigureCustomerOwnership(modelBuilder.Entity<CustomerOwnershipHistory>());
         ConfigureCustomerDuplicate(modelBuilder.Entity<CustomerDuplicateCandidate>());
@@ -189,6 +190,11 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         entity.Property(x => x.PrimaryEmail).HasMaxLength(256);
         entity.Property(x => x.DataSource).HasMaxLength(80).IsRequired();
         entity.Property(x => x.LastSynchronizedAtUtc).HasPrecision(3);
+        entity.Property(x => x.RelationshipType).HasConversion<string>().HasMaxLength(16).HasDefaultValue(Crm.Domain.Accounts.AccountRelationship.Customer);
+        entity.Property(x => x.Tags).HasMaxLength(400);
+        entity.Ignore(x => x.TagList);
+        entity.HasIndex(x => x.ParentCustomerId);
+        entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.ParentCustomerId).OnDelete(DeleteBehavior.NoAction);
         entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
         entity.HasIndex(x => new { x.CompanyId, x.NationalId }).IsUnique().HasFilter("[NationalId] IS NOT NULL");
         entity.HasIndex(x => new { x.CompanyId, x.BranchId, x.TerritoryId });
@@ -361,6 +367,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     {
         ConfigureEntity(entity, "Opportunities", "sales");
         entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+        entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired().HasDefaultValue("IRR");
+        entity.HasIndex(x => x.ContactId);
         entity.Property(x => x.Title).HasMaxLength(250).IsRequired();
         entity.Property(x => x.Customer).HasMaxLength(200);
         entity.Property(x => x.Value).HasPrecision(18, 2);
@@ -911,6 +919,216 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     public DbSet<Crm.Domain.Notifications.NotificationPreference> NotificationPreferences => Set<Crm.Domain.Notifications.NotificationPreference>();
     public DbSet<Crm.Domain.Notifications.NotificationMessage> NotificationMessages => Set<Crm.Domain.Notifications.NotificationMessage>();
 
+    public DbSet<Crm.Domain.Accounts.CrmActivity> CrmActivities => Set<Crm.Domain.Accounts.CrmActivity>();
+    public DbSet<Crm.Domain.Accounts.ActivityParticipant> ActivityParticipants => Set<Crm.Domain.Accounts.ActivityParticipant>();
+    public DbSet<Crm.Domain.Accounts.ClientOperation> ClientOperations => Set<Crm.Domain.Accounts.ClientOperation>();
+    public DbSet<Crm.Domain.Accounts.AccountNote> AccountNotes => Set<Crm.Domain.Accounts.AccountNote>();
+    public DbSet<Crm.Domain.Accounts.CrmDocument> CrmDocuments => Set<Crm.Domain.Accounts.CrmDocument>();
+    public DbSet<Crm.Domain.Accounts.DocumentContent> DocumentContents => Set<Crm.Domain.Accounts.DocumentContent>();
+    public DbSet<Crm.Domain.Accounts.DocumentLink> DocumentLinks => Set<Crm.Domain.Accounts.DocumentLink>();
+    public DbSet<Crm.Domain.Accounts.AccountPayment> AccountPayments => Set<Crm.Domain.Accounts.AccountPayment>();
+    public DbSet<Crm.Domain.Accounts.AccountBankAccount> AccountBankAccounts => Set<Crm.Domain.Accounts.AccountBankAccount>();
+    public DbSet<Crm.Domain.Accounts.AccountContract> AccountContracts => Set<Crm.Domain.Accounts.AccountContract>();
+    public DbSet<Crm.Domain.Accounts.AccountProject> AccountProjects => Set<Crm.Domain.Accounts.AccountProject>();
+    public DbSet<Crm.Domain.Accounts.AccountParticipation> AccountParticipations => Set<Crm.Domain.Accounts.AccountParticipation>();
+    public DbSet<Crm.Domain.Accounts.AccountAllocation> AccountAllocations => Set<Crm.Domain.Accounts.AccountAllocation>();
+    public DbSet<Crm.Domain.Accounts.Campaign> Campaigns => Set<Crm.Domain.Accounts.Campaign>();
+    public DbSet<Crm.Domain.Accounts.CampaignMember> CampaignMembers => Set<Crm.Domain.Accounts.CampaignMember>();
+    public DbSet<Crm.Domain.Accounts.TargetList> TargetLists => Set<Crm.Domain.Accounts.TargetList>();
+    public DbSet<Crm.Domain.Accounts.TargetListMember> TargetListMembers => Set<Crm.Domain.Accounts.TargetListMember>();
+    public DbSet<Crm.Domain.Accounts.Survey> Surveys => Set<Crm.Domain.Accounts.Survey>();
+    public DbSet<Crm.Domain.Accounts.SurveyResponse> SurveyResponses => Set<Crm.Domain.Accounts.SurveyResponse>();
+
+    /// <summary>Account file (پرونده حساب): activities, notes, documents and account-owned records; schema "account".</summary>
+    private static void ConfigureAccountFile(ModelBuilder modelBuilder)
+    {
+        void Owned<T>(EntityTypeBuilder<T> entity, string table) where T : Crm.Domain.Accounts.AccountRecord
+        {
+            ConfigureEntity(entity, table, "account");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.HasIndex(x => x.CustomerId);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+        }
+        modelBuilder.Entity<Crm.Domain.Accounts.CrmActivity>(entity => {
+            ConfigureEntity(entity, "Activities", "account");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Subject).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(4000);
+            entity.Property(x => x.StartAtUtc).HasPrecision(3);
+            entity.Property(x => x.EndAtUtc).HasPrecision(3);
+            entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Location).HasMaxLength(300);
+            entity.Property(x => x.Priority).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.RelatedKind).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.CallResult).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.Outcome).HasMaxLength(4000);
+            entity.Property(x => x.CompletedAtUtc).HasPrecision(3);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.Ignore(x => x.DueAtUtc);
+            entity.Ignore(x => x.ReminderAtUtc);
+            entity.HasIndex(x => new { x.CustomerId, x.Status, x.StartAtUtc });
+            entity.HasIndex(x => new { x.OwnerUserId, x.Status, x.StartAtUtc });
+            entity.HasIndex(x => x.ContactId);
+            entity.HasIndex(x => new { x.RelatedKind, x.RelatedId });
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.ActivityParticipant>(entity => {
+            ConfigureEntity(entity, "ActivityParticipants", "account");
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(8);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.HasIndex(x => new { x.ActivityId, x.Kind, x.ParticipantId }).IsUnique();
+            entity.HasOne<Crm.Domain.Accounts.CrmActivity>().WithMany().HasForeignKey(x => x.ActivityId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.ClientOperation>(entity => {
+            ConfigureEntity(entity, "ClientOperations", "account");
+            entity.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+            entity.HasIndex(x => new { x.UserId, x.OperationId }).IsUnique();
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountNote>(entity => {
+            ConfigureEntity(entity, "Notes", "account");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(8000).IsRequired();
+            entity.Property(x => x.Visibility).HasConversion<string>().HasMaxLength(12);
+            entity.HasIndex(x => new { x.CustomerId, x.IsDeleted, x.CreatedAtUtc });
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.AuthorUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.CrmDocument>(entity => {
+            ConfigureEntity(entity, "Documents", "account");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.FileName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            entity.HasIndex(x => new { x.CompanyId, x.IsDeleted, x.Title });
+            entity.HasIndex(x => x.NoteId);
+            entity.HasOne<Crm.Domain.Accounts.AccountNote>().WithMany().HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.DocumentContent>(entity => {
+            ConfigureEntity(entity, "DocumentContents", "account");
+            entity.Property(x => x.Bytes).HasColumnType("varbinary(max)").IsRequired();
+            entity.HasOne<Crm.Domain.Accounts.CrmDocument>().WithOne().HasForeignKey<Crm.Domain.Accounts.DocumentContent>(x => x.Id).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.DocumentLink>(entity => {
+            ConfigureEntity(entity, "DocumentLinks", "account");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.HasIndex(x => new { x.DocumentId, x.CustomerId }).IsUnique();
+            entity.HasIndex(x => x.CustomerId);
+            entity.HasOne<Crm.Domain.Accounts.CrmDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountPayment>(entity => {
+            Owned(entity, "Payments");
+            entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(8);
+            entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.Method).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.Reference).HasMaxLength(80);
+            entity.Property(x => x.InvoiceReference).HasMaxLength(40);
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
+            entity.Property(x => x.DecisionNote).HasMaxLength(500);
+            entity.Ignore(x => x.CountsInTotals);
+            entity.HasIndex(x => new { x.CustomerId, x.Status, x.CurrencyCode });
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountBankAccount>(entity => {
+            Owned(entity, "BankAccounts");
+            entity.Property(x => x.BankName).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Iban).HasMaxLength(26).IsRequired();
+            entity.Property(x => x.AccountNumber).HasMaxLength(30);
+            entity.Property(x => x.HolderName).HasMaxLength(150).IsRequired();
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountContract>(entity => {
+            Owned(entity, "Contracts");
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(8);
+            entity.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Amount).HasPrecision(18, 2);
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.ServiceLevel).HasMaxLength(120);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.TerminationReason).HasMaxLength(500);
+            entity.HasIndex(x => new { x.CompanyId, x.Number }).IsUnique();
+            entity.HasIndex(x => x.OpportunityId);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountProject>(entity => {
+            Owned(entity, "Projects");
+            entity.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Budget).HasPrecision(18, 2);
+            entity.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountParticipation>(entity => {
+            Owned(entity, "Participations");
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Role).HasMaxLength(80);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.AccountAllocation>(entity => {
+            Owned(entity, "Allocations");
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.ItemCode).HasMaxLength(40);
+            entity.Property(x => x.ItemName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Quantity).HasPrecision(18, 3);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Notes).HasMaxLength(500);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.SurveyResponse>(entity => {
+            Owned(entity, "SurveyResponses");
+            entity.Property(x => x.Comment).HasMaxLength(1000);
+            entity.HasIndex(x => x.SurveyId);
+            entity.HasOne<Crm.Domain.Accounts.Survey>().WithMany().HasForeignKey(x => x.SurveyId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.Campaign>(entity => {
+            ConfigureEntity(entity, "Campaigns", "marketing");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Ignore(x => x.AcceptsMembers);
+            entity.HasIndex(x => new { x.CompanyId, x.Status });
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.CampaignMember>(entity => {
+            ConfigureEntity(entity, "CampaignMembers", "marketing");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.HasIndex(x => new { x.CampaignId, x.CustomerId }).IsUnique();
+            entity.HasIndex(x => x.CustomerId);
+            entity.HasOne<Crm.Domain.Accounts.Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.TargetList>(entity => {
+            ConfigureEntity(entity, "TargetLists", "marketing");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.TargetListMember>(entity => {
+            ConfigureEntity(entity, "TargetListMembers", "marketing");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.HasIndex(x => new { x.TargetListId, x.CustomerId }).IsUnique();
+            entity.HasIndex(x => x.CustomerId);
+            entity.HasOne<Crm.Domain.Accounts.TargetList>().WithMany().HasForeignKey(x => x.TargetListId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.Accounts.Survey>(entity => {
+            ConfigureEntity(entity, "Surveys", "marketing");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(8);
+            entity.Ignore(x => x.ScoreRange);
+        });
+    }
+
     private static void ConfigureNotifications(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Crm.Domain.Notifications.NotificationPreference>(entity => {
@@ -994,6 +1212,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.EvaluatedByUserId).OnDelete(DeleteBehavior.NoAction);
         });
         modelBuilder.Entity<DealerGuarantee>(entity => {
+            entity.HasIndex(x => new { x.CustomerId, x.Status });
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
             ConfigureEntity(entity, "DealerGuarantees", "channel"); Scope(entity);
             entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(24);
             entity.Property(x => x.Number).HasMaxLength(60).IsRequired();

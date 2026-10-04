@@ -1,0 +1,99 @@
+@model AccountFileDto
+@{
+    var a = Model.Account;
+    var c360 = ViewData["Customer360"] as Customer360Dto;
+    var profile = c360?.Profile;
+    var addresses = c360?.Addresses.Where(x => x.IsActive && x.Type is not (CustomerAddressType.Branch or CustomerAddressType.ServiceCenter or CustomerAddressType.SalesCenter)).ToList() ?? [];
+    string V(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}
+<details class="panel info-panel" open>
+    <summary class="info-panel__summary"><span><strong>اطلاعات حساب</strong><small>@(a.Masked ? "برخی مقادیر به‌دلیل سطح دسترسی پوشانده شده‌اند" : "اطلاعات تماس، شناسه‌ها و طبقه‌بندی")</small></span><svg class="chev"><use href="#i-chevron"/></svg></summary>
+    <dl class="info-grid">
+        <div><dt>نوع شخص</dt><dd>@(a.Kind == CustomerKind.Legal ? "حقوقی" : "حقیقی")</dd></div>
+        <div><dt>نوع رابطه</dt><dd>@AccountRecordService.RelationshipLabel(a.Relationship)</dd></div>
+        <div><dt>بخش / سگمنت</dt><dd>@a.Segment</dd></div>
+        <div><dt>صنعت / نوع فعالیت</dt><dd>@V(a.Industry)</dd></div>
+        @foreach (var phone in a.Phones)
+        {
+            <div><dt>@phone.Label</dt><dd><bdi dir="ltr">@phone.Value</bdi></dd></div>
+        }
+        @if (a.Phones.Count == 0) { <div><dt>تلفن</dt><dd>—</dd></div> }
+        <div><dt>ایمیل</dt><dd>@if (a.Email is { } email) { <bdi dir="ltr">@email</bdi> } else { <text>—</text> }</dd></div>
+        <div><dt>وب‌سایت</dt><dd>@if (a.Website is { } site) { <a href="@site" target="_blank" rel="noopener noreferrer" dir="ltr">@site.Replace("https://", "").Replace("http://", "")</a> } else { <text>—</text> }</dd></div>
+        @foreach (var id in a.Identifiers)
+        {
+            <div><dt>@id.Label</dt><dd><bdi dir="ltr">@id.Value</bdi></dd></div>
+        }
+        <div class="info-grid__wide"><dt>نشانی اصلی</dt><dd>@V(a.Address)</dd></div>
+        <div class="info-grid__wide"><dt>برچسب‌ها</dt><dd>@if (a.Tags.Count == 0) { <text>—</text> } else { foreach (var tag in a.Tags) { <span class="chip">#@tag</span> } }</dd></div>
+    </dl>
+</details>
+
+@if (profile is not null)
+{
+    <details class="panel info-panel">
+        <summary class="info-panel__summary"><span><strong>@(a.Kind == CustomerKind.Legal ? "اطلاعات شرکت و نماینده" : "اطلاعات شخص")</strong><small>از فرم تعریف مشتری</small></span><svg class="chev"><use href="#i-chevron"/></svg></summary>
+        <dl class="info-grid">
+            <div><dt>@(a.Kind == CustomerKind.Legal ? "نماینده" : "نام و نام خانوادگی")</dt><dd>@V(string.Join(' ', new[] { profile.Title, profile.FirstName, profile.LastName }.Where(x => x is not null)))</dd></div>
+            <div><dt>سمت</dt><dd>@V(profile.Position)</dd></div>
+            <div><dt>نام شرکت / فروشگاه</dt><dd>@V(profile.LegalName)</dd></div>
+            <div><dt>استان</dt><dd>@V(profile.Province)</dd></div>
+            @if (a.Kind == CustomerKind.Legal)
+            {
+                <div><dt>کد ملی نماینده</dt><dd><bdi dir="ltr">@V(profile.RepresentativeNationalCode)</bdi></dd></div>
+                <div><dt>تعداد پرسنل</dt><dd>@V(profile.EmployeeCount)</dd></div>
+            }
+            else
+            {
+                <div><dt>شماره شناسنامه</dt><dd><bdi dir="ltr">@V(profile.BirthCertificateNumber)</bdi></dd></div>
+                <div><dt>تاریخ تولد</dt><dd><bdi dir="ltr">@V(profile.BirthDate)</bdi></dd></div>
+            }
+            <div><dt>تاریخ آشنایی</dt><dd><bdi dir="ltr">@V(profile.AcquaintanceDate)</bdi></dd></div>
+            <div><dt>نحوه آشنایی</dt><dd>@V(profile.ReferralSource)</dd></div>
+            <div><dt>خرید نرم‌افزار</dt><dd>@V(profile.SoftwarePurchase)</dd></div>
+            <div><dt>کد اشتراک شعبه</dt><dd><bdi dir="ltr">@V(profile.BranchSubscriptionCode)</bdi></dd></div>
+            @if (!string.IsNullOrWhiteSpace(profile.Notes)) { <div class="info-grid__wide"><dt>توضیحات</dt><dd>@profile.Notes</dd></div> }
+        </dl>
+    </details>
+}
+
+<div class="overview-grid">
+    <section class="panel">
+        <div class="panel-heading"><div><strong>خلاصهٔ رکوردهای مرتبط</strong><small>برای جزئیات روی هر بخش بزنید</small></div></div>
+        <div class="overview-sections">
+            @foreach (var s in Model.Sections.Where(x => x.Count > 0).OrderByDescending(x => x.Count).Take(12))
+            {
+                <a class="overview-sections__item" href="?tab=related&open=@s.Key" data-goto><svg><use href="#@s.Icon"/></svg><span>@s.Title</span><b>@s.Count</b></a>
+            }
+            @if (!Model.Sections.Any(x => x.Count > 0)) { <p class="empty-inline">هنوز رکورد مرتبطی ثبت نشده است.</p> }
+        </div>
+    </section>
+    @if (c360 is not null)
+    {
+        <section class="panel">
+            <div class="panel-heading"><div><strong>منبع و تازگی داده</strong><small>مالک هر بخش از اطلاعات</small></div></div>
+            <div class="source-list">@foreach (var source in c360.Sources) { <div><span><strong>@source.Section</strong><small>@source.SystemOfRecord</small></span><span class="badge @(source.FreshnessStatus == "به‌روز" ? "badge--success" : "badge--warning")"><span></span>@source.FreshnessStatus</span><time>@(source.LastSynchronizedAtUtc is { } at ? Crm.Domain.Common.TehranTime.Format(at) : "نامشخص")</time></div> }</div>
+        </section>
+    }
+</div>
+
+@if (Model.DataQualityIssues.Count > 0)
+{
+    <section class="panel quality-panel"><div class="panel-heading"><div><strong>موارد کیفیت داده</strong><small>تکمیل این موارد کیفیت پرونده را بالا می‌برد</small></div><a class="link-button" href="/customers/data-quality">داشبورد کیفیت</a></div><div class="quality-issues">@foreach (var issue in Model.DataQualityIssues) { <span class="quality-issue quality-issue--@issue.Severity.ToLowerInvariant()"><b>@issue.Field</b>@issue.Message</span> }</div></section>
+}
+
+@if (addresses.Count > 0 || Model.CanEdit)
+{
+    <section class="panel">
+        <div class="panel-heading"><div><strong>نشانی‌ها</strong><small>ثبتی، صورتحساب، ارسال و بازدید (شعب و مراکز در «رکوردهای مرتبط»)</small></div>@if (Model.CanEdit) { <button type="button" class="link-button" hx-get="/customers/@a.Id/addresses/create" hx-target="#drawerBody"><svg><use href="#i-plus"/></svg>افزودن نشانی</button> }</div>
+        <div class="record-list">@if (addresses.Count == 0) { <p class="empty-inline">نشانی ثبت نشده است.</p> } @foreach (var item in addresses) { <div><span class="mini-icon"><svg><use href="#i-building"/></svg></span><span><strong>@item.Title @if (item.IsPrimary) { <small class="tag">اصلی</small> }</strong><small>@item.Province، @item.City — @item.AddressLine</small></span></div> }</div>
+    </section>
+}
+
+@if (c360 is not null && c360.OwnershipHistory.Count > 0)
+{
+    <section class="panel">
+        <div class="panel-heading"><div><strong>تاریخچهٔ مالکیت</strong><small>هر تغییر با دلیل و بازهٔ اعتبار</small></div></div>
+        <div class="record-list">@foreach (var item in c360.OwnershipHistory) { <div><span class="mini-icon"><svg><use href="#i-users"/></svg></span><span><strong>@item.Owner</strong><small>شعبه @item.BranchId · از @Crm.Domain.Common.TehranTime.Date(item.ValidFromUtc) @(item.ValidToUtc is { } to ? $"تا {Crm.Domain.Common.TehranTime.Date(to)}" : "(جاری)") · @item.Reason</small></span></div> }</div>
+    </section>
+}

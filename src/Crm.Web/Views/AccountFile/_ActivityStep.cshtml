@@ -1,0 +1,60 @@
+@model ActivityDetailsDto
+@{
+    var step = (string)ViewBag.Step;
+    var x = Model.Item;
+    var s = Model.Activity;
+    var action = $"/customers/{Model.AccountId}/activities/{x.Id}/{step}";
+    var post = ViewContext.HttpContext.Request.HasFormContentType ? ViewContext.HttpContext.Request.Form : null;
+    string? Posted(string name) => post?[name].ToString() is { Length: > 0 } v ? v : null;
+}
+<form class="drawer-form account-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ExpectedVersion" value="@x.Version" />
+    <div class="form-context"><svg><use href="#i-clock"/></svg><span>@AccountActivityService.Label(s.Type): <b>@x.Subject</b> · @x.When</span></div>
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    @if (step == "complete")
+    {
+        <section class="form-section"><h3>ثبت نتیجه</h3>
+            <div class="form-grid">
+                @if (s.Type == ActivityType.Call)
+                {
+                    <label><span>نتیجهٔ تماس *</span><select name="CallResult" required><option value="">—</option>@foreach (var r in Enum.GetValues<CallResult>()) { <option value="@r" selected="@(Posted("CallResult") == r.ToString())">@AccountActivityService.CallResultLabel(r)</option> }</select></label>
+                    <label><span>مدت واقعی (دقیقه)</span><input name="ActualDurationMinutes" type="number" min="1" max="600" value="@(Posted("ActualDurationMinutes") ?? s.DurationMinutes?.ToString())" dir="ltr" /></label>
+                }
+                <label class="field--full"><span>@(s.Type == ActivityType.Task ? "توضیح انجام کار" : "شرح نتیجه *")</span><textarea name="Outcome" rows="3" maxlength="4000" required="@(s.Type != ActivityType.Task)">@Posted("Outcome")</textarea></label>
+            </div>
+        </section>
+        <section class="form-section"><h3>اقدام بعدی (اختیاری)</h3>
+            <div class="form-grid">
+                <label><span>نوع</span><select name="NextType"><option value="">— بدون اقدام بعدی —</option><option value="Call" selected="@(Posted("NextType") == "Call")">تماس</option><option value="Meeting" selected="@(Posted("NextType") == "Meeting")">جلسه</option><option value="Task" selected="@(Posted("NextType") == "Task")">وظیفه</option></select></label>
+                <label><span>موضوع</span><input name="NextSubject" value="@Posted("NextSubject")" maxlength="200" /></label>
+                <label><span>تاریخ</span><input name="NextDate" value="@Posted("NextDate")" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></label>
+                <label><span>ساعت</span><input name="NextTime" value="@(Posted("NextTime") ?? "10:00")" dir="ltr" inputmode="numeric" /></label>
+            </div>
+            <small class="field-help">اقدام بعدی با همان رابط، مسئول و رکورد مرتبط ساخته می‌شود و در فرصت مرتبط هم به‌روز می‌شود.</small>
+        </section>
+    }
+    else if (step == "reschedule")
+    {
+        <section class="form-section"><h3>تغییر زمان</h3>
+            <div class="form-grid">
+                <label><span>تاریخ جدید *</span><input name="StartDate" value="@(Posted("StartDate") ?? s.StartDate)" required inputmode="numeric" data-jalali /></label>
+                <label><span>ساعت جدید</span><input name="StartTime" value="@(Posted("StartTime") ?? s.StartTime)" dir="ltr" inputmode="numeric" /></label>
+                @if (s.Type == ActivityType.Meeting)
+                {
+                    <label><span>تاریخ پایان</span><input name="EndDate" value="@(Posted("EndDate") ?? s.EndDate)" inputmode="numeric" data-jalali /></label>
+                    <label><span>ساعت پایان</span><input name="EndTime" value="@(Posted("EndTime") ?? s.EndTime)" dir="ltr" inputmode="numeric" /></label>
+                }
+            </div>
+            <small class="field-help">یادآوری قبلی لغو و برای زمان جدید دوباره تنظیم می‌شود.</small>
+        </section>
+    }
+    else
+    {
+        <section class="form-section"><h3>لغو فعالیت</h3>
+            <div class="form-grid"><label class="field--full"><span>دلیل لغو *</span><textarea name="Reason" rows="3" required maxlength="500">@Posted("Reason")</textarea></label></div>
+            <small class="field-help">فعالیت حذف نمی‌شود؛ با وضعیت «لغوشده» و دلیل در سوابق می‌ماند.</small>
+        </section>
+    }
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button @(step == "cancel" ? "button--danger" : "button--primary")" type="submit">@(step switch { "complete" => "ثبت نتیجه", "reschedule" => "ذخیرهٔ زمان جدید", _ => "لغو فعالیت" })</button></div>
+</form>

@@ -27,14 +27,6 @@ public sealed class CustomersController(
     public IActionResult Table(string? q = null, int page = 1, int pageSize = 20) =>
         PartialView("_Table", crm.SearchCustomers(current.CrmUserId, current.RequiredOrganization(), q, page, pageSize));
 
-    [HttpGet("/customers/{id:guid}")]
-    public IActionResult Details(Guid id)
-    {
-        var customer = customer360.Get(current.CrmUserId, current.RequiredOrganization(), id, includeRelatedActivity: false);
-        SetCustomerCapabilities();
-        return customer is null ? NotFound() : View(customer);
-    }
-
     [HttpGet("/customers/{id:guid}/activity")]
     public IActionResult Activity(Guid id)
     {
@@ -256,12 +248,11 @@ public sealed class CustomersController(
 
     [Authorize(Policy = "perm:Customer.Update")]
     [HttpGet("/customers/{id:guid}/addresses/create")]
-    public IActionResult CreateAddress(Guid id)
+    public IActionResult CreateAddress(Guid id, Crm.Domain.Customers.CustomerAddressType type = Crm.Domain.Customers.CustomerAddressType.Registered)
     {
         if (customer360.GetEdit(current.CrmUserId, current.RequiredOrganization(), id) is null) return NotFound();
         ViewBag.CustomerId = id;
-        return PartialView("_AddressForm", new AddCustomerAddressCommand(Crm.Domain.Customers.CustomerAddressType.Registered,
-            "", "", "", "", "", false));
+        return PartialView("_AddressForm", new AddCustomerAddressCommand(type, "", "", "", "", "", false));
     }
 
     [Authorize(Policy = "perm:Customer.Update")]

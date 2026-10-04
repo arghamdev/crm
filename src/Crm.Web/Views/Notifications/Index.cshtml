@@ -6,6 +6,7 @@
     {
         NotificationCategory.ServiceEscalation => "ارجاع پرونده‌های خدمات (نقض SLA)",
         NotificationCategory.CommissionApproval => "کمیسیون‌های در انتظار تأیید",
+        NotificationCategory.ActivityReminder => "یادآور تماس‌ها و جلسه‌ها",
         _ => "سررسید تضمین نمایندگان"
     };
 }
@@ -37,7 +38,7 @@
         <tr><td><bdi dir="ltr">@Crm.Domain.Common.JalaliDate.Format(item.CreatedAtUtc.UtcDateTime) @item.CreatedAtUtc.ToString("HH:mm")</bdi></td>
             <td>@(item.Channel == NotificationChannel.Email ? "ایمیل" : "پیامک") <small><bdi dir="ltr">@item.Address</bdi></small></td>
             <td>@if (item.SourceReference is { } link && link.StartsWith('/')) { <a href="@link">@item.Subject</a> } else { @item.Subject }<small class="notification-body">@item.Body</small></td>
-            <td><span class="badge @(item.Status switch { NotificationStatus.Sent => "badge--success", NotificationStatus.Pending => "badge--info", _ => "badge--danger" })"><span></span>@(item.Status switch { NotificationStatus.Sent => "ارسال‌شده", NotificationStatus.Pending => "در صف ارسال", _ => "ناموفق" })</span>@if (item.LastError is not null && item.Status != NotificationStatus.Sent) { <small> @item.LastError</small> }</td></tr>
+            <td><span class="badge @(item.Status switch { NotificationStatus.Sent => "badge--success", NotificationStatus.Pending => "badge--info", _ => "badge--danger" })"><span></span>@(item.Status switch { NotificationStatus.Sent => "ارسال‌شده", NotificationStatus.Pending => "در صف ارسال", NotificationStatus.Withdrawn => "لغوشده", _ => "ناموفق" })</span>@if (item.LastError is not null && item.Status != NotificationStatus.Sent) { <small> @item.LastError</small> }</td></tr>
     }
     </tbody></table></div>
 </section>

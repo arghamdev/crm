@@ -1,0 +1,81 @@
+@model ActivityPanelDto
+@{
+    var accountId = (Guid)ViewBag.AccountId;
+    var f = Model.Filter;
+    var basePath = $"/customers/{accountId}";
+    string TypeIcon(ActivityItemDto x) => x.Kind switch { "Call" => "i-phone", "Meeting" => "i-calendar", "Task" => "i-task", "Visit" => "i-building", _ => "i-target" };
+    string StateLabel(ActivityItemDto x) => x.IsOverdue ? "معوق" : x.State switch { "Planned" => "برنامه‌ریزی‌شده", "Completed" => "انجام‌شده", "Cancelled" => "لغوشده", _ => x.State };
+    string StateTone(ActivityItemDto x) => x.IsOverdue ? "danger" : x.State switch { "Planned" => "info", "Completed" => "success", _ => "neutral" };
+}
+<form id="activityFilter" class="act-filter" hx-get="@basePath/activities" hx-target="#activityPanel" hx-swap="innerHTML" hx-trigger="change, submit">
+    @if (f.ContactId is { } contact) { <input type="hidden" name="contact" value="@contact" /> }
+    <select name="type" aria-label="نوع فعالیت">
+        <option value="">همهٔ انواع</option>
+        <option value="Call" selected="@(f.Type == ActivityType.Call)">تماس</option>
+        <option value="Meeting" selected="@(f.Type == ActivityType.Meeting)">جلسه</option>
+        <option value="Task" selected="@(f.Type == ActivityType.Task)">وظیفه</option>
+    </select>
+    <select name="state" aria-label="وضعیت">
+        <option value="">همهٔ وضعیت‌ها</option>
+        <option value="overdue" selected="@(f.State == "overdue")">معوق</option>
+        <option value="planned" selected="@(f.State == "planned")">برنامه‌ریزی‌شده</option>
+        <option value="completed" selected="@(f.State == "completed")">انجام‌شده</option>
+        <option value="cancelled" selected="@(f.State == "cancelled")">لغوشده</option>
+    </select>
+    <select name="owner" aria-label="مسئول">
+        <option value="">همهٔ مسئولان</option>
+        @foreach (var user in Model.Owners) { <option value="@user.Id" selected="@(f.OwnerUserId == user.Id)">@user.Name</option> }
+    </select>
+    <input name="from" value="@(f.From is { } from ? Crm.Domain.Common.JalaliDate.Format(from) : null)" placeholder="از ۱۴۰۵/۰۷/۰۱" inputmode="numeric" aria-label="از تاریخ" />
+    <input name="to" value="@(f.To is { } to ? Crm.Domain.Common.JalaliDate.Format(to) : null)" placeholder="تا ۱۴۰۵/۰۷/۳۰" inputmode="numeric" aria-label="تا تاریخ" />
+</form>
+@if (f.ContactId is not null)
+{
+    <p class="sec-note"><svg><use href="#i-users"/></svg>فقط فعالیت‌های یک فرد رابط نمایش داده می‌شود. <a class="link-button" href="#" hx-get="@basePath/activities" hx-target="#activityPanel">نمایش همه</a></p>
+}
+@if (Model.Total == 0)
+{
+    <p class="state-empty">@(f.Type is null && f.State is null && f.OwnerUserId is null && f.From is null && f.To is null ? "هنوز فعالیتی ثبت نشده است؛ از «عملیات اصلی» تماس، جلسه یا وظیفه بسازید." : "فعالیتی با این فیلتر پیدا نشد.")</p>
+}
+@foreach (var (title, items, css) in new[] { ("معوق", Model.Overdue, "act-group--overdue"), ("فعالیت‌های باز", Model.Upcoming, "act-group--open"), ("فعالیت‌های گذشته", Model.Past, "act-group--past") })
+{
+    if (items.Count == 0) { continue; }
+    <section class="act-group @css">
+        <h4>@title <b>@items.Count</b></h4>
+        @foreach (var x in items)
+        {
+            <article class="act @(x.IsOverdue ? "act--overdue" : "") @(x.State != "Planned" ? "act--closed" : "")">
+                <span class="act__icon"><svg><use href="#@TypeIcon(x)"/></svg></span>
+                <div class="act__body">
+                    @if (x.Type is not null)
+                    {
+                        <button type="button" class="act__title" hx-get="@basePath/activities/@x.Id" hx-target="#drawerBody">@x.Subject</button>
+                    }
+                    else if (x.RelatedUrl is { } related) { <a class="act__title" href="@related">@x.Subject</a> }
+                    else { <span class="act__title">@x.Subject</span> }
+                    <div class="act__meta">
+                        <span class="badge badge--@StateTone(x)"><span></span>@StateLabel(x)</span>
+                        <span><svg><use href="#i-clock"/></svg>@x.When</span>
+                        <span><svg><use href="#i-users"/></svg>@x.Owner</span>
+                        @if (x.Contact is not null) { <span>رابط: @x.Contact</span> }
+                        @if (x.Related is not null) { if (x.Type is not null && x.RelatedUrl is { } relatedUrl) { <a href="@relatedUrl">@x.Related</a> } else { <span>@x.Related</span> } }
+                        @if (!string.IsNullOrWhiteSpace(x.Details)) { <span>@x.Details</span> }
+                    </div>
+                    @if (x.Outcome is not null) { <p class="act__outcome"><b>@(x.State == "Cancelled" ? "دلیل لغو:" : "نتیجه:")</b> @x.Outcome</p> }
+                </div>
+                @if (x.CanComplete || x.CanEdit)
+                {
+                    <div class="act__actions">
+                        @if (x.CanComplete) { <button type="button" class="chip-action chip-action--primary" hx-get="@basePath/activities/@x.Id/complete" hx-target="#drawerBody"><svg><use href="#i-check"/></svg>ثبت نتیجه</button> }
+                        @if (x.CanEdit)
+                        {
+                            <button type="button" class="chip-action" hx-get="@basePath/activities/@x.Id/reschedule" hx-target="#drawerBody"><svg><use href="#i-clock"/></svg>زمان جدید</button>
+                            <button type="button" class="chip-action" hx-get="@basePath/activities/@x.Id/edit" hx-target="#drawerBody"><svg><use href="#i-edit"/></svg>ویرایش</button>
+                            <button type="button" class="chip-action chip-action--danger" hx-get="@basePath/activities/@x.Id/cancel" hx-target="#drawerBody">لغو</button>
+                        }
+                    </div>
+                }
+            </article>
+        }
+    </section>
+}

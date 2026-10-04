@@ -1,0 +1,9 @@
+@model QuickActionModel
+@if (Model.Allowed)
+{
+    <button type="button" class="quick-action" hx-get="@Model.Path" hx-target="#drawerBody"><span class="quick-action__icon"><svg><use href="#@Model.Icon"/></svg></span><span>@Model.Label</span></button>
+}
+else
+{
+    <span class="quick-action is-disabled" title="@(Model.AccountActive ? "برای این عملیات مجوز ندارید" : "حساب غیرفعال است")" aria-disabled="true"><span class="quick-action__icon"><svg><use href="#@Model.Icon"/></svg></span><span>@Model.Label</span><small>@(Model.AccountActive ? "بدون مجوز" : "حساب غیرفعال")</small></span>
+}

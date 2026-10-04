@@ -1,0 +1,22 @@
+@model AccountLinkFormDto
+@if (Model.Options.Count == 0)
+{
+    <p class="state-empty">@(Model.Query is { Length: > 0 } ? "رکوردی با این عبارت پیدا نشد." : "رکورد قابل اتصالی وجود ندارد.")</p>
+}
+<ul class="link-list">
+    @foreach (var option in Model.Options)
+    {
+        <li>
+            <form method="post" action="@Model.Action" hx-post="@Model.Action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="recordId" value="@option.Id" />
+                <span class="link-list__text"><strong>@option.Title</strong>@if (option.Subtitle is not null) { <small>@option.Subtitle</small> }</span>
+                @if (Model.Fields.Count > 0)
+                {
+                    <span class="link-list__fields">@foreach (var field in Model.Fields) { <partial name="_Field" model="field" /> }</span>
+                }
+                <button type="submit" class="button button--soft button--sm"><svg><use href="#i-link"/></svg>اتصال</button>
+            </form>
+        </li>
+    }
+</ul>

@@ -21,7 +21,9 @@ public sealed class RoleAdministrationService(ICrmDataStore store, IAccessSnapsh
     {
         ["Administration"] = "مدیریت سامانه", ["Customer"] = "مشتری", ["Lead"] = "سرنخ", ["Opportunity"] = "فرصت فروش",
         ["Quote"] = "پیشنهاد قیمت", ["Order"] = "سفارش", ["Dealer"] = "نمایندگان و کمیسیون", ["Portal"] = "پرتال نماینده",
-        ["Mobile"] = "موبایل", ["Reporting"] = "گزارش", ["Dashboard"] = "داشبورد", ["WorkQueue"] = "کارتابل", ["Service"] = "خدمات و SLA"
+        ["Mobile"] = "موبایل", ["Reporting"] = "گزارش", ["Dashboard"] = "داشبورد", ["WorkQueue"] = "کارتابل", ["Service"] = "خدمات و SLA",
+        ["Activity"] = "فعالیت‌ها", ["Note"] = "یادداشت‌ها", ["Document"] = "اسناد", ["Payment"] = "پرداخت‌ها", ["BankAccount"] = "حساب‌های بانکی",
+        ["Account"] = "پرونده حساب", ["Contract"] = "قراردادها", ["Project"] = "پروژه‌ها", ["Campaign"] = "بازاریابی", ["Survey"] = "نظرسنجی"
     };
 
     /// <summary>Every permission the application checks; seeded from the shipped matrix so names cannot be mistyped in the UI.</summary>

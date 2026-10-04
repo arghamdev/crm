@@ -1,0 +1,15 @@
+@model AccountRecordFormDto
+<form class="drawer-form account-form" method="post" action="@Model.Action" hx-post="@Model.Action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]"
+      hx-encoding="@(Model.Multipart ? "multipart/form-data" : null)" enctype="@(Model.Multipart ? "multipart/form-data" : null)">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="operationId" value="@(Model.OperationId == Guid.Empty ? Guid.NewGuid() : Model.OperationId)" />
+    <div class="form-context"><svg><use href="#i-building"/></svg><span>حساب: <b>@Model.AccountName</b></span></div>
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>@Model.Title</h3>
+        <div class="form-grid">
+            @foreach (var field in Model.Fields) { <partial name="_Field" model="field" /> }
+        </div>
+        @if (Model.Note is not null) { <p class="field-help"><svg><use href="#i-info"/></svg>@Model.Note</p> }
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">@Model.SubmitLabel</button></div>
+</form>

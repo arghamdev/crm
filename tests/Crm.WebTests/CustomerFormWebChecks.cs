@@ -62,10 +62,12 @@ internal static partial class TestRunner
         using (var response = await manager.GetAsync($"/customers/{id}"))
         {
             html = await response.Content.ReadAsStringAsync();
-            CheckHtml(HtmlContains(html, "اطلاعات شخص") && HtmlContains(html, "1368/04/10") && HtmlContains(html, "زهرا منشی") &&
+            CheckHtml(HtmlContains(html, "اطلاعات شخص") && HtmlContains(html, "1368/04/10") &&
                       html.Contains($"/customers/{id}/logo") && html.Contains($"/customers/{id}/contacts/"),
-                "CUSTF: details show the profile, Jalali birth date, contact person and logo.", "custf-details", html);
+                "CUSTF: the account file shows the profile, Jalali birth date and logo.", "custf-details", html);
         }
+        using (var response = await manager.GetAsync($"/customers/{id}/sections/contacts"))
+            Check(HtmlContains(await response.Content.ReadAsStringAsync(), "زهرا منشی"), "CUSTF: the contact person is listed in the contacts section.");
         using (var response = await manager.GetAsync($"/customers/{id}/logo"))
             Check(response.Content.Headers.ContentType?.MediaType == "image/png", "CUSTF: the logo is served as PNG.");
         using (var response = await manager.GetAsync($"/customers/{id}/edit"))

@@ -9,15 +9,22 @@ public enum DealerTrainingTopic { Product, Sales, AfterSales, Systems, Complianc
 public enum CommissionPayoutStatus { Pending, Sent, DeadLetter }
 
 /// <summary>
-/// Security a dealer has lodged against its credit (bank guarantee, cheque, promissory note, deposit, collateral).
-/// A guarantee is effective while active and not past its expiry; releasing (returning) or forfeiting (cashing) it
-/// is a recorded decision.
+/// Security lodged against credit (bank guarantee, cheque, promissory note, deposit, collateral) by a dealer or by an
+/// account (customer/supplier); exactly one of <see cref="DealerId"/> and <see cref="CustomerId"/> is set. A guarantee
+/// is effective while active and not past its expiry; releasing (returning) or forfeiting (cashing) it is a recorded decision.
 /// </summary>
 public sealed class DealerGuarantee : Entity, IOrganizationScoped
 {
-    public DealerGuarantee(Guid id, Guid dealerId, string companyId, string branchId, string? territoryId, DealerGuaranteeType type,
-        string number, string? issuer, decimal amount, DateOnly issuedOn, DateOnly? expiresOn, string? notes, Guid registeredByUserId) : base(id)
+    /// <summary>Guarantee or deposit of an account (customer, supplier, partner).</summary>
+    public static DealerGuarantee ForAccount(Guid id, Guid customerId, string companyId, string branchId, string? territoryId, DealerGuaranteeType type,
+        string number, string? issuer, decimal amount, DateOnly issuedOn, DateOnly? expiresOn, string? notes, Guid registeredByUserId) =>
+        new(id, null, companyId, branchId, territoryId, type, number, issuer, amount, issuedOn, expiresOn, notes, registeredByUserId, customerId);
+
+    public DealerGuarantee(Guid id, Guid? dealerId, string companyId, string branchId, string? territoryId, DealerGuaranteeType type,
+        string number, string? issuer, decimal amount, DateOnly issuedOn, DateOnly? expiresOn, string? notes, Guid registeredByUserId,
+        Guid? customerId = null) : base(id)
     {
+        if (dealerId is null == customerId is null) throw new ArgumentException("A guarantee belongs to either a dealer or an account.");
         if (amount <= 0) throw new InvalidOperationException("مبلغ تضمین باید مثبت باشد.");
         if (type is DealerGuaranteeType.BankGuarantee or DealerGuaranteeType.Cheque && string.IsNullOrWhiteSpace(issuer))
             throw new InvalidOperationException("برای ضمانت‌نامه بانکی و چک، نام بانک صادرکننده الزامی است.");
@@ -25,6 +32,7 @@ public sealed class DealerGuarantee : Entity, IOrganizationScoped
             throw new InvalidOperationException("ضمانت‌نامه بانکی تاریخ سررسید لازم دارد.");
         if (expiresOn is { } expiry && expiry <= issuedOn) throw new InvalidOperationException("سررسید باید بعد از تاریخ صدور باشد.");
         DealerId = dealerId;
+        CustomerId = customerId;
         CompanyId = companyId;
         BranchId = branchId;
         TerritoryId = territoryId;
@@ -43,7 +51,8 @@ public sealed class DealerGuarantee : Entity, IOrganizationScoped
         CompanyId = BranchId = Number = "EF";
     }
 
-    public Guid DealerId { get; private set; }
+    public Guid? DealerId { get; private set; }
+    public Guid? CustomerId { get; private set; }
     public string CompanyId { get; private set; }
     public string BranchId { get; private set; }
     public string? TerritoryId { get; private set; }
@@ -59,6 +68,13 @@ public sealed class DealerGuarantee : Entity, IOrganizationScoped
     public Guid? DecidedByUserId { get; private set; }
     public DateTimeOffset? DecidedAtUtc { get; private set; }
     public string? DecisionReason { get; private set; }
+
+    public void ReassignCustomer(Guid customerId)
+    {
+        if (CustomerId is null) throw new InvalidOperationException("Only account guarantees can move between accounts.");
+        CustomerId = customerId;
+        Touch();
+    }
 
     public bool IsEffective(DateOnly today) => Status == DealerGuaranteeStatus.Active && (ExpiresOn is null || ExpiresOn >= today);
 

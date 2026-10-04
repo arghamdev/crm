@@ -89,6 +89,22 @@ public static class IranianIdentifiers
         digits is { Length: 11 } && digits[0] == '0' && digits[1] is not '9' and not '0' ||
         digits is { Length: 8 } && digits[0] != '0';
 
+    /// <summary>Sheba/IBAN: "IR" + 24 digits; spaces and Persian digits are accepted on input.</summary>
+    public static string? NormalizeIban(string? value)
+    {
+        var text = PersianText.Normalize(value)?.Replace(" ", "", StringComparison.Ordinal).Replace("-", "", StringComparison.Ordinal).ToUpperInvariant();
+        if (text is null) return null;
+        return text.All(char.IsAsciiDigit) && text.Length == 24 ? "IR" + text : text;
+    }
+
+    /// <summary>ISO 13616 mod-97 check of an Iranian IBAN.</summary>
+    public static bool IsValidIban(string? iban)
+    {
+        if (iban is not { Length: 26 } || !iban.StartsWith("IR", StringComparison.Ordinal) || !iban[2..].All(char.IsAsciiDigit)) return false;
+        var rearranged = iban[4..] + "1827" + iban[2..4]; // I=18, R=27
+        return System.Numerics.BigInteger.Parse(rearranged, System.Globalization.CultureInfo.InvariantCulture) % 97 == 1;
+    }
+
     /// <summary>Postal code: 10 digits, the first five without 0 or 2 (post office rule), and not a single repeated digit.</summary>
     public static bool IsValidPostalCode(string? digits) =>
         digits is { Length: 10 } && digits[..5].All(c => c is not '0' and not '2') && digits.Distinct().Count() > 1;
@@ -133,4 +149,43 @@ public static class JalaliDate
     public static DateTimeOffset NextMonthStart(int year, int month) => month == 12 ? MonthStart(year + 1, 1) : MonthStart(year, month + 1);
 
     public static string MonthLabel(int year, int month) => $"{MonthNames[month - 1]} {year}";
+}
+
+/// <summary>Jalali date + local time in Iran (Asia/Tehran), the way users enter and read times.</summary>
+public static class TehranTime
+{
+    private static readonly TimeZoneInfo Zone = Resolve();
+
+    private static TimeZoneInfo Resolve()
+    {
+        try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Tehran"); }
+        catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            return TimeZoneInfo.CreateCustomTimeZone("Asia/Tehran", TimeSpan.FromMinutes(210), "Tehran", "Tehran");
+        }
+    }
+
+    /// <summary>Jalali date ("1405/07/12") and time ("14:30") in Tehran time to UTC; null when the date is empty.</summary>
+    public static DateTimeOffset? ToUtc(string? jalaliDate, string? time, string label)
+    {
+        if (string.IsNullOrWhiteSpace(jalaliDate)) return null;
+        if (!JalaliDate.TryParse(jalaliDate, out var date)) throw new InvalidOperationException($"{label}: تاریخ را به شکل شمسی ۱۴۰۵/۰۷/۱۲ وارد کنید.");
+        var clock = TimeOnly.MinValue;
+        var text = PersianText.Normalize(time);
+        if (text is not null && !TimeOnly.TryParseExact(text, ["HH:mm", "H:mm"], System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out clock))
+            throw new InvalidOperationException($"{label}: ساعت را به شکل ۱۴:۳۰ وارد کنید.");
+        var local = date.ToDateTime(clock, DateTimeKind.Unspecified);
+        return new DateTimeOffset(local, Zone.GetUtcOffset(local)).ToUniversalTime();
+    }
+
+    public static DateTime Local(DateTimeOffset utc) => TimeZoneInfo.ConvertTime(utc, Zone).DateTime;
+
+    public static string Date(DateTimeOffset utc) => JalaliDate.Format(Local(utc));
+
+    public static string Clock(DateTimeOffset utc) => Local(utc).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+    public static string Format(DateTimeOffset utc) => $"{Date(utc)} {Clock(utc)}";
+
+    public static DateOnly Today(DateTimeOffset utc) => DateOnly.FromDateTime(Local(utc));
 }

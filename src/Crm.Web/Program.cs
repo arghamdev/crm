@@ -20,6 +20,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 var builder = WebApplication.CreateBuilder(args);
+// Persian text is written as-is (not as &#x...; entities): smaller pages, readable source. Encoding of markup characters is unchanged.
+builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
+    options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
 
 builder.Services.AddControllersWithViews(options =>
 {
@@ -199,6 +202,10 @@ builder.Services.AddScoped<IDealerAssuranceService, DealerAssuranceService>();
 builder.Services.AddScoped<CommissionPayoutDispatcher>();
 builder.Services.AddScoped<NotificationDispatcher>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAccountFileService, AccountFileService>();
+builder.Services.AddScoped<IAccountActivityService, AccountActivityService>();
+builder.Services.AddScoped<IAccountNoteService, AccountNoteService>();
+builder.Services.AddScoped<IAccountRecordService, AccountRecordService>();
 // Email: Demo (log only) or Smtp; SMS: Demo or Http gateway. Secrets come from configuration/environment, never source.
 if (string.Equals(builder.Configuration["Notifications:Email:Mode"], "Smtp", StringComparison.OrdinalIgnoreCase))
     builder.Services.AddSingleton<INotificationSender>(_ => new Crm.Infrastructure.Notifications.SmtpEmailSender(new(

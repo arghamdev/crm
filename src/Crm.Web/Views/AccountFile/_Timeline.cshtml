@@ -1,0 +1,25 @@
+@model IReadOnlyList<TimelineItemDto>
+@if (Model.Count == 0)
+{
+    <p class="state-empty">رویدادی ثبت نشده است.</p>
+}
+else
+{
+    <ol class="timeline">
+        @foreach (var group in Model.GroupBy(x => x.When.Split(' ')[0]))
+        {
+            <li class="timeline__day"><span>@group.Key</span></li>
+            @foreach (var item in group)
+            {
+                <li class="timeline__item timeline__item--@item.Kind.ToLowerInvariant()">
+                    <span class="timeline__icon"><svg><use href="#@item.Icon"/></svg></span>
+                    <div>
+                        <div class="timeline__title">@if (item.Url is { } url) { <a href="@url" hx-get="@(url.Contains("/activities/") ? url : null)" hx-target="@(url.Contains("/activities/") ? "#drawerBody" : null)">@item.Title</a> } else { <strong>@item.Title</strong> }</div>
+                        @if (!string.IsNullOrWhiteSpace(item.Description)) { <p class="pre">@item.Description</p> }
+                        <small>@item.When.Split(' ').LastOrDefault() · @(item.Actor ?? "سیستم")</small>
+                    </div>
+                </li>
+            }
+        }
+    </ol>
+}

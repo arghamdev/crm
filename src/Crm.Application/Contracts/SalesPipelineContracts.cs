@@ -43,7 +43,9 @@ public sealed record PipelineBoardDto(IReadOnlyList<OpportunityDto> Items,
 public sealed record CreateOpportunityCommand(Guid CustomerId, string Title, decimal Value, Guid OwnerUserId,
     string BranchId, string? TerritoryId, DateTimeOffset ExpectedCloseAtUtc, string Source,
     string NextAction, DateTimeOffset NextActionAtUtc, string? Competitor = null,
-    OpportunityRiskLevel RiskLevel = OpportunityRiskLevel.Medium);
+    OpportunityRiskLevel RiskLevel = OpportunityRiskLevel.Medium,
+    Guid? ContactId = null, string CurrencyCode = "IRR", OpportunityStage? InitialStage = null, int? Probability = null,
+    Guid? OperationId = null);
 public sealed record UpdateOpportunityCommand(string Title, decimal Value, DateTimeOffset ExpectedCloseAtUtc,
     string Source, string? Competitor, OpportunityRiskLevel RiskLevel,
     string NextAction, DateTimeOffset NextActionAtUtc, long ExpectedVersion);

@@ -1,0 +1,45 @@
+@model ActivityDetailsDto
+@{
+    var x = Model.Item;
+    var s = Model.Activity;
+    var basePath = $"/customers/{Model.AccountId}/activities/{x.Id}";
+    string State() => x.IsOverdue ? "معوق" : s.Status switch { ActivityStatus.Planned => "برنامه‌ریزی‌شده", ActivityStatus.Completed => "انجام‌شده", _ => "لغوشده" };
+}
+<div class="drawer-form account-form">
+    <section class="form-section">
+        <h3>@AccountActivityService.Label(s.Type): @x.Subject</h3>
+        <dl class="info-grid info-grid--drawer">
+            <div><dt>وضعیت</dt><dd><span class="badge badge--@(x.IsOverdue ? "danger" : s.Status == ActivityStatus.Completed ? "success" : s.Status == ActivityStatus.Planned ? "info" : "neutral")"><span></span>@State()</span></dd></div>
+            <div><dt>زمان</dt><dd>@x.When</dd></div>
+            <div><dt>مسئول</dt><dd>@x.Owner</dd></div>
+            <div><dt>فرد رابط</dt><dd>@(x.Contact ?? "—")</dd></div>
+            @if (s.Type == ActivityType.Call)
+            {
+                <div><dt>جهت / مدت</dt><dd>@(s.Direction == CallDirection.Inbound ? "ورودی" : "خروجی") @(s.DurationMinutes is { } d ? $"· {d} دقیقه" : "")</dd></div>
+                <div><dt>نتیجهٔ تماس</dt><dd>@(s.CallResult is { } r ? AccountActivityService.CallResultLabel(r) : "—")</dd></div>
+            }
+            @if (s.Type == ActivityType.Meeting)
+            {
+                <div class="info-grid__wide"><dt>مکان / پیوند</dt><dd>@(s.Location ?? "—")</dd></div>
+                <div class="info-grid__wide"><dt>شرکت‌کنندگان</dt><dd>@(Model.Participants.Count == 0 ? "—" : string.Join("، ", Model.Participants))</dd></div>
+            }
+            @if (s.Type == ActivityType.Task) { <div><dt>اولویت</dt><dd>@AccountActivityService.PriorityLabel(s.Priority)</dd></div> }
+            <div><dt>یادآوری</dt><dd>@(s.Reminder is { } m ? $"{m} دقیقه قبل" : "—")</dd></div>
+            <div><dt>مرتبط با</dt><dd>@if (x.RelatedUrl is { } url) { <a href="@url">@x.Related</a> } else { <text>—</text> }</dd></div>
+            @if (s.FollowUpOf is not null) { <div class="info-grid__wide"><dt>اقدام بعدیِ</dt><dd>@s.FollowUpOf</dd></div> }
+            @if (!string.IsNullOrWhiteSpace(x.Description)) { <div class="info-grid__wide"><dt>@(s.Type == ActivityType.Meeting ? "دستور جلسه" : "توضیحات")</dt><dd class="pre">@x.Description</dd></div> }
+            @if (x.Outcome is not null) { <div class="info-grid__wide"><dt>@(s.Status == ActivityStatus.Cancelled ? "دلیل لغو" : "نتیجه")</dt><dd class="pre">@x.Outcome</dd></div> }
+            @if (s.CompletedAt is not null) { <div class="info-grid__wide"><dt>@(s.Status == ActivityStatus.Cancelled ? "لغو توسط" : "ثبت نتیجه توسط")</dt><dd>@s.CompletedBy · @s.CompletedAt</dd></div> }
+        </dl>
+    </section>
+    <div class="drawer-actions">
+        <button class="button button--ghost" type="button" data-drawer-close>بستن</button>
+        @if (x.CanEdit)
+        {
+            <button class="button button--ghost" type="button" hx-get="@basePath/cancel" hx-target="#drawerBody">لغو فعالیت</button>
+            <button class="button button--ghost" type="button" hx-get="@basePath/reschedule" hx-target="#drawerBody">زمان جدید</button>
+            <button class="button button--ghost" type="button" hx-get="@basePath/edit" hx-target="#drawerBody">ویرایش</button>
+        }
+        @if (x.CanComplete) { <button class="button button--primary" type="button" hx-get="@basePath/complete" hx-target="#drawerBody">ثبت نتیجه</button> }
+    </div>
+</div>

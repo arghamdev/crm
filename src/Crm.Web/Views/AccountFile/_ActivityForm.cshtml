@@ -1,0 +1,81 @@
+@model ActivityFormDto
+@{
+    var c = Model.Command;
+    var o = Model.Options;
+    var type = c.Type;
+    var isNew = Model.ActivityId is null;
+    var action = isNew ? $"/customers/{Model.AccountId}/activities" : $"/customers/{Model.AccountId}/activities/{Model.ActivityId}/edit";
+    var title = (isNew ? type switch { ActivityType.Call => "برنامه‌ریزی تماس", ActivityType.Meeting => "برنامه‌ریزی جلسه", _ => "ایجاد وظیفه" } : $"ویرایش {AccountActivityService.Label(type)}");
+    var related = c.RelatedId is { } rid ? $"{c.RelatedKind}:{rid}" : "";
+    var users = o.CanAssignOthers ? o.Users : o.Users.Where(x => x.Id == o.CurrentUserId).ToList();
+    var reminders = new[] { (0, "بدون یادآوری"), (5, "۵ دقیقه قبل"), (15, "۱۵ دقیقه قبل"), (30, "۳۰ دقیقه قبل"), (60, "۱ ساعت قبل"), (1440, "۱ روز قبل") };
+}
+<form class="drawer-form account-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Type" value="@type" />
+    <input type="hidden" name="OperationId" value="@c.OperationId" />
+    <input type="hidden" name="ExpectedVersion" value="@c.ExpectedVersion" />
+    <div class="form-context"><svg><use href="#i-building"/></svg><span>حساب: <b>@o.AccountName</b></span></div>
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section"><h3>@title</h3>
+        <div class="form-grid">
+            <label class="field--full"><span>@(type == ActivityType.Task ? "عنوان وظیفه *" : "موضوع *")</span><input name="Subject" value="@c.Subject" required maxlength="200" placeholder="@(type switch { ActivityType.Call => "مثلاً پیگیری پیش‌فاکتور", ActivityType.Meeting => "مثلاً جلسهٔ معرفی محصول", _ => "مثلاً ارسال کاتالوگ" })" /></label>
+            @if (type != ActivityType.Meeting)
+            {
+                <label><span>فرد رابط</span><select name="ContactId"><option value="">— بدون رابط —</option>@foreach (var x in o.Contacts) { <option value="@x.Id" selected="@(c.ContactId == x.Id)">@x.Name</option> }</select></label>
+            }
+            <label><span>مسئول *</span><select name="OwnerUserId" required>@foreach (var x in users) { <option value="@x.Id" selected="@(c.OwnerUserId == x.Id)">@x.Name</option> }</select>@if (!o.CanAssignOthers) { <small class="field-help">واگذاری به دیگران نیازمند مجوز است.</small> }</label>
+            <label><span>@(type == ActivityType.Task ? "تاریخ مهلت *" : "تاریخ *")</span><input name="StartDate" value="@c.StartDate" required placeholder="۱۴۰۵/۰۷/۱۲" inputmode="numeric" data-jalali /></label>
+            <label><span>@(type == ActivityType.Task ? "ساعت مهلت" : "ساعت شروع *")</span><input name="StartTime" value="@c.StartTime" placeholder="۱۰:۳۰" dir="ltr" inputmode="numeric" /></label>
+            @if (type == ActivityType.Call)
+            {
+                <label><span>مدت (دقیقه)</span><input name="DurationMinutes" type="number" min="1" max="600" value="@c.DurationMinutes" dir="ltr" /></label>
+                <label><span>جهت تماس</span><select name="Direction"><option value="Outbound" selected="@(c.Direction != CallDirection.Inbound)">خروجی</option><option value="Inbound" selected="@(c.Direction == CallDirection.Inbound)">ورودی</option></select></label>
+            }
+            @if (type == ActivityType.Meeting)
+            {
+                <label><span>تاریخ پایان</span><input name="EndDate" value="@c.EndDate" placeholder="همان روز" inputmode="numeric" data-jalali /></label>
+                <label><span>ساعت پایان *</span><input name="EndTime" value="@c.EndTime" placeholder="۱۱:۳۰" dir="ltr" inputmode="numeric" /></label>
+                <label class="field--full"><span>مکان یا پیوند جلسهٔ آنلاین</span><input name="Location" value="@c.Location" maxlength="300" placeholder="دفتر مشتری / https://meet…" /></label>
+                <fieldset class="field--full pick-list"><legend>شرکت‌کنندگان از طرف حساب</legend>
+                    @if (o.Contacts.Count == 0) { <small class="field-help">رابطی برای این حساب ثبت نشده است.</small> }
+                    @foreach (var x in o.Contacts) { <label class="consent-row"><input type="checkbox" name="ParticipantContactIds" value="@x.Id" checked="@(c.ParticipantContactIds?.Contains(x.Id) == true)" /><span>@x.Name</span></label> }
+                </fieldset>
+                <fieldset class="field--full pick-list"><legend>شرکت‌کنندگان داخلی</legend>
+                    @foreach (var x in o.Users) { <label class="consent-row"><input type="checkbox" name="ParticipantUserIds" value="@x.Id" checked="@(c.ParticipantUserIds?.Contains(x.Id) == true)" /><span>@x.Name</span></label> }
+                </fieldset>
+            }
+            @if (type == ActivityType.Task)
+            {
+                <label><span>اولویت</span><select name="Priority">@foreach (var p in Enum.GetValues<ActivityPriority>()) { <option value="@p" selected="@(c.Priority == p)">@AccountActivityService.PriorityLabel(p)</option> }</select></label>
+            }
+            else { <input type="hidden" name="Priority" value="@c.Priority" /> }
+            @if (type != ActivityType.Task)
+            {
+                <label><span>یادآوری</span><select name="ReminderMinutesBefore">@foreach (var (value, label) in reminders) { <option value="@(value == 0 ? "" : value.ToString())" selected="@((c.ReminderMinutesBefore ?? 0) == value)">@label</option> }</select></label>
+            }
+            <label class="field--full"><span>مرتبط با</span><select name="Related">
+                <option value="">— فقط حساب —</option>
+                @if (o.Opportunities.Count > 0) { <optgroup label="فرصت‌ها">@foreach (var x in o.Opportunities) { <option value="Opportunity:@x.Id" selected="@(related == $"Opportunity:{x.Id}")">@x.Name</option> }</optgroup> }
+                @if (o.Projects.Count > 0) { <optgroup label="پروژه‌ها">@foreach (var x in o.Projects) { <option value="Project:@x.Id" selected="@(related == $"Project:{x.Id}")">@x.Name</option> }</optgroup> }
+                @if (o.Contracts.Count > 0) { <optgroup label="قراردادها">@foreach (var x in o.Contracts) { <option value="Contract:@x.Id" selected="@(related == $"Contract:{x.Id}")">@x.Name</option> }</optgroup> }
+            </select></label>
+            <label class="field--full"><span>@(type == ActivityType.Meeting ? "دستور جلسه" : "توضیحات")</span><textarea name="Description" rows="3" maxlength="4000">@c.Description</textarea></label>
+        </div>
+    </section>
+    @if (isNew && type != ActivityType.Task)
+    {
+        <details class="form-section done-toggle" open="@c.AlreadyDone">
+            <summary><h3>@(type == ActivityType.Call ? "این تماس انجام شده است؟" : "این جلسه برگزار شده است؟")</h3><small>برای ثبت سابقهٔ انجام‌شده؛ در غیر این صورت فعالیت «برنامه‌ریزی‌شده» می‌ماند.</small></summary>
+            <div class="form-grid">
+                <label class="consent-row field--full"><input type="checkbox" name="AlreadyDone" value="true" checked="@c.AlreadyDone" /><span>بله، نتیجه را همین حالا ثبت کن (وضعیت: انجام‌شده)</span></label>
+                @if (type == ActivityType.Call)
+                {
+                    <label><span>نتیجهٔ تماس</span><select name="CallResult"><option value="">—</option>@foreach (var r in Enum.GetValues<CallResult>()) { <option value="@r" selected="@(c.CallResult == r)">@AccountActivityService.CallResultLabel(r)</option> }</select></label>
+                }
+                <label class="field--full"><span>شرح نتیجه</span><textarea name="Outcome" rows="2" maxlength="4000">@c.Outcome</textarea></label>
+            </div>
+        </details>
+    }
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">@(isNew ? "ذخیره" : "ذخیرهٔ تغییرات")</button></div>
+</form>

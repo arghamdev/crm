@@ -32,7 +32,7 @@ const required = [
   "src/Crm.Application/Contracts/Customer360Contracts.cs",
   "src/Crm.Application/Services/Customer360Service.cs",
   "src/Crm.Web/Controllers/CustomersController.cs",
-  "src/Crm.Web/Views/Customers/Details.cshtml",
+  "src/Crm.Web/Views/AccountFile/Index.cshtml",
   "src/Crm.Web/Views/Customers/Activity.cshtml",
   "src/Crm.Web/Views/Customers/_Activity.cshtml",
   "src/Crm.Web/Views/Customers/DataQuality.cshtml",
@@ -172,6 +172,20 @@ const required = [
   ,"src/Crm.Infrastructure/Migrations/202610030016_Notifications.cs"
   ,"scripts/sql/notifications-idempotent.sql"
   ,"scripts/sql/notifications-rollback.sql"
+  ,"src/Crm.Infrastructure/Migrations/202610030017_AccountFile.cs"
+  ,"scripts/sql/account-file-idempotent.sql"
+  ,"scripts/sql/account-file-rollback.sql"
+  ,"src/Crm.Domain/Accounts/CrmActivity.cs"
+  ,"src/Crm.Domain/Accounts/AccountRecords.cs"
+  ,"src/Crm.Domain/Accounts/AccountNotesAndDocuments.cs"
+  ,"src/Crm.Application/Services/AccountFileService.cs"
+  ,"src/Crm.Application/Services/AccountActivityService.cs"
+  ,"src/Crm.Application/Services/AccountNoteService.cs"
+  ,"src/Crm.Application/Services/AccountRecordService.cs"
+  ,"docs/account-file-fa.md"
+  ,"src/Crm.Web/Controllers/AccountFileController.cs"
+  ,"src/Crm.Web/Views/AccountFile/_Section.cshtml"
+  ,"src/Crm.Web/Views/AccountFile/_ActivityPanel.cshtml"
   ,"src/Crm.Domain/Notifications/Notification.cs"
   ,"src/Crm.Application/Services/NotificationServices.cs"
   ,"src/Crm.Infrastructure/Notifications/NotificationSenders.cs"

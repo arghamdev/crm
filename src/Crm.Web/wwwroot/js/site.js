@@ -76,14 +76,37 @@
     const label = input && document.getElementById(input.dataset.fileLabel);
     if (label) label.textContent = input.files?.[0]?.name ?? "انتخاب تصویر…";
   });
+  // Capture phase: runs before htmx's own submit handler, so a cancelled confirm/prompt really stops the request.
   document.addEventListener("submit", event => {
     const form = event.target;
     const message = form.dataset.confirm;
     if (message && !window.confirm(message)) {
       event.preventDefault();
+      event.stopPropagation();
       return;
     }
-    const button = form.querySelector('button[type="submit"]');
+    const question = form.dataset.prompt;
+    if (question) {
+      const answer = window.prompt(question);
+      if (answer === null || !answer.trim()) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (answer !== null) showToast(question + " الزامی است.", true);
+        return;
+      }
+      let input = form.querySelector('input[name="reason"]');
+      if (!input) {
+        input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "reason";
+        form.appendChild(input);
+      }
+      input.value = answer.trim();
+    }
+  }, true);
+  // Bubble phase (as before): forms whose own script stops the event keep managing their buttons themselves.
+  document.addEventListener("submit", event => {
+    const button = event.target.querySelector('button[type="submit"]');
     if (button) {
       button.classList.add("is-loading");
       button.setAttribute("aria-disabled", "true");
@@ -110,7 +133,13 @@
   });
 
   document.body.addEventListener("htmx:afterSwap", event => {
-    if (event.detail.target?.id === "drawerBody") openDrawer();
+    if (event.detail.target?.id === "drawerBody") {
+      // The drawer title follows the form that was loaded (e.g. «برنامه‌ریزی تماس») instead of a generic caption.
+      const heading = drawerBody?.querySelector("[data-drawer-title], .form-section h3");
+      const title = document.getElementById("drawerTitle");
+      if (heading && title) title.textContent = heading.textContent.trim();
+      openDrawer();
+    }
   });
 
   document.body.addEventListener("htmx:afterRequest", event => {
@@ -132,4 +161,144 @@
       showToast(event.detail?.message || "تغییر با موفقیت ثبت شد.");
     });
   });
+
+  // ───────────── Account file (پرونده حساب): tabs, lazy sections, in-place refresh ─────────────
+  const accountRoot = document.querySelector("[data-account-id]");
+  // Non-bubbling: a nested panel's refresh must not also reload the panel that contains it.
+  const refresh = el => el.dispatchEvent(new CustomEvent("refresh", { bubbles: false }));
+
+  function loadLazy(scope) {
+    scope.querySelectorAll("[data-lazy]:not([data-loaded])").forEach(el => {
+      const details = el.closest("details");
+      if (details && !details.open) return;
+      if (el.closest("[hidden]")) return;
+      el.dataset.loaded = "1";
+      refresh(el);
+    });
+  }
+
+  function activateTab(container, name) {
+    if (!container) return;
+    container.querySelectorAll("[data-tab]").forEach(tab => {
+      if (tab.closest("[data-tabs]") !== container) return;
+      const on = tab.dataset.tab === name;
+      tab.classList.toggle("is-active", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    container.querySelectorAll("[data-tab-panel]").forEach(panel => {
+      if (panel.closest("[data-tabs]") !== container) return;
+      panel.hidden = panel.dataset.tabPanel !== name;
+      if (!panel.hidden) loadLazy(panel);
+    });
+  }
+
+  function openSection(key) {
+    const details = document.getElementById("sec-" + key);
+    if (!details) return;
+    details.open = true;
+    loadLazy(details);
+    details.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function goTo(search) {
+    const params = new URLSearchParams(search);
+    const tab = params.get("tab");
+    if (tab === "activities" && params.get("state")) {
+      const state = document.querySelector('#activityFilter select[name="state"]');
+      if (state) { state.value = params.get("state"); window.htmx?.trigger(state.form, "change"); }
+      document.getElementById("activityPanel")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (tab) activateTab(document.querySelector('[data-tabs="main"]'), tab);
+    if (params.get("open")) openSection(params.get("open"));
+  }
+
+  if (accountRoot) {
+    document.addEventListener("click", event => {
+      const tab = event.target.closest("[data-tab]");
+      if (tab) activateTab(tab.closest("[data-tabs]"), tab.dataset.tab);
+      if (event.target.closest("summary [data-no-toggle]")) event.preventDefault();
+      const link = event.target.closest("a[data-goto]");
+      if (link) {
+        event.preventDefault();
+        goTo(new URL(link.href, location.href).search);
+      }
+      const toggle = event.target.closest("[data-sections-toggle]");
+      if (toggle) {
+        document.querySelectorAll("details[data-lazy-section]").forEach(d => {
+          if (d.closest("[hidden]") || d.style.display === "none") return;
+          d.open = toggle.dataset.sectionsToggle === "open";
+        });
+      }
+    });
+    document.addEventListener("toggle", event => {
+      const details = event.target;
+      if (details.matches?.("details[data-lazy-section]") && details.open) loadLazy(details);
+    }, true);
+    document.addEventListener("input", event => {
+      const search = event.target.closest("[data-section-search]");
+      if (!search) return;
+      const term = search.value.trim();
+      document.querySelectorAll("[data-section-group]").forEach(group => {
+        let visible = 0;
+        group.querySelectorAll("details[data-lazy-section]").forEach(d => {
+          const show = !term || d.dataset.title.includes(term);
+          d.style.display = show ? "" : "none";
+          if (show) visible++;
+        });
+        group.style.display = visible ? "" : "none";
+      });
+    });
+    // Thousands separators while typing amounts (the server strips them).
+    document.addEventListener("input", event => {
+      const input = event.target.closest?.("input[data-money=\"true\"]");
+      if (!input) return;
+      const digits = input.value.replace(/[^\d۰-۹٠-٩.]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+      const [whole, fraction] = digits.split(".");
+      input.value = (whole || "").replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (fraction !== undefined ? "." + fraction : "");
+    });
+    document.body.addEventListener("htmx:afterSwap", event => {
+      const target = event.detail.target;
+      if (target?.hasAttribute?.("data-account-refresh")) target.dataset.loaded = "1";
+    });
+    // New content gets its htmx listeners at settle time, so lazy loads inside it are started only after settling.
+    document.body.addEventListener("htmx:afterSettle", event => {
+      const target = event.detail.target;
+      if (target?.id === "sectionNav") {
+        const open = (target.dataset.reopen || "").split(",").filter(Boolean);
+        open.forEach(key => { const d = document.getElementById("sec-" + key); if (d) d.open = true; });
+        loadLazy(target);
+        const total = [...target.querySelectorAll(".acc-section__count")].reduce((sum, el) => sum + (parseInt(el.textContent, 10) || 0), 0);
+        const badge = document.querySelector(".tabbar__count");
+        if (badge) badge.textContent = total;
+        const search = document.querySelector("[data-section-search]");
+        if (search?.value) search.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+    document.body.addEventListener("htmx:responseError", event => {
+      const target = event.detail.target;
+      if (!target?.hasAttribute?.("data-account-refresh")) return;
+      const denied = event.detail.xhr.status === 403;
+      target.innerHTML = denied
+        ? '<p class="state-denied">برای مشاهدهٔ این بخش مجوز ندارید.</p>'
+        : '<p class="state-error">بارگذاری انجام نشد. <button type="button" class="link-button">تلاش دوباره</button></p>';
+      target.querySelector("button")?.addEventListener("click", () => refresh(target));
+    });
+    document.body.addEventListener("accountChanged", event => {
+      closeDrawer();
+      showToast(event.detail?.message || "ثبت شد.");
+      const nav = document.getElementById("sectionNav");
+      if (nav) nav.dataset.reopen = [...nav.querySelectorAll("details[data-lazy-section][open]")].map(d => d.dataset.section).join(",");
+      document.querySelectorAll("[data-account-refresh]").forEach(el => {
+        if (el !== nav && el.closest("#sectionNav")) return;
+        if (el.id === "activityPanel" && document.getElementById("activityFilter")) {
+          window.htmx?.trigger(document.getElementById("activityFilter"), "submit");
+          return;
+        }
+        if (el.dataset.loaded || !el.hasAttribute("data-lazy")) refresh(el);
+      });
+    });
+    document.body.addEventListener("accountError", event => showToast(event.detail?.message || "انجام نشد.", true));
+    if (location.search) goTo(location.search);
+  }
 })();

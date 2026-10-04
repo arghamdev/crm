@@ -42,6 +42,34 @@ public sealed class Customer(
     public string? PrimaryEmail { get; private set; } = NormalizeEmail(primaryEmail);
     public string DataSource { get; private set; } = Require(dataSource, nameof(dataSource));
     public DateTimeOffset? LastSynchronizedAtUtc { get; private set; }
+    /// <summary>Customer, prospect, supplier or partner.</summary>
+    public Crm.Domain.Accounts.AccountRelationship RelationshipType { get; private set; } = Crm.Domain.Accounts.AccountRelationship.Customer;
+    /// <summary>Comma-separated labels (max 10, 30 characters each).</summary>
+    public string? Tags { get; private set; }
+    /// <summary>Parent account in a group hierarchy (holding/subsidiary).</summary>
+    public Guid? ParentCustomerId { get; private set; }
+
+    public IReadOnlyList<string> TagList => Tags?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [];
+
+    public void Classify(Crm.Domain.Accounts.AccountRelationship relationship, IEnumerable<string>? tags)
+    {
+        if (!Enum.IsDefined(relationship)) throw new InvalidOperationException("نوع رابطه معتبر نیست.");
+        var list = (tags ?? []).Select(x => Common.PersianText.NormalizeLetters(x)).Where(x => x is not null).Select(x => x!.Replace(",", " "))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (list.Count > 10) throw new InvalidOperationException("حداکثر ۱۰ برچسب مجاز است.");
+        if (list.Any(x => x.Length > 30)) throw new InvalidOperationException("هر برچسب حداکثر ۳۰ نویسه است.");
+        RelationshipType = relationship;
+        Tags = list.Count == 0 ? null : string.Join(',', list);
+        Touch();
+    }
+
+    /// <summary>Links (or with null detaches) the parent account; cycles are checked by the caller against the hierarchy.</summary>
+    public void SetParent(Guid? parentCustomerId)
+    {
+        if (parentCustomerId == Id) throw new InvalidOperationException("حساب نمی‌تواند مادر خودش باشد.");
+        ParentCustomerId = parentCustomerId;
+        Touch();
+    }
 
     private Customer() : this(Guid.Empty, "EF", "EF", string.Empty, string.Empty, "EF", "EF", string.Empty, null, string.Empty, 0) { }
 
