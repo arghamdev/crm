@@ -122,6 +122,20 @@ public sealed record ActivityPanelDto(
     ActivityFilter Filter,
     IReadOnlyList<UserOptionDto> Owners);
 
+/// <summary>
+/// One thing to follow up for an account: a planned call/meeting/task/visit, or the next step of an open opportunity or lead.
+/// <see cref="ActivityId"/> is set when the item can be completed from the account file.
+/// </summary>
+public sealed record FollowUpItemDto(string Source, string Title, string Detail, DateTimeOffset? DueAtUtc, bool IsOverdue, string Icon, string? Url,
+    Guid? ActivityId, bool CanComplete);
+
+/// <summary>Follow-ups of an account grouped by due time (overdue, today, later, without a date).</summary>
+public sealed record FollowUpPanelDto(IReadOnlyList<FollowUpItemDto> Overdue, IReadOnlyList<FollowUpItemDto> Today, IReadOnlyList<FollowUpItemDto> Later,
+    IReadOnlyList<FollowUpItemDto> Undated, bool CanPlan)
+{
+    public int Total => Overdue.Count + Today.Count + Later.Count + Undated.Count;
+}
+
 public sealed record TimelineItemDto(string Kind, string Title, string? Description, string When, DateTimeOffset AtUtc, string? Actor, string? Url, string Icon);
 
 /// <summary>Picker options for quick-action forms, all restricted to the current account and the user's scope.</summary>

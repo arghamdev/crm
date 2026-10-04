@@ -1,0 +1,42 @@
+@model FollowUpPanelDto
+@{
+    var basePath = $"/customers/{ViewBag.AccountId}";
+    var now = (DateTimeOffset)ViewBag.NowUtc;
+}
+<div class="follow-head">
+    <span class="follow-head__counts">
+        @if (Model.Overdue.Count > 0) { <span class="pill pill--danger pill--sm"><svg><use href="#i-alert"/></svg>@Model.Overdue.Count معوق</span> }
+        @if (Model.Today.Count > 0) { <span class="pill pill--success pill--sm"><svg><use href="#i-calendar"/></svg>@Model.Today.Count امروز</span> }
+        @if (Model.Total == 0) { <span class="muted">موردی برای پیگیری نیست</span> }
+    </span>
+    @if (Model.CanPlan) { <button type="button" class="link-button" hx-get="@basePath/activities/new/Task" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-plus"/></svg>پیگیری جدید</button> }
+</div>
+@if (Model.Total == 0)
+{
+    <p class="state-empty">برای این حساب تماس، جلسه، وظیفه یا اقدام بعدی بازی ثبت نشده است.</p>
+}
+@foreach (var (title, items) in new[] { ("معوق", Model.Overdue), ("امروز", Model.Today), ("پیش رو", Model.Later), ("بدون زمان مشخص", Model.Undated) })
+{
+    if (items.Count == 0) { continue; }
+    <section class="follow-group">
+        <h4>@title <b>@items.Count</b></h4>
+        @foreach (var item in items)
+        {
+            var due = ListFormat.Due(item.DueAtUtc, now);
+            <article class="follow @(item.IsOverdue ? "follow--overdue" : "")">
+                <span class="follow__icon"><svg><use href="#@item.Icon"/></svg></span>
+                <div class="follow__body">
+                    @if (item.ActivityId is { } activityId) { <button type="button" class="follow__title" hx-get="@basePath/activities/@activityId" hx-target="#drawerBody" hx-swap="innerHTML">@item.Title</button> }
+                    else if (item.Url is { } url) { <a class="follow__title" href="@url">@item.Title</a> }
+                    else { <span class="follow__title">@item.Title</span> }
+                    <small><b>@item.Source</b> · @item.Detail</small>
+                    <span class="due due--@due.Item2"><svg><use href="#@(due.Item2 == "danger" ? "i-alert" : "i-calendar")"/></svg>@(item.DueAtUtc is null ? "زمان تعیین نشده" : due.Item1)</span>
+                </div>
+                @if (item.CanComplete && item.ActivityId is { } id)
+                {
+                    <button type="button" class="chip-action chip-action--primary" hx-get="@basePath/activities/@id/complete" hx-target="#drawerBody" hx-swap="innerHTML" title="ثبت نتیجه"><svg><use href="#i-check"/></svg>انجام شد</button>
+                }
+            </article>
+        }
+    </section>
+}

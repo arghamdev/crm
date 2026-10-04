@@ -6,29 +6,6 @@
     var addresses = c360?.Addresses.Where(x => x.IsActive && x.Type is not (CustomerAddressType.Branch or CustomerAddressType.ServiceCenter or CustomerAddressType.SalesCenter)).ToList() ?? [];
     string V(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }
-<details class="panel info-panel" open>
-    <summary class="info-panel__summary"><span><strong>اطلاعات حساب</strong><small>@(a.Masked ? "برخی مقادیر به‌دلیل سطح دسترسی پوشانده شده‌اند" : "اطلاعات تماس، شناسه‌ها و طبقه‌بندی")</small></span><svg class="chev"><use href="#i-chevron"/></svg></summary>
-    <dl class="info-grid">
-        <div><dt>نوع شخص</dt><dd>@(a.Kind == CustomerKind.Legal ? "حقوقی" : "حقیقی")</dd></div>
-        <div><dt>نوع رابطه</dt><dd>@AccountRecordService.RelationshipLabel(a.Relationship)</dd></div>
-        <div><dt>بخش / سگمنت</dt><dd>@a.Segment</dd></div>
-        <div><dt>صنعت / نوع فعالیت</dt><dd>@V(a.Industry)</dd></div>
-        @foreach (var phone in a.Phones)
-        {
-            <div><dt>@phone.Label</dt><dd><bdi dir="ltr">@phone.Value</bdi></dd></div>
-        }
-        @if (a.Phones.Count == 0) { <div><dt>تلفن</dt><dd>—</dd></div> }
-        <div><dt>ایمیل</dt><dd>@if (a.Email is { } email) { <bdi dir="ltr">@email</bdi> } else { <text>—</text> }</dd></div>
-        <div><dt>وب‌سایت</dt><dd>@if (a.Website is { } site) { <a href="@site" target="_blank" rel="noopener noreferrer" dir="ltr">@site.Replace("https://", "").Replace("http://", "")</a> } else { <text>—</text> }</dd></div>
-        @foreach (var id in a.Identifiers)
-        {
-            <div><dt>@id.Label</dt><dd><bdi dir="ltr">@id.Value</bdi></dd></div>
-        }
-        <div class="info-grid__wide"><dt>نشانی اصلی</dt><dd>@V(a.Address)</dd></div>
-        <div class="info-grid__wide"><dt>برچسب‌ها</dt><dd>@if (a.Tags.Count == 0) { <text>—</text> } else { foreach (var tag in a.Tags) { <span class="chip">#@tag</span> } }</dd></div>
-    </dl>
-</details>
-
 @if (profile is not null)
 {
     <details class="panel info-panel">

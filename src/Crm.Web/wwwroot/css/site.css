@@ -1493,3 +1493,30 @@ td code { font-size: 12px; }
 /* Dark theme: status colors are lightened on dark surfaces so pills and due dates keep their contrast. */
 [data-theme="dark"] .pill { color: color-mix(in srgb, var(--tone) 45%, #ffffff); background: color-mix(in srgb, var(--tone) 24%, var(--surface)); }
 [data-theme="dark"] .due--success, [data-theme="dark"] .due--info, [data-theme="dark"] .due--danger, [data-theme="dark"] .cell-flag { filter: brightness(1.6); }
+
+/* ───────────── Account file v1.9.2: «پیگیری» side panel, activity panel in the main tab ───────────── */
+.follow-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.follow-head__counts { display: inline-flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.follow-group { margin-top: 8px; }
+.follow-group h4 { display: flex; align-items: center; gap: 6px; margin: 10px 0 4px; color: var(--ink-2); font-size: 12.5px; }
+.follow-group h4 b { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--surface-3); font-size: 11px; }
+.follow-group:first-of-type h4 { margin-top: 4px; }
+.follow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: start; gap: 4px 10px; padding: 10px 8px; border: 1px solid transparent; border-radius: 12px; }
+.follow + .follow { border-top-color: var(--line); border-radius: 0; }
+.follow--overdue { border-color: color-mix(in srgb, var(--red-600) 22%, var(--line)) !important; border-radius: 12px !important; background: color-mix(in srgb, var(--red-100) 45%, var(--surface)); }
+.follow__icon { display: grid; place-items: center; width: 34px; height: 34px; color: var(--primary-700); border-radius: 10px; background: var(--primary-50); }
+.follow--overdue .follow__icon { color: var(--red-700); background: var(--red-100); }
+.follow__icon svg { width: 17px; height: 17px; }
+.follow__body { display: grid; gap: 3px; min-width: 0; }
+.follow__title { padding: 0; overflow: hidden; color: var(--ink); border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 750; text-align: start; text-decoration: none; text-overflow: ellipsis; cursor: pointer; }
+.follow__title:hover { color: var(--primary-700); }
+.follow__body small { color: var(--ink-3); font-size: 11.5px; }
+.follow__body small b { color: var(--ink-2); font-weight: 700; }
+.follow__body .due { font-size: 12px; }
+.follow .chip-action { align-self: center; }
+.activity-main { margin-bottom: 16px; }
+.activity-main > #activityPanel, .activity-main > .state-denied { padding: 0 18px 16px; }
+.timeline-panel--collapsible > summary { cursor: pointer; list-style: none; }
+.timeline-panel--collapsible > summary::-webkit-details-marker { display: none; }
+.timeline-panel--collapsible > summary { display: flex; justify-content: space-between; align-items: center; }
+.timeline-panel--collapsible[open] > summary .chev { transform: rotate(-90deg); }

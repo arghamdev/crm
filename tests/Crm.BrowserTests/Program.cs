@@ -303,6 +303,14 @@ static async Task VerifyAccountFile(IPage page, string baseUrl)
     var stamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     var callSubject = "تماس مرورگر " + stamp;
     await page.GotoAsync(baseUrl + accountPath, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    // Side panel «پیگیری»: overdue follow-ups are listed with «انجام شد»; the overview no longer repeats the account info.
+    var followUps = page.Locator("#followUpPanel");
+    await followUps.Locator(".follow--overdue").First.WaitForAsync();
+    Assert(await followUps.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "انجام شد" }).CountAsync() > 0, "Follow-up panel offers no «انجام شد» action.");
+    Assert(await page.Locator("[data-tab-panel='overview'] .info-grid", new PageLocatorOptions { HasText = "نوع رابطه" }).CountAsync() == 0,
+        "The overview still repeats the account information block.");
+    // The activity panel lives in the «فعالیت‌ها و تعاملات» tab.
+    await page.Locator("[data-tab='activities']").ClickAsync();
     var panel = page.Locator("#activityPanel");
     await panel.Locator(".act-group").First.WaitForAsync();
 
@@ -317,7 +325,9 @@ static async Task VerifyAccountFile(IPage page, string baseUrl)
     await page.Locator("#drawer[aria-hidden='true']").WaitForAsync();
     await panel.GetByText(callSubject).First.WaitForAsync();
     Assert(await panel.GetByText(callSubject).CountAsync() == 1, "Double-clicked call was listed more than once.");
+    await followUps.GetByText(callSubject).First.WaitForAsync();
     await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    await page.Locator("[data-tab='activities']").ClickAsync();
     await panel.GetByText(callSubject).First.WaitForAsync();
 
     // Record the outcome separately from planning, with a next action.

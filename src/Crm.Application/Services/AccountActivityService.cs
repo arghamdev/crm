@@ -22,6 +22,7 @@ public interface IAccountActivityService
         CompleteActivityCommand command, DateTimeOffset nowUtc);
     ActivityItemDto Cancel(Guid userId, OrganizationSelection organization, Guid accountId, Guid activityId, CancelActivityCommand command, DateTimeOffset nowUtc);
     IReadOnlyList<TimelineItemDto> GetTimeline(Guid userId, OrganizationSelection organization, Guid accountId, DateTimeOffset nowUtc, int take = 60);
+    FollowUpPanelDto GetFollowUps(Guid userId, OrganizationSelection organization, Guid accountId, DateTimeOffset nowUtc);
 }
 
 /// <summary>
@@ -84,6 +85,53 @@ public sealed class AccountActivityService(ICrmDataStore store, IAccessSnapshotS
             var past = list.Where(x => x.State != "Planned").OrderByDescending(x => x.SortAtUtc).Take(pastLimit).ToList();
             return new ActivityPanelDto(overdue, upcoming, past, list.Count, filter, AccountGuard.Owners(data, account, nowUtc));
         });
+    }
+
+    /// <summary>
+    /// The «پیگیری» panel: everything still to be done for the account in one list — planned activities (incl. planned
+    /// visits) the user may read, and the next step of open opportunities and leads the user may see (own records unless
+    /// the user manages the whole sales team), grouped into overdue, today and later.
+    /// </summary>
+    public FollowUpPanelDto GetFollowUps(Guid userId, OrganizationSelection organization, Guid accountId, DateTimeOffset nowUtc)
+    {
+        var snapshot = AccountGuard.Snapshot(access, userId);
+        var items = new List<FollowUpItemDto>();
+        var account = store.Read(data => AccountGuard.Account(data, snapshot, organization, accountId));
+        if (AccountGuard.Allows(snapshot, account, ActivityRead))
+        {
+            var panel = GetActivities(userId, organization, accountId, new ActivityFilter(State: "planned"), nowUtc, 0);
+            items.AddRange(panel.Overdue.Concat(panel.Upcoming).Select(x => new FollowUpItemDto(
+                x.Kind switch { "Call" => "تماس", "Meeting" => "جلسه", "Task" => "وظیفه", "Visit" => "بازدید", _ => "فعالیت" },
+                x.Subject, $"{x.Owner}{(x.Contact is null ? "" : " · رابط: " + x.Contact)}", x.SortAtUtc, x.IsOverdue,
+                x.Kind switch { "Call" => "i-phone", "Meeting" => "i-calendar", "Visit" => "i-building", _ => "i-task" },
+                x.Type is null ? x.RelatedUrl : null, x.Type is null ? null : x.Id, x.CanComplete)));
+        }
+        store.Read(data =>
+        {
+            var managerWide = AccountGuard.ManagerWide(snapshot, account.CompanyId);
+            if (AccountGuard.Allows(snapshot, account, "Opportunity.Read"))
+                items.AddRange(data.Find<Opportunity>(x => x.CustomerId == account.Id && x.Stage != OpportunityStage.Won && x.Stage != OpportunityStage.Lost)
+                    .Where(x => managerWide || x.OwnerUserId == userId)
+                    .Select(x => new FollowUpItemDto("فرصت فروش", x.NextAction ?? "اقدام بعدی تعیین نشده", x.Title, x.NextActionAtUtc,
+                        x.NextActionAtUtc < nowUtc, "i-target", $"/opportunities/{x.Id}", null, false)));
+            if (AccountGuard.Allows(snapshot, account, "Lead.Read"))
+                items.AddRange(data.Find<Lead>(x => x.CustomerId == account.Id && x.Status != LeadStatus.Converted && x.Status != LeadStatus.Disqualified &&
+                        x.Status != LeadStatus.Duplicate && x.Status != LeadStatus.Invalid)
+                    .Where(x => managerWide || x.OwnerUserId == userId)
+                    .Select(x =>
+                    {
+                        var firstContact = x.FirstContactAtUtc is null && x.NextAction is null;
+                        var due = firstContact ? x.FirstContactDueAtUtc : x.NextActionAtUtc;
+                        return new FollowUpItemDto("سرنخ", firstContact ? "تماس اولیه" : x.NextAction ?? "اقدام بعدی تعیین نشده", $"{x.Name} · {x.Code}", due,
+                            due < nowUtc, "i-lead", $"/leads/{x.Id}", null, false);
+                    }));
+            return 0;
+        });
+        var endOfToday = TehranTime.ToUtc(JalaliDate.Format(TehranTime.Today(nowUtc).AddDays(1)), "00:00", "") ?? nowUtc.AddDays(1);
+        var dated = items.Where(x => x.DueAtUtc is not null).OrderBy(x => x.DueAtUtc).ToList();
+        return new FollowUpPanelDto(dated.Where(x => x.IsOverdue).ToList(), dated.Where(x => !x.IsOverdue && x.DueAtUtc < endOfToday).ToList(),
+            dated.Where(x => !x.IsOverdue && x.DueAtUtc >= endOfToday).ToList(), items.Where(x => x.DueAtUtc is null).ToList(),
+            account.Status != CustomerStatus.Inactive && AccountGuard.Allows(snapshot, account, "Activity.Create"));
     }
 
     public AccountFormOptions GetFormOptions(Guid userId, OrganizationSelection organization, Guid accountId, DateTimeOffset nowUtc)

@@ -32,6 +32,17 @@ internal static partial class TestRunner
         CheckHtml(html.Contains("class=\"account-card\"") && HtmlContains(html, "کد حساب:") && HtmlContains(html, "صنعت:") && HtmlContains(html, "منطقه:") &&
                   html.Contains("href=\"tel:02188776655\"") && html.Contains("href=\"mailto:info@sepehr.test\"") && html.Contains("#i-globe") && html.Contains("#i-pin"),
             "ACCW: the account card shows code, industry, region and clickable phone/email/website/address.", "accw-card", html);
+        CheckHtml(html.Contains($"hx-get=\"{basePath}/follow-ups\"") && HtmlContains(html, "پیگیری") && !HtmlContains(html, "اطلاعات تماس، شناسه‌ها و طبقه‌بندی") &&
+                  html.Contains("id=\"activityPanel\"") && html.Contains("data-lazy-details"),
+            "ACCW: the side panel is «پیگیری», the activity panel sits in its tab and the overview no longer repeats the account info.", "accw-layout", html);
+        using (var response = await manager.SendAsync(Htmx(HttpMethod.Get, $"{basePath}/follow-ups")))
+        {
+            var follow = await response.Content.ReadAsStringAsync();
+            Check(response.StatusCode == HttpStatusCode.OK && HtmlContains(follow, "تماس پیگیری پرداخت فاکتور") && HtmlContains(follow, "معوق") && HtmlContains(follow, "انجام شد"),
+                "ACCW: the follow-up panel lists the overdue call with a «انجام شد» action.");
+        }
+        using (var response = await expert.SendAsync(Htmx(HttpMethod.Get, $"/customers/{OtherBranchAccountId}/follow-ups")))
+            Check(response.StatusCode == HttpStatusCode.NotFound, "ACCW: follow-ups of an out-of-scope account are not found.");
         using (var response = await manager.SendAsync(Htmx(HttpMethod.Get, $"{basePath}/edit")))
         {
             var edit = await response.Content.ReadAsStringAsync();

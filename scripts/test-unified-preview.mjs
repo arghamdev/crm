@@ -189,3 +189,14 @@ lk.click({uAction:'logout'});lk.dispatch('submit',lk.form('login',{username:'rep
 assert(!lk.node('#viewHost').innerHTML.includes('data-ls-select'),'A read-only role gets no row selection.');
 assert.deepEqual(lk.errors,[]);
 console.log('v1.9 preview checks passed: lead and customer list tabs, tiles, filters, selection, bulk next action/assign/task, cards, sort and import.');
+// v1.9.2 account file layout: no repeated account info in the overview, «پیگیری» on the side, activity panel in its tab.
+const fu=runtime({hash:'#/customer?id=1'});
+fu.dispatch('submit',fu.form('login',{username:'sales.manager',password:'Demo@1405'}));
+let fp=fu.node('#viewHost').innerHTML;
+assert(!fp.includes('<h2>اطلاعات حساب</h2>')&&fp.includes('خلاصهٔ رکوردهای مرتبط'),'The overview no longer repeats the account information.');
+assert(fp.includes('data-id="followups"')&&fp.includes('تماس پیگیری پرداخت فاکتور')&&fp.includes('follow--overdue')&&fp.includes('انجام شد'),'The side panel lists follow-ups with «انجام شد».');
+fu.click({uAction:'af-tab',id:'activities'});fp=fu.node('#viewHost').innerHTML;
+assert(fp.includes('act-chips')&&fp.includes('خط زمانی تعاملات'),'The activities tab holds the activity panel and the timeline.');
+fu.click({uAction:'af-side',id:'notes'});assert(fu.node('#viewHost').innerHTML.includes('class="note"')||fu.node('#viewHost').innerHTML.includes('یادداشتی ثبت نشده'));
+assert.deepEqual(fu.errors,[]);
+console.log('v1.9.2 preview checks passed: overview without repeated account info, follow-up side panel, activity panel in its tab.');

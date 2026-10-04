@@ -60,6 +60,16 @@ public sealed class AccountFileController(
     [HttpGet("/customers/{id:guid}/history")]
     public IActionResult History(Guid id) => Guarded(() => PartialView("_Timeline", files.GetHistory(UserId, Org, id, 150)));
 
+    /// <summary>The «پیگیری» side panel: overdue, today and later follow-ups of the account.</summary>
+    [HttpGet("/customers/{id:guid}/follow-ups")]
+    public IActionResult FollowUps(Guid id) =>
+        Guarded(() =>
+        {
+            ViewBag.AccountId = id;
+            ViewBag.NowUtc = Now;
+            return PartialView("_FollowUps", activities.GetFollowUps(UserId, Org, id, Now));
+        });
+
     // ───────────── activities ─────────────
 
     [HttpGet("/customers/{id:guid}/activities")]

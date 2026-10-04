@@ -60,17 +60,13 @@
 
         <section class="panel side-tabs" data-tabs="side">
             <div class="tabbar" role="tablist">
-                <button type="button" role="tab" class="tabbar__tab is-active" data-tab="side-activities" aria-selected="true">فعالیت‌ها</button>
+                <button type="button" role="tab" class="tabbar__tab is-active" data-tab="side-followups" aria-selected="true">پیگیری</button>
                 <button type="button" role="tab" class="tabbar__tab" data-tab="side-notes" aria-selected="false">یادداشت‌ها</button>
             </div>
-            <div data-tab-panel="side-activities">
-                @if (Model.CanReadActivities)
-                {
-                    <div id="activityPanel" data-account-refresh hx-get="@basePath/activities@(ViewBag.Contact is Guid contactId ? $"?contact={contactId}" : "")" hx-trigger="load, refresh" hx-swap="innerHTML">
-                        <p class="state-loading">در حال بارگذاری فعالیت‌ها…</p>
-                    </div>
-                }
-                else { <p class="state-denied"><svg><use href="#i-shield"/></svg>مجوز مشاهدهٔ فعالیت‌ها را ندارید.</p> }
+            <div data-tab-panel="side-followups">
+                <div id="followUpPanel" data-account-refresh hx-get="@basePath/follow-ups" hx-trigger="load, refresh" hx-swap="innerHTML">
+                    <p class="state-loading">در حال بارگذاری پیگیری‌ها…</p>
+                </div>
             </div>
             <div data-tab-panel="side-notes" hidden>
                 @if (Model.CanReadNotes)
@@ -97,10 +93,20 @@
         </section>
 
         <section data-tab-panel="activities" hidden>
-            <div class="panel timeline-panel">
-                <div class="panel-heading"><div><strong>خط زمانی تعاملات</strong><small>فعالیت‌های انجام‌شده، یادداشت‌ها و رویدادهای فروش، مالی و خدمات؛ هر مورد یک بار</small></div></div>
-                <div data-account-refresh data-lazy hx-get="@basePath/timeline" hx-trigger="refresh" hx-swap="innerHTML"><p class="state-loading">در حال بارگذاری…</p></div>
+            <div class="panel activity-main">
+                <div class="panel-heading"><div><strong>فعالیت‌ها</strong><small>تماس‌ها، جلسه‌ها، وظایف و بازدیدهای حساب؛ با فیلتر نوع، وضعیت، مسئول و بازه زمانی</small></div></div>
+                @if (Model.CanReadActivities)
+                {
+                    <div id="activityPanel" data-account-refresh data-lazy hx-get="@basePath/activities@(ViewBag.Contact is Guid contactId ? $"?contact={contactId}" : "")" hx-trigger="refresh" hx-swap="innerHTML">
+                        <p class="state-loading">در حال بارگذاری فعالیت‌ها…</p>
+                    </div>
+                }
+                else { <p class="state-denied"><svg><use href="#i-shield"/></svg>مجوز مشاهدهٔ فعالیت‌ها را ندارید.</p> }
             </div>
+            <details class="panel timeline-panel timeline-panel--collapsible" data-lazy-details>
+                <summary class="panel-heading"><div><strong>خط زمانی تعاملات</strong><small>فعالیت‌های انجام‌شده، یادداشت‌ها و رویدادهای فروش، مالی و خدمات؛ هر مورد یک بار</small></div><svg class="chev"><use href="#i-chevron"/></svg></summary>
+                <div data-account-refresh data-lazy hx-get="@basePath/timeline" hx-trigger="refresh" hx-swap="innerHTML"><p class="state-loading">در حال بارگذاری…</p></div>
+            </details>
         </section>
 
         <section data-tab-panel="related" hidden>

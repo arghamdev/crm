@@ -29,7 +29,7 @@ function createAccountFilePreview(ctx) {
   const field = (label, html, wide = false) => `<label class="${wide ? 'u-wide' : ''}">${e(label)}${html}</label>`;
   const opField = () => `<input type="hidden" name="op" value="op-${Date.now()}-${Math.random().toString(36).slice(2)}">`;
   const nextId = key => idFor(key);
-  const ui = {tab: 'overview', side: 'activities', type: '', state: '', open: new Set(['opportunities', 'payments']), search: {}};
+  const ui = {tab: 'overview', side: 'followups', type: '', state: '', open: new Set(['opportunities', 'payments']), search: {}};
 
   // ── Seed (once; merged into older saved stores) ──
   const c0 = store.customers[0], c1 = store.customers[1];
@@ -162,10 +162,31 @@ function createAccountFilePreview(ctx) {
     items.sort((a, b) => b.at.localeCompare(a.at));
     return items.length ? `<ol class="timeline-list">${items.map(x => `<li><strong>${e(x.title)}</strong>${x.text ? `<p>${e(x.text)}</p>` : ''}<small>${when(x.at)} · ${e(x.by || 'سیستم')}</small></li>`).join('')}</ol>` : '<p class="state-empty">رویدادی ثبت نشده است.</p>';
   }
+  // «پیگیری» (v1.9.2): planned activities and the next steps of open opportunities and leads, grouped by due time.
+  function followUps(c) {
+    const endOfToday = (() => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); })();
+    const items = [
+      ...activitiesOf(c).filter(a => a.status === 'planned').map(a => ({source: label[a.type], title: a.subject, detail: a.owner + (a.contact ? ' · رابط: ' + a.contact : ''), due: Date.parse(a.start), late: overdue(a), ic: {call: 'phone', meeting: 'calendar'}[a.type] || 'task', activity: a.id})),
+      ...oppsOf(c).filter(o => !['برنده', 'باخته'].includes(o.stage)).map(o => ({source: 'فرصت فروش', title: o.next || 'اقدام بعدی تعیین نشده', detail: o.name, due: o.nextAt ? Date.parse(o.nextAt) : null, late: o.nextAt ? Date.parse(o.nextAt) < Date.now() : false, ic: 'target'})),
+      ...store.leads.filter(l => l.customerId === c.id && !['تبدیل‌شده', 'ردشده', 'تکراری', 'نامعتبر'].includes(l.status)).map(l => ({source: 'سرنخ', title: l.next || 'تماس اولیه', detail: l.name + ' · ' + l.code, due: l.dueAt ? Date.parse(l.dueAt) : null, late: l.dueAt ? Date.parse(l.dueAt) < Date.now() : false, ic: 'lead'}))];
+    const dated = items.filter(x => x.due).sort((a, b) => a.due - b.due);
+    const groups = [['معوق', dated.filter(x => x.late)], ['امروز', dated.filter(x => !x.late && x.due < endOfToday)], ['پیش رو', dated.filter(x => !x.late && x.due >= endOfToday)], ['بدون زمان مشخص', items.filter(x => !x.due)]];
+    const dueText = x => !x.due ? ['زمان تعیین نشده', 'muted'] : x.late ? ['معوق · ' + when(new Date(x.due)), 'danger'] : x.due < endOfToday ? ['امروز، ' + jTime.format(new Date(x.due)), 'success'] : [when(new Date(x.due)), 'info'];
+    const late = groups[0][1].length, today = groups[1][1].length;
+    return `<div class="follow-head"><span class="follow-head__counts">${late ? `<span class="pill pill--danger pill--sm">${icon('alert')}${amount(late)} معوق</span>` : ''}${today ? `<span class="pill pill--success pill--sm">${icon('calendar')}${amount(today)} امروز</span>` : ''}${items.length ? '' : '<span class="muted">موردی برای پیگیری نیست</span>'}</span>
+      ${c.status !== 'غیرفعال' && can.activity() ? `<button type="button" class="link-button" data-u-action="af-new-task" data-id="${c.id}">${icon('plus')}پیگیری جدید</button>` : ''}</div>
+      ${items.length ? '' : '<p class="state-empty">برای این حساب تماس، جلسه، وظیفه یا اقدام بعدی بازی ثبت نشده است.</p>'}
+      ${groups.filter(([, list]) => list.length).map(([title, list]) => `<section class="follow-group"><h4>${title} <b>${amount(list.length)}</b></h4>${list.map(x => { const [t, tone] = dueText(x); return `<article class="follow ${x.late ? 'follow--overdue' : ''}"><span class="follow__icon">${icon(x.ic)}</span><div class="follow__body"><span class="follow__title">${e(x.title)}</span><small><b>${e(x.source)}</b> · ${e(x.detail)}</small><span class="due due--${tone}">${icon(tone === 'danger' ? 'alert' : 'calendar')}${e(t)}</span></div>${x.activity && can.activity() ? `<button type="button" class="chip-action chip-action--primary" data-u-action="af-complete" data-id="${x.activity}">${icon('check')}انجام شد</button>` : ''}</article>`; }).join('')}</section>`).join('')}`;
+  }
   function overview(c) {
-    const contacts = store.contacts.filter(x => x.customerId === c.id && x.active);
-    return `<section class="panel u-panel"><h2>اطلاعات حساب</h2><dl class="info-grid">${[['نوع شخص', c.type], ['نوع رابطه', c.relationship], ['بخش', c.segment], ['شهر', c.city], ['تلفن', c.phone], ['ایمیل', c.email || '—'], [c.type === 'حقیقی' ? 'کد ملی' : 'شناسه ملی', c.nationalId || '—'], ['شعبه', c.branch], ['مالک', c.owner],
-      ['برچسب‌ها', (c.tags || []).map(t => '#' + t).join('، ') || '—'], ['رابط اصلی', contacts.find(x => x.primary)?.name || '—'], ...(c.profile ? Object.entries(c.profile).filter(([, v]) => v) : [])].map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join('')}</dl></section>`;
+    // The account card above already shows the account information; the overview summarises the account's records.
+    const counts = [['افراد رابط', 'users', store.contacts.filter(x => x.customerId === c.id && x.active).length], ['فرصت‌های فروش', 'target', oppsOf(c).length],
+      ['پیش‌فاکتورها', 'file', store.quotes.filter(x => x.customer === c.name).length], ['سرنخ‌ها', 'lead', store.leads.filter(x => x.customerId === c.id).length],
+      ['پرداخت‌ها و دریافت‌ها', 'check', store.payments.filter(p => p.customerId === c.id).length], ['اسناد و پیوست‌ها', 'file', store.documents.filter(d => d.links.includes(c.id)).length],
+      ['درخواست‌های خدمات', 'shield', store.serviceCases.filter(x => x.customerId === c.id).length]].filter(([, , n]) => n > 0);
+    const profile = c.profile ? Object.entries(c.profile).filter(([, v]) => v) : [];
+    return `<section class="panel u-panel"><h2>خلاصهٔ رکوردهای مرتبط</h2><div class="overview-sections">${counts.length ? counts.map(([t, ic, n]) => `<button type="button" class="overview-sections__item" data-u-action="af-tab" data-id="related">${icon(ic)}<span>${t}</span><b>${amount(n)}</b></button>`).join('') : '<p class="empty-inline">هنوز رکورد مرتبطی ثبت نشده است.</p>'}</div></section>
+      ${profile.length ? `<details class="panel info-panel"><summary class="info-panel__summary"><span><strong>${c.type === 'حقیقی' ? 'اطلاعات شخص' : 'اطلاعات شرکت و نماینده'}</strong><small>از فرم تعریف مشتری</small></span></summary><dl class="info-grid">${profile.map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join('')}</dl></details>` : ''}`;
   }
   function accountView() {
     const c = account();
@@ -184,9 +205,9 @@ function createAccountFilePreview(ctx) {
       <div class="account-head__actions">${can.manage() && active ? button('af-classify', 'نوع رابطه و برچسب', c.id) : ''}${can.manage() ? button('af-status', active ? 'غیرفعال‌سازی' : 'فعال‌سازی', c.id) : ''}${link('customers', 'بازگشت به فهرست')}</div></div></header>
       ${active ? '' : '<p class="account-banner">این حساب غیرفعال است: سوابق می‌ماند ولی ثبت رکورد جدید بسته است. حذف حساب دارای سابقه مجاز نیست.</p>'}
       ${kpis(c)}
-      <div class="account-layout"><aside class="account-side">${quick(c)}<section class="panel side-tabs"><div class="tabbar">${side('activities', 'فعالیت‌ها')}${side('notes', 'یادداشت‌ها')}</div><div class="side-tabs__body">${ui.side === 'notes' ? notesPanel(c) : activityPanel(c)}</div></section></aside>
+      <div class="account-layout"><aside class="account-side">${quick(c)}<section class="panel side-tabs"><div class="tabbar">${side('followups', 'پیگیری')}${side('notes', 'یادداشت‌ها')}</div><div class="side-tabs__body">${ui.side === 'notes' ? notesPanel(c) : followUps(c)}</div></section></aside>
       <div class="account-main"><div class="tabbar tabbar--main">${tab('overview', 'نمای کلی')}${tab('activities', 'فعالیت‌ها و تعاملات')}${tab('related', 'رکوردهای مرتبط')}${tab('history', 'تاریخچه تغییرات')}</div>
-      ${ui.tab === 'related' ? sections(c) : ui.tab === 'activities' ? `<section class="panel u-panel"><h2>خط زمانی تعاملات</h2>${timeline(c, false)}</section>` : ui.tab === 'history' ? `<section class="panel u-panel"><h2>تاریخچه تغییرات</h2>${timeline(c, true)}</section>` : overview(c)}</div></div>`;
+      ${ui.tab === 'related' ? sections(c) : ui.tab === 'activities' ? `<section class="panel u-panel activity-main"><h2>فعالیت‌ها</h2>${activityPanel(c)}</section><details class="panel u-panel timeline-panel--collapsible"><summary><h2>خط زمانی تعاملات</h2></summary>${timeline(c, false)}</details>` : ui.tab === 'history' ? `<section class="panel u-panel"><h2>تاریخچه تغییرات</h2>${timeline(c, true)}</section>` : overview(c)}</div></div>`;
   }
 
   // ── Forms ──
@@ -368,7 +389,7 @@ function createAccountFilePreview(ctx) {
         store.activities.push(a);
         if (a.reminder && !doneNow) notify('یادآور فعالیت', `یادآور ${label[type]}: ${a.subject}`, a.owner);
         log(c.id, `${label[type]} ${doneNow ? 'انجام‌شده ثبت شد' : 'برنامه‌ریزی شد'}: ${a.subject}`);
-        ui.side = 'activities'; ui.type = ''; ui.state = '';
+        ui.side = 'followups'; ui.type = ''; ui.state = '';
         return finish(doneNow ? 'فعالیت انجام‌شده ثبت شد.' : `${label[type]} «${a.subject}» برنامه‌ریزی شد.`);
       }
       case 'af-complete': {
@@ -429,7 +450,7 @@ function createAccountFilePreview(ctx) {
     views: {customer: accountView, version: versionView, service: serviceView, commissions: commissionView, notifications: notificationView},
     routes: ['version', 'service', 'commissions', 'notifications'],
     allowed: route => route === 'version' || (route === 'commissions' ? can.commission() : ['service', 'notifications'].includes(route) ? user() !== 'dealer.user' : true),
-    action, submit, customerForm, resetUi: () => { ui.tab = 'overview'; ui.side = 'activities'; ui.type = ''; ui.state = ''; ui.search = {}; },
+    action, submit, customerForm, resetUi: () => { ui.tab = 'overview'; ui.side = 'followups'; ui.type = ''; ui.state = ''; ui.search = {}; },
     search: (key, q) => { ui.search[key] = q; ui.open.add(key); render(); }
   };
 }

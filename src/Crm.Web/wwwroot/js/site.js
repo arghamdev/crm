@@ -260,10 +260,18 @@
   function goTo(search) {
     const params = new URLSearchParams(search);
     const tab = params.get("tab");
-    if (tab === "activities" && params.get("state")) {
-      const state = document.querySelector('#activityFilter select[name="state"]');
-      if (state) { state.value = params.get("state"); window.htmx?.trigger(state.form, "change"); }
-      document.getElementById("activityPanel")?.scrollIntoView({ behavior: "smooth" });
+    // The activity panel lives in the «فعالیت‌ها و تعاملات» tab; a state/contact link opens the tab with that filter.
+    if ((tab === "activities" && params.get("state")) || params.get("contact")) {
+      const panel = document.getElementById("activityPanel");
+      if (panel) panel.dataset.loaded = "1";
+      activateTab(document.querySelector('[data-tabs="main"]'), "activities");
+      if (panel && window.htmx) {
+        const query = new URLSearchParams();
+        if (params.get("state")) query.set("state", params.get("state"));
+        if (params.get("contact")) query.set("contact", params.get("contact"));
+        window.htmx.ajax("GET", panel.getAttribute("hx-get").split("?")[0] + "?" + query, { target: panel, swap: "innerHTML" });
+      }
+      panel?.scrollIntoView({ behavior: "smooth" });
       return;
     }
     if (tab) activateTab(document.querySelector('[data-tabs="main"]'), tab);
@@ -290,7 +298,7 @@
     });
     document.addEventListener("toggle", event => {
       const details = event.target;
-      if (details.matches?.("details[data-lazy-section]") && details.open) loadLazy(details);
+      if (details.matches?.("details[data-lazy-section], details[data-lazy-details]") && details.open) loadLazy(details);
     }, true);
     document.addEventListener("input", event => {
       const search = event.target.closest("[data-section-search]");
