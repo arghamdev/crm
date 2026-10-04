@@ -1,0 +1,48 @@
+@model IReadOnlyList<ReleaseNote>
+@{
+    ViewData["Title"] = "نسخه و تغییرات";
+}
+<section class="page-header">
+    <div><span class="eyebrow">درباره سامانه</span><h1>نسخه و تغییرات</h1><p class="muted">فهرست نسخه‌های ارقام CRM و تغییرات هر نسخه؛ تازه‌ترین نسخه در بالا.</p></div>
+</section>
+<section class="version-hero panel">
+    <span class="version-hero__mark" aria-hidden="true">آ</span>
+    <div>
+        <small>نسخهٔ جاری</small>
+        <strong dir="ltr">v@(SystemVersion.Current)</strong>
+        <span>@(SystemVersion.ReleasedOn is { } date ? $"انتشار {date}" : "تاریخ انتشار ثبت نشده است")</span>
+    </div>
+</section>
+@if (Model.Count == 0)
+{
+    <p class="state-empty">فهرست تغییرات در دسترس نیست.</p>
+}
+<ol class="release-list">
+    @foreach (var release in Model)
+    {
+        var current = release.Version == SystemVersion.Current;
+        <li class="release @(current ? "release--current" : "")">
+            <div class="release__head">
+                <span class="release__version" dir="ltr">v@(release.Version)</span>
+                <strong>@release.Title</strong>
+                @if (current) { <span class="badge badge--success"><span></span>نسخهٔ جاری</span> }
+                <time>@release.Date</time>
+            </div>
+            <ul>@foreach (var change in release.Changes) { <li>@Inline(change)</li> }</ul>
+        </li>
+    }
+</ol>
+@functions {
+    /// <summary>`code` spans of the changelog become &lt;code&gt;; everything else is HTML-encoded.</summary>
+    private static Microsoft.AspNetCore.Html.IHtmlContent Inline(string text)
+    {
+        var parts = text.Split('`');
+        var html = new System.Text.StringBuilder();
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var encoded = System.Net.WebUtility.HtmlEncode(parts[i]);
+            html.Append(i % 2 == 1 ? $"<code>{encoded}</code>" : encoded);
+        }
+        return new Microsoft.AspNetCore.Html.HtmlString(html.ToString());
+    }
+}

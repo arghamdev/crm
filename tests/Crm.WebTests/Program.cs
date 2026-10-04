@@ -34,6 +34,7 @@ internal static partial class TestRunner
         await CheckSecurityHeaders(manager);
         var managerCookie = await Login(manager, "sales.manager", "Demo@1405");
         await CheckManagerAccess(manager);
+        await CheckVersion(firstNode, manager);
         await CheckCustomer360(manager);
         await CheckCustomerForm(manager);
         await CheckSalesPipeline(manager);

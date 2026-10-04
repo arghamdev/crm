@@ -4,6 +4,10 @@
     <ProjectReference Include="..\Crm.Infrastructure\Crm.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Release notes shown on /system/version; the top entry must match <Version> in Directory.Build.props. -->
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.12" />
   </ItemGroup>
