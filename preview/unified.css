@@ -35,3 +35,8 @@ button.list-tile { width: 100%; text-align: right; }
 button.sort-link { padding: 0; border: 0; background: none; font-weight: inherit; }
 button.list-layout__btn { border: 0; background: none; }
 button.list-layout__btn.is-active { background: var(--surface); }
+
+/* Organizational palette (v1.9.1): visible input borders and keyboard focus ring. */
+.u-form input,.u-form select,.u-form textarea,.u-filter input,.u-filter select,.field input,.field select,.field textarea,.table-search,.form-grid label input,.form-grid label select,.form-grid label textarea{border-color:var(--field-border)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sidebar{background:linear-gradient(180deg,var(--navy-900) 0%,var(--navy-900) 70%,var(--navy-950) 100%)}

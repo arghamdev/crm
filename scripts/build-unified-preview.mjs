@@ -17,7 +17,17 @@ const script = versionScript + '\n' + readFileSync(resolve(root, 'preview/self-s
 const siteCss = readFileSync(resolve(root, 'src/Crm.Web/wwwroot/css/site.css'), 'utf8');
 const start = siteCss.indexOf('/* ───────────── Account file'), end = siteCss.length;
 if (start < 0) throw new Error('Account-file CSS markers not found in site.css.');
-const css = readFileSync(resolve(root, 'preview/unified.css'), 'utf8') + '\n' + siteCss.slice(start, end);
+// Organizational palette (v1.9.1): the MVC theme tokens override the legacy preview tokens, and the legacy
+// hard-coded teal/navy accents are mapped to the same palette.
+const tokensStart = siteCss.indexOf(':root {'), tokensEnd = siteCss.indexOf('}', siteCss.indexOf('[data-theme="dark"] {')) + 1;
+if (tokensStart < 0 || tokensEnd <= tokensStart) throw new Error('Theme tokens not found in site.css.');
+const css = siteCss.slice(tokensStart, tokensEnd) + '\n' + readFileSync(resolve(root, 'preview/unified.css'), 'utf8') + '\n' + siteCss.slice(start, end);
+const palette = [
+  [/rgba\((15, ?118, ?110|13, ?148, ?136),/g, 'rgba(29,78,216,'], [/rgba\(20, ?184, ?166,/g, 'rgba(37,99,235,'], [/rgba\(45, ?212, ?191,/g, 'rgba(96,165,250,'],
+  [/rgba\(94, ?234, ?212,/g, 'rgba(147,197,253,'], [/#5eead4/gi, '#93c5fd'], [/#2dd4bf/gi, '#14b8a6'], [/#071b2d/gi, '#0d1a2b'], [/#0a243a|#0d2d46|#0b2943/gi, '#14263d'],
+  [/#0b3f4b/gi, '#1b3150'], [/#115e59/gi, '#1e40af'], [/#0f766e/gi, '#1d4ed8'], [/#0d9488/gi, '#2563eb'], [/#d9fffa/gi, '#ffffff']
+];
+for (const [from, to] of palette) html = html.replace(from, to);
 const layoutSymbols = [...readFileSync(resolve(root, 'src/Crm.Web/Views/Shared/_Layout.cshtml'), 'utf8').matchAll(/<symbol id="(i-[a-z-]+)"[\s\S]*?<\/symbol>/g)]
   .map(m => ({id: m[1], markup: m[0]}));
 // One document, one store and one shell. No iframe, fetch, CDN or separate-page dependency.
