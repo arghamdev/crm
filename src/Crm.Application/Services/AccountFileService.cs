@@ -121,8 +121,9 @@ public sealed class AccountFileService(ICrmDataStore store, IAccessSnapshotServi
         return new AccountSummaryDto(account.Id, account.Code, account.Name, account.Kind, account.Status, account.RelationshipType, account.TagList, account.Owner,
             account.CompanyId, company, account.Branch, account.TerritoryId, account.Segment, profile?.LogoContentType is not null, account.Version,
             parent?.Id, parent?.Name, phones, contact ? account.PrimaryEmail?.ToLowerInvariant() : FieldMasking.MaskEmail(account.PrimaryEmail), profile?.Website,
-            address is null ? null : string.Join("، ", new[] { address.Province, address.City, address.AddressLine }.Where(x => !string.IsNullOrWhiteSpace(x))),
-            profile?.ActivityType, identifiers, !contact || !identity);
+            address is null ? null : string.Join("، ", new[] { address.Province, address.City, address.AddressLine }.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct()),
+            profile?.ActivityType, identifiers, !contact || !identity,
+            string.IsNullOrWhiteSpace(profile?.Province) ? account.City : profile.Province);
     }
 
     /// <summary>Summary indicators; each carries its definition so the number is never ambiguous.</summary>

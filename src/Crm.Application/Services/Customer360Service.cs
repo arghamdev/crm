@@ -80,7 +80,7 @@ public sealed class Customer360Service(ICrmDataStore store, IAccessSnapshotServi
             return new CustomerEditDto(customer.Id, customer.Code, customer.Name, customer.City, customer.Owner,
                 customer.BranchId, customer.TerritoryId, customer.Segment, customer.Kind, customer.NationalId,
                 customer.PrimaryPhone, customer.PrimaryEmail, customer.Version, branches, territories,
-                CustomerFormRules.ToInput(customer, profile, address)) { HasLogo = profile?.LogoContentType is not null };
+                CustomerFormRules.ToInput(customer, profile, address)) { HasLogo = profile?.LogoContentType is not null, Status = customer.Status };
         });
     }
 

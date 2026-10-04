@@ -2,8 +2,10 @@
 @{ var profile = Model.Profile ?? new CustomerProfileInput(); }
 <form class="drawer-form customer-form" data-kind="@Model.Kind" method="post" action="/customers/@Model.Id/edit" enctype="multipart/form-data"
       hx-post="/customers/@Model.Id/edit" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML">
+    <span data-drawer-title hidden>ویرایش مشتری</span>
     @Html.AntiForgeryToken()<input type="hidden" name="ExpectedVersion" value="@Model.ExpectedVersion"/>
     <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <partial name="_AccountCard" model="AccountCardModel.From(Model)" />
     <section class="customer-identity-box">
         <label class="logo-picker" title="عکس یا لوگوی سازمان (PNG، JPEG یا WebP، حداکثر ۵۱۲ کیلوبایت)">
             <span class="logo-picker__image">@if (Model.HasLogo) { <img src="/customers/@Model.Id/logo?v=@Model.ExpectedVersion" alt="عکس سازمان" /> } else { <svg><use href="#i-building"/></svg> }</span>

@@ -32,7 +32,8 @@ public sealed record AccountSummaryDto(
     string? Address,
     string? Industry,
     IReadOnlyList<(string Label, string Value)> Identifiers,
-    bool Masked);
+    bool Masked,
+    string? Region = null);
 
 /// <summary>Navigation entry of a related-records section (sections the user may not read are left out).</summary>
 public sealed record AccountSectionInfo(string Key, string Title, string Group, string Icon, int Count, bool CanCreate, bool CanLink);

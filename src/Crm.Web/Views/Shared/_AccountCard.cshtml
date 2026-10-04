@@ -1,0 +1,31 @@
+@model AccountCardModel
+@{
+    var m = Model;
+    string? Href(string? site) => string.IsNullOrWhiteSpace(site) ? null : site.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? site : "https://" + site;
+    string Plain(string site) => site.Replace("https://", "").Replace("http://", "").TrimEnd('/');
+    var phoneLink = m.Phone is { } p && !p.Contains('*') ? "tel:" + new string(p.Where(c => char.IsDigit(c) || c == '+').ToArray()) : null;
+}
+<section class="account-card" aria-label="اطلاعات حساب">
+    <div class="account-card__identity">
+        <span class="account-card__mark" aria-hidden="true">
+            @if (m.HasLogo) { <img src="/customers/@m.Id/logo?v=@m.Version" alt="" /> } else { <span class="account-card__icon"><svg><use href="#i-building"/></svg></span> }
+        </span>
+        <div class="account-card__text">
+            <div class="account-card__title">
+                @if (m.Heading) { <h1>@m.Name</h1> } else { <strong>@m.Name</strong> }
+                <span class="account-card__status account-card__status--@m.StatusTone">@m.StatusLabel</span>
+            </div>
+            <dl class="account-card__facts">
+                <div><dt>کد حساب:</dt><dd><bdi dir="ltr">@m.Code</bdi></dd></div>
+                <div><dt>صنعت:</dt><dd>@(string.IsNullOrWhiteSpace(m.Industry) ? "—" : m.Industry)</dd></div>
+                <div><dt>منطقه:</dt><dd>@(string.IsNullOrWhiteSpace(m.Region) ? "—" : m.Region)</dd></div>
+            </dl>
+        </div>
+    </div>
+    <ul class="account-card__contacts">
+        <li><svg aria-hidden="true"><use href="#i-phone"/></svg><span class="sr-only">تلفن:</span>@if (phoneLink is not null) { <a href="@phoneLink" dir="ltr">@m.Phone</a> } else { <bdi dir="ltr">@(m.Phone ?? "—")</bdi> }</li>
+        <li><svg aria-hidden="true"><use href="#i-mail"/></svg><span class="sr-only">ایمیل:</span>@if (m.Email is { } email && !email.Contains('*')) { <a href="mailto:@email" dir="ltr">@email</a> } else { <bdi dir="ltr">@(m.Email ?? "—")</bdi> }</li>
+        <li><svg aria-hidden="true"><use href="#i-globe"/></svg><span class="sr-only">وب‌سایت:</span>@if (Href(m.Website) is { } url) { <a href="@url" target="_blank" rel="noopener noreferrer" dir="ltr">@Plain(m.Website!)</a> } else { <span>—</span> }</li>
+        <li><svg aria-hidden="true"><use href="#i-pin"/></svg><span class="sr-only">نشانی:</span><span>@(m.Address ?? "—")</span></li>
+    </ul>
+</section>

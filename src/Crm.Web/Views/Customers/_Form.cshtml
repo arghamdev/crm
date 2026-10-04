@@ -7,6 +7,7 @@
 }
 <form class="drawer-form customer-form" method="post" action="/customers/create" enctype="multipart/form-data"
       hx-post="/customers/create" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML">
+    <span data-drawer-title hidden>تعریف مشتری جدید</span>
     @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
     <div class="form-tabs" role="tablist">

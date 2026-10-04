@@ -29,6 +29,14 @@ internal static partial class TestRunner
                       html.Contains($"{basePath}/quick/lead") && html.Contains("data-account-refresh"),
                 "ACCW: the account page renders the six quick actions, the tabs and lazy panels.", "accw-page", html);
         }
+        CheckHtml(html.Contains("class=\"account-card\"") && HtmlContains(html, "کد حساب:") && HtmlContains(html, "صنعت:") && HtmlContains(html, "منطقه:") &&
+                  html.Contains("href=\"tel:02188776655\"") && html.Contains("href=\"mailto:info@sepehr.test\"") && html.Contains("#i-globe") && html.Contains("#i-pin"),
+            "ACCW: the account card shows code, industry, region and clickable phone/email/website/address.", "accw-card", html);
+        using (var response = await manager.SendAsync(Htmx(HttpMethod.Get, $"{basePath}/edit")))
+        {
+            var edit = await response.Content.ReadAsStringAsync();
+            Check(edit.Contains("class=\"account-card\"") && HtmlContains(edit, "کد حساب:") && edit.Contains("data-drawer-title"), "ACCW: the customer edit form starts with the account card.");
+        }
         using (var response = await manager.SendAsync(Htmx(HttpMethod.Get, $"{basePath}/sections/payments")))
         {
             html = await response.Content.ReadAsStringAsync();

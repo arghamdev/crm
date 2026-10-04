@@ -44,6 +44,7 @@ public sealed record CustomerEditDto(
     CustomerProfileInput? Profile = null)
 {
     public bool HasLogo { get; init; }
+    public CustomerStatus Status { get; init; } = CustomerStatus.Active;
 }
 
 public sealed record UpdateCustomerCommand(string Name, string City, string Owner, string BranchId, string? TerritoryId,

@@ -5,31 +5,21 @@
     var c360 = ViewBag.Customer360 as Customer360Dto;
     var active = a.Status != CustomerStatus.Inactive;
     var basePath = $"/customers/{a.Id}";
-    string StatusLabel(CustomerStatus s) => s switch { CustomerStatus.Active => "فعال", CustomerStatus.Inactive => "غیرفعال", _ => "در حال بررسی" };
-    string StatusTone(CustomerStatus s) => s switch { CustomerStatus.Active => "success", CustomerStatus.Inactive => "neutral", _ => "warning" };
 }
 <nav class="breadcrumb"><a href="/customers">مشتریان و حساب‌ها</a><svg><use href="#i-chevron"/></svg><span>@a.Name</span></nav>
 
-<header class="account-head panel" data-account-id="@a.Id">
-    <div class="account-head__identity">
-        @if (a.HasLogo) { <img class="account-head__logo" src="@basePath/logo?v=@a.Version" alt="نشان @a.Name" /> } else { <span class="account-head__avatar" aria-hidden="true">@a.Name[..1]</span> }
-        <div class="account-head__text">
-            <div class="account-head__title">
-                <h1>@a.Name</h1>
-                <span class="badge badge--@StatusTone(a.Status)"><span></span>@StatusLabel(a.Status)</span>
-                <span class="badge badge--info">@AccountRecordService.RelationshipLabel(a.Relationship)</span>
-                <span class="badge badge--neutral">@(a.Kind == CustomerKind.Legal ? "حقوقی" : "حقیقی")</span>
-            </div>
-            <dl class="account-head__meta">
-                <div><dt>کد</dt><dd><bdi dir="ltr">@a.Code</bdi></dd></div>
-                <div><dt>مالک</dt><dd>@a.Owner</dd></div>
-                <div><dt>شرکت</dt><dd>@a.CompanyName</dd></div>
-                <div><dt>شعبه</dt><dd>@a.BranchName</dd></div>
-                @if (a.ParentId is { } parentId) { <div><dt>حساب مادر</dt><dd><a href="/customers/@parentId">@a.ParentName</a></dd></div> }
-            </dl>
-            @if (a.Tags.Count > 0) { <div class="account-head__tags">@foreach (var tag in a.Tags) { <span class="chip">#@tag</span> }</div> }
+<header class="account-head" data-account-id="@a.Id">
+    <partial name="_AccountCard" model="AccountCardModel.From(a)" />
+    <div class="account-head__bar">
+        <div class="account-head__meta">
+            <span class="badge badge--info">@AccountRecordService.RelationshipLabel(a.Relationship)</span>
+            <span class="badge badge--neutral">@(a.Kind == CustomerKind.Legal ? "حقوقی" : "حقیقی")</span>
+            <span><b>مالک:</b> @a.Owner</span>
+            <span><b>شرکت:</b> @a.CompanyName</span>
+            <span><b>شعبه:</b> @a.BranchName</span>
+            @if (a.ParentId is { } parentId) { <span><b>حساب مادر:</b> <a href="/customers/@parentId">@a.ParentName</a></span> }
+            @foreach (var tag in a.Tags) { <span class="chip">#@tag</span> }
         </div>
-    </div>
     <div class="account-head__actions">
         @if (Model.CanEdit)
         {
@@ -41,6 +31,7 @@
             <button class="button button--ghost" type="button" hx-get="@basePath/account/status" hx-target="#drawerBody"><svg><use href="#i-shield"/></svg>@(active ? "غیرفعال‌سازی" : "فعال‌سازی")</button>
         }
         <a class="button button--ghost" href="/customers"><svg><use href="#i-chevron"/></svg>بازگشت به فهرست</a>
+    </div>
     </div>
 </header>
 
