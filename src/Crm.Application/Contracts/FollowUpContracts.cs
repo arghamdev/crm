@@ -87,7 +87,12 @@ public sealed record FollowUpCreateOptions(
     string CaseType,
     string? SuggestedOwner,
     string SlaPreview,
-    string? ClosingCriteria);
+    string? ClosingCriteria)
+{
+    /// <summary>Queue and person the assignment rules pick for this customer and type (preselected in the form).</summary>
+    public Guid? SuggestedQueueId { get; init; }
+    public Guid? SuggestedOwnerId { get; init; }
+}
 
 // ───────────── Case page ─────────────
 
@@ -194,6 +199,9 @@ public sealed record FollowUpCaseDto(
     public IReadOnlyList<FollowUpOptionDto> Approvers { get; init; } = [];
     public IReadOnlyList<FollowUpOptionDto> Branches { get; init; } = [];
     public IReadOnlyList<FollowUpOptionDto> Contacts { get; init; } = [];
+    public IReadOnlyDictionary<string, string?> ContactPhones { get; init; } = new Dictionary<string, string?>();
+    /// <summary>Teams (queues) a referral can be addressed to.</summary>
+    public IReadOnlyList<FollowUpOptionDto> Teams { get; init; } = [];
     /// <summary>Published templates offered when the conversation continues in a new case after closing.</summary>
     public IReadOnlyList<FollowUpOptionDto> NextTemplates { get; init; } = [];
     public bool PausesOnCustomer { get; init; } = true;
@@ -208,11 +216,12 @@ public sealed record FollowUpCaseDto(
 /// <summary>۲. برنامه‌ریزی اقدام — a call, meeting, visit or internal task linked to the case and a stage.</summary>
 public sealed record PlanFollowUpActionCommand(string Kind, string? Title, Guid? StageId, Guid OwnerUserId, Guid? ContactId, FollowUpChannel Channel,
     string? Date, string? Time, int? DurationMinutes, int? ReminderMinutes, ActivityPriority Priority, string? Instructions, string? Location,
-    IReadOnlyList<string>? PreChecklist, IReadOnlyList<string>? PreChecklistDone, Guid OperationId);
+    IReadOnlyList<string>? PreChecklist, IReadOnlyList<string>? PreChecklistDone, Guid OperationId, string? Phone = null, string? TimeZone = null);
 
 /// <summary>۳. ثبت نتیجه — the coded result, the outcome text and the next action (required unless the case is being closed).</summary>
 public sealed record RecordFollowUpResultCommand(string? ResultCode, string? Outcome, CallResult? CallResult, string? NextTitle, string? NextKind,
-    Guid? NextOwnerUserId, string? NextDate, string? NextTime, bool RequestStageCompletion, long ExpectedVersion);
+    Guid? NextOwnerUserId, string? NextDate, string? NextTime, bool RequestStageCompletion, long ExpectedVersion, string? DoneDate = null, string? DoneTime = null,
+    Guid? DoneByUserId = null);
 
 /// <summary>۴. ارجاع — stage or whole case, receiver, reason, acceptance deadline and what goes with it.</summary>
 public sealed record ReferFollowUpCommand(ReferralScope Scope, Guid? StageId, Guid ToUserId, string? ToBranchId, string? ToTeam, string? Reason,
@@ -235,7 +244,7 @@ public sealed record FollowUpDocumentUpload(string FileName, string ContentType,
 public sealed record CloseFollowUpCommand(string? Outcome, string? Note, bool StartNextCase, Guid? NextTemplateId, Guid? NextOwnerUserId);
 public sealed record ReopenFollowUpCommand(string? Reason, Guid OwnerUserId, string? DueDate, string? DueTime);
 
-public sealed record FollowUpActionResult(Guid CaseId, string Message, Guid? NewCaseId = null);
+public sealed record FollowUpActionResult(Guid CaseId, string Message, Guid? NewCaseId = null, bool Replayed = false);
 
 // ───────────── Configuration (۹، ۱۰، ۱۱) ─────────────
 
@@ -287,7 +296,11 @@ public sealed record FollowUpConfigurationDto(IReadOnlyList<FollowUpTemplateSumm
 public sealed record FollowUpSupervisionQuery(string? BranchId = null, Guid? QueueId = null, string? Period = null);
 
 public sealed record FollowUpAttentionDto(Guid Id, string Code, string CustomerName, string Subject, string? Owner, string Reason, string Tone,
-    DateTimeOffset? DueUtc, int Severity);
+    DateTimeOffset? DueUtc, int Severity)
+{
+    /// <summary>unassigned, nonext, overdue, stage, near, referral, rejected, review.</summary>
+    public string Kind { get; init; } = "overdue";
+}
 
 public sealed record FollowUpStageWaitDto(string Stage, double AverageHours, int Count);
 

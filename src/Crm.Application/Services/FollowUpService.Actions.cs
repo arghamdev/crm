@@ -41,10 +41,12 @@ public sealed partial class FollowUpService
         });
         if (string.IsNullOrWhiteSpace(command.Title)) throw new InvalidOperationException("عنوان اقدام الزامی است.");
         var type = ActivityKind(command.Kind);
-        var start = RequiredTime(command.Date, command.Time, "تاریخ و ساعت اقدام", nowUtc);
+        // Date and time are entered in the chosen time zone (default: the branch's Tehran time) and stored in UTC.
+        var start = ZonedTime(command.Date, command.Time, command.TimeZone, "تاریخ و ساعت اقدام", nowUtc);
         var duration = command.DurationMinutes is > 0 and <= 600 ? command.DurationMinutes : type == ActivityType.Task ? null : 15;
         var end = type == ActivityType.Meeting ? start.AddMinutes(duration ?? 60) : (DateTimeOffset?)null;
-        var location = command.Kind == "Visit" ? "بازدید: " + (string.IsNullOrWhiteSpace(command.Location) ? "محل مشتری" : command.Location!.Trim()) : command.Location;
+        var location = command.Kind == "Visit" ? "بازدید: " + (string.IsNullOrWhiteSpace(command.Location) ? "محل مشتری" : command.Location!.Trim())
+            : type == ActivityType.Call && !string.IsNullOrWhiteSpace(command.Phone) ? "شماره تماس: " + command.Phone.Trim() : command.Location;
         var activity = activities.SaveActivity(userId, organization, customerId, null, new SaveActivityCommand(type, command.Title, command.Instructions, command.ContactId,
             command.OwnerUserId, TehranTime.Date(start), TehranTime.Clock(start), end is { } e ? TehranTime.Date(e) : null, end is { } e2 ? TehranTime.Clock(e2) : null,
             duration, type == ActivityType.Call ? CallDirection.Outbound : null, location, command.Priority, command.ReminderMinutes, ActivityRelatedKind.FollowUpCase,
@@ -60,6 +62,20 @@ public sealed partial class FollowUpService
                 AccountGuard.UserNames(data, [command.OwnerUserId]).GetValueOrDefault(command.OwnerUserId, "—") + (stageName is null ? "" : $" · مرحله: {stageName}"), userId, nowUtc);
             return new FollowUpActionResult(c.Id, "اقدام برنامه‌ریزی شد و اقدام بعدی پرونده به‌روز شد.");
         });
+    }
+
+    private static DateTimeOffset ZonedTime(string? date, string? time, string? zoneId, string label, DateTimeOffset nowUtc)
+    {
+        if (string.IsNullOrWhiteSpace(zoneId) || zoneId == "Asia/Tehran") return RequiredTime(date, time, label, nowUtc);
+        if (!JalaliDate.TryParse(date, out var day)) throw new InvalidOperationException($"{label}: تاریخ را به شکل شمسی ۱۴۰۵/۰۷/۱۲ وارد کنید.");
+        if (!TimeOnly.TryParseExact(PersianText.Normalize(string.IsNullOrWhiteSpace(time) ? "09:00" : time), ["HH:mm", "H:mm"],
+                System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var clock))
+            throw new InvalidOperationException($"{label}: ساعت را به شکل ۱۴:۳۰ وارد کنید.");
+        var zone = WorkCalendar.ResolveZone(zoneId);
+        var local = day.ToDateTime(clock, DateTimeKind.Unspecified);
+        var at = new DateTimeOffset(local, zone.GetUtcOffset(local)).ToUniversalTime();
+        if (at <= nowUtc) throw new InvalidOperationException($"{label} باید در آینده باشد.");
+        return at;
     }
 
     private static string ActivityLabel(string? kind) => kind switch { "Meeting" => "جلسه", "Visit" => "بازدید", "Task" => "کار داخلی", _ => "تماس" };
@@ -85,8 +101,12 @@ public sealed partial class FollowUpService
         var nextAt = hasNext ? RequiredTime(command.NextDate, command.NextTime, "موعد اقدام بعدی", nowUtc) : (DateTimeOffset?)null;
         // A call needs a call result; when it was not picked it follows the follow-up result («پاسخ نداد» → no answer).
         var callResult = command.CallResult ?? (command.ResultCode == "NoAnswer" ? CallResult.NoAnswer : CallResult.Answered);
+        // «تاریخ انجام» and «ساعت»: when the activity actually happened (not in the future).
+        var doneAt = string.IsNullOrWhiteSpace(command.DoneDate) ? nowUtc
+            : TehranTime.ToUtc(command.DoneDate, command.DoneTime, "تاریخ انجام") ?? nowUtc;
+        if (doneAt > nowUtc.AddMinutes(5)) throw new InvalidOperationException("تاریخ انجام نمی‌تواند در آینده باشد.");
         activities.Complete(userId, organization, customerId, activityId, new CompleteActivityCommand(command.Outcome, callResult, null, null, null, null, null,
-            command.ExpectedVersion), nowUtc);
+            command.ExpectedVersion), doneAt);
         Guid? nextActivityId = null;
         if (hasNext)
         {
@@ -102,7 +122,9 @@ public sealed partial class FollowUpService
             var link = data.Find<FollowUpActivityLink>(x => x.Id == activityId).Single();
             link.RecordResult(command.ResultCode!, command.RequestStageCompletion);
             c.MarkFirstResponse(nowUtc);
-            Log(data, c, "Result", $"نتیجه ثبت شد: {FollowUpResults.Label(command.ResultCode)}", command.Outcome, userId, nowUtc);
+            var doer = command.DoneByUserId is { } by ? AccountGuard.UserNames(data, [by]).GetValueOrDefault(by) : null;
+            Log(data, c, "Result", $"نتیجه ثبت شد: {FollowUpResults.Label(command.ResultCode)}",
+                command.Outcome + (doer is null ? "" : $" · انجام‌دهنده: {doer}") + $" · زمان انجام: {TehranTime.Format(doneAt)}", userId, nowUtc);
             var message = "نتیجه ثبت شد.";
             if (nextActivityId is { } nextId)
             {

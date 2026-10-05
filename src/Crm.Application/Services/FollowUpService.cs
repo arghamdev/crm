@@ -219,7 +219,11 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
                 : $"«{policy.Name}»: پاسخ اولیه تا {TehranTime.Format(first)}، حل کامل تا {TehranTime.Format(resolution)} (ساعات کاری)";
             return new FollowUpCreateOptions(customer?.Id, customer?.Name, customers.Select(x => new FollowUpOptionDto(x.Id.ToString(), $"{x.Name} · {x.Code}")).ToList(),
                 contacts, templates, branches, owners, queues, dealers, related, FollowUpCaseTypes.ExtraFields(type), type,
-                suggestion?.UserName is { } name ? $"{name} — {suggestion.Explanation}" : suggestion?.Explanation, preview, template?.ClosingCriteria);
+                suggestion?.UserName is { } name ? $"{name} — {suggestion.Explanation}" : suggestion?.Explanation, preview, template?.ClosingCriteria)
+            {
+                SuggestedQueueId = suggestion?.QueueId,
+                SuggestedOwnerId = suggestion?.UserId
+            };
         });
     }
 
@@ -264,7 +268,7 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
         var result = store.Write(data =>
         {
             if (ClientOperations.Existing(data, userId, command.OperationId) is { } replayed)
-                return new FollowUpActionResult(replayed, "پرونده قبلاً ثبت شده بود.");
+                return new FollowUpActionResult(replayed, "پرونده قبلاً ثبت شده بود.", Replayed: true);
             var customer = data.Find<Customer>(x => x.Id == command.CustomerId).SingleOrDefault(x => AccountGuard.InContext(snapshot, organization, "Customer.Read", x)) ??
                 throw new InvalidOperationException("مشتری / حساب را از دامنهٔ مجاز انتخاب کنید.");
             if (customer.Status == CustomerStatus.Inactive) throw new InvalidOperationException("حساب غیرفعال است؛ برای آن پرونده جدید باز نمی‌شود.");
@@ -307,7 +311,9 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
             Guid? queueId = command.QueueId;
             if (command.OwnerUserId is { } chosen && chosen != Guid.Empty)
             {
-                if (chosen != userId && !Has(snapshot, organization.CompanyId, P.Assign))
+                // Picking someone else needs FollowUp.Assign, unless it is the person the assignment rules suggest.
+                if (chosen != userId && !Has(snapshot, organization.CompanyId, P.Assign) &&
+                    Suggest(data, organization.CompanyId, branchId, command.CaseType!, command.PartFamily, command.Language ?? "fa", nowUtc, command.QueueId).UserId != chosen)
                     throw new UnauthorizedAccessException("تعیین مسئول دیگر برای پرونده نیازمند مجوز FollowUp.Assign است.");
                 if (!BranchUsers(data, organization.CompanyId, branchId, customer.TerritoryId, nowUtc).Any(x => x.Id == chosen))
                     throw new InvalidOperationException("مسئول پرونده باید کاربر فعال در دامنهٔ شعبه باشد.");
@@ -373,7 +379,8 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
             var files = docIds.Length == 0 ? [] : data.Find<CrmDocument>(x => docIds.Contains(x.Id)).ToDictionary(x => x.Id);
             var approvals = data.Find<FollowUpApproval>(x => x.CaseId == c.Id).OrderByDescending(x => x.RequestedAtUtc).ToList();
             var events = data.Find<FollowUpEvent>(x => x.CaseId == c.Id).OrderByDescending(x => x.AtUtc).Take(300).ToList();
-            var contacts = data.Find<CustomerContact>(x => x.CustomerId == c.CustomerId).ToDictionary(x => x.Id, x => x.FullName);
+            var contactRows = data.Find<CustomerContact>(x => x.CustomerId == c.CustomerId);
+            var contacts = contactRows.ToDictionary(x => x.Id, x => x.FullName);
             var userIds = new[] { c.OwnerUserId, c.NextActionOwnerUserId }.Where(x => x is not null).Select(x => x!.Value)
                 .Concat(stages.Select(x => x.ResponsibleUserId).Where(x => x is not null).Select(x => x!.Value))
                 .Concat(checklist.Select(x => x.DoneByUserId).Where(x => x is not null).Select(x => x!.Value))
@@ -457,6 +464,9 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
                 NextTemplates = data.Find<FollowUpTemplate>(x => x.CompanyId == c.CompanyId && x.Status == FollowUpTemplateStatus.Published).OrderBy(x => x.Name)
                     .Select(x => new FollowUpOptionDto(x.Id.ToString(), $"{x.Name} · نسخه {x.TemplateVersion}")).ToList(),
                 Contacts = contacts.OrderBy(x => x.Value).Select(x => new FollowUpOptionDto(x.Key.ToString(), x.Value)).ToList(),
+                ContactPhones = contactRows.ToDictionary(x => x.Id.ToString(), x => x.Phone),
+                Teams = data.Find<FollowUpQueue>(x => x.CompanyId == c.CompanyId && x.IsActive).OrderBy(x => x.RuleOrder)
+                    .Select(x => new FollowUpOptionDto(x.Name, x.Name)).ToList(),
                 PausesOnCustomer = policy?.PauseOnWaitingCustomer ?? true,
                 PausesOnInternal = policy?.PauseOnWaitingInternal ?? false
             };
