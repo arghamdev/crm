@@ -161,8 +161,18 @@ public sealed class FollowUpSettingsController(
     public IActionResult Queue(Guid id, string tab = "queue") => Guarded(() =>
     {
         ViewBag.Tab = tab;
-        return View("Queue", QueuePage(settings.GetQueue(UserId, Org, id, Now) ?? throw new KeyNotFoundException(), null));
+        var queue = settings.GetQueue(UserId, Org, id, Now) ?? throw new KeyNotFoundException();
+        return View("Queue", QueuePage(queue, Suggest(queue)));
     });
+
+    /// <summary>«پیشنهاد تخصیص»: who the next case entering this queue would go to right now (no case is created).</summary>
+    private AssignmentSuggestionDto? Suggest(FollowUpQueueDto queue)
+    {
+        var branch = queue.BranchId ?? settings.GetOverview(UserId, Org, Now).Branches.FirstOrDefault()?.Value;
+        if (branch is null) return null;
+        try { return settings.TestAssignment(UserId, Org, branch, queue.CaseType ?? "Proforma", queue.PartFamily, queue.Language, queue.Id, Now); }
+        catch (InvalidOperationException) { return null; }
+    }
 
     private FollowUpQueuePage QueuePage(FollowUpQueueDto? queue, AssignmentSuggestionDto? test) =>
         new(queue, settings.GetOverview(UserId, Org, Now), test);

@@ -3,100 +3,138 @@
     var c = Model;
     var basePath = $"/follow-ups/{c.Id}";
     var active = c.ActiveStage;
+    var now = DateTimeOffset.UtcNow;
+    static string StateClass(FollowUpStageStatus s) => s switch
+    {
+        FollowUpStageStatus.Done => "done", FollowUpStageStatus.Active => "active", FollowUpStageStatus.Waiting => "waiting",
+        FollowUpStageStatus.Returned => "returned", FollowUpStageStatus.Skipped => "skipped", _ => "pending"
+    };
+    static string StateIcon(FollowUpStageStatus s) => s switch
+    {
+        FollowUpStageStatus.Done => "i-check", FollowUpStageStatus.Active => "i-more", FollowUpStageStatus.Waiting => "i-pause",
+        FollowUpStageStatus.Returned => "i-sort", FollowUpStageStatus.Skipped => "i-ban", _ => "i-clock"
+    };
 }
-<div class="fu-stages">
-    <div class="panel">
-        <div class="panel-heading"><div><strong>مراحل پرونده</strong><small>پیشرفت کل = Σ (وزن × پیشرفت مرحله) ÷ ۱۰۰؛ مرحلهٔ شرطی کنارگذاشته از محاسبه خارج است و برگشت برای اصلاح پیشرفت را کم می‌کند.</small></div><span class="fu-total">@c.Progress٪</span></div>
-        <div class="table-wrap">
-            <table class="list-table fu-stage-table">
-                <thead><tr><th>#</th><th>مرحله</th><th>وزن</th><th>پیشرفت</th><th>وضعیت</th><th class="hide-sm">مسئول مرحله</th><th class="hide-sm">مهلت</th></tr></thead>
-                <tbody>
-                    @foreach (var s in c.Stages)
-                    {
-                        <tr class="@(s.Id == active?.Id ? "is-current" : "")">
-                            <td>@s.Order</td>
-                            <td><strong class="cell-title">@s.Name</strong><small class="cell-sub">@s.ResponsibleRole@(s.Required ? "" : " · اختیاری")@if (s.Condition is not null) { <text> · شرط: @s.Condition</text> }</small>@if (s.ReturnReason is not null && s.Status == FollowUpStageStatus.Returned) { <small class="cell-flag"><svg><use href="#i-sort"/></svg>@s.ReturnReason</small> }@if (s.SkipReason is not null) { <small class="cell-sub">کنار گذاشته: @s.SkipReason</small> }</td>
-                            <td>@s.Weight٪</td>
-                            <td><span class="fu-progress" style="--value:@s.Progress"><span></span><b>@s.Progress٪</b></span><small class="cell-sub">سهم در کل: @s.Contribution٪</small></td>
-                            <td><span class="pill pill--sm pill--@FollowUpLabels.StageTone(s.Status)">@FollowUpLabels.Stage(s.Status)</span></td>
-                            <td class="hide-sm">@(s.Responsible ?? "—")</td>
-                            <td class="hide-sm">@if (s.DueAtUtc is { } due) { <span class="due due--@(s.IsOverdue ? "danger" : "muted")">@Crm.Domain.Common.TehranTime.Format(due)</span> } else { <span>—</span> }</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+<section class="panel fu-stagecard" aria-labelledby="fuStagesTitle">
+    <header class="fu-sheet__head fu-stagecard__head">
+        <span class="fu-num" aria-hidden="true">@FollowUpLabels.Fa(5)</span>
+        <div class="fu-sheet__title"><h2 id="fuStagesTitle">مراحل و وظایف پرونده</h2><p>پیشرفت کل = Σ (وزن × پیشرفت مرحله) ÷ ۱۰۰؛ مرحلهٔ کنارگذاشته از محاسبه خارج است و برگشت برای اصلاح پیشرفت را کم می‌کند.</p></div>
+        <span class="fu-chip"><svg><use href="#i-case"/></svg><bdi>@FollowUpSheetHead.CaseChip(c)</bdi></span>
+    </header>
+    <div class="fu-stagecard__top">
+        <div class="fu-stagecard__total">
+            <div><b class="fu-total">@FollowUpLabels.Fa(c.Progress)٪</b><span>پیشرفت کل — @FollowUpLabels.Words(c.Progress) درصد</span></div>
+            <div class="fu-progressbar" role="progressbar" aria-valuenow="@c.Progress" aria-valuemin="0" aria-valuemax="100" aria-label="پیشرفت وزنی پرونده"><span style="width:@c.Progress%"></span></div>
         </div>
-        @if (c.Rules.Count > 0 && c.IsOpen && c.CanUpdate)
-        {
-            <div class="fu-rules">
-                <strong><svg><use href="#i-flow"/></svg>قواعد الگو</strong>
-                @foreach (var rule in c.Rules)
+        <div class="fu-person"><span class="fu-avatar">@ListFormat.Initial(c.Owner ?? "—")</span><span><small>مسئول پرونده</small><strong>@(c.Owner ?? "بدون مسئول")</strong></span></div>
+    </div>
+    <div class="table-wrap">
+        <table class="fu-t fu-stage-table">
+            <thead><tr><th>مرحله</th><th>وزن</th><th>پیشرفت</th><th>وضعیت</th><th class="hide-sm">مسئول</th><th class="hide-sm">مهلت</th></tr></thead>
+            <tbody>
+                @foreach (var s in c.Stages)
                 {
-                    <form method="post" action="@basePath/rules/@rule.Index" hx-post="@basePath/rules/@rule.Index" hx-swap="none" data-confirm="«@rule.Condition» رخ داده است؟ اقدام: @rule.Action">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="chip-action"><span>اگر <b>@rule.Condition</b></span><svg><use href="#i-chevron"/></svg><span>@rule.Action</span></button>
-                    </form>
+                    <tr class="@(s.Id == active?.Id ? "is-current" : "")">
+                        <td><span class="fu-stage-name"><span class="fu-stage-ico"><svg><use href="#@FollowUpLabels.StageIcon(s.Name)"/></svg></span><span>@s.Name<small>@s.ResponsibleRole@(s.Required ? "" : " · اختیاری")@if (s.Condition is not null) { <text> · شرط: @s.Condition</text> }</small>@if (s.ReturnReason is not null && s.Status == FollowUpStageStatus.Returned) { <small class="cell-flag"><svg><use href="#i-sort"/></svg>@s.ReturnReason</small> }@if (s.SkipReason is not null) { <small>کنار گذاشته: @s.SkipReason</small> }</span></span></td>
+                        <td>@FollowUpLabels.Fa(s.Weight)٪</td>
+                        <td><span class="fu-progress" style="--value:@s.Progress"><span></span><b>@FollowUpLabels.Fa(s.Progress)٪</b></span></td>
+                        <td><span class="fu-state fu-state--@StateClass(s.Status)" title="@FollowUpLabels.Stage(s.Status)"><svg><use href="#@StateIcon(s.Status)"/></svg></span><span class="sr-only">@FollowUpLabels.Stage(s.Status)</span></td>
+                        <td class="hide-sm">@(s.Responsible ?? "—")</td>
+                        <td class="hide-sm">@if (s.DueAtUtc is { } due) { <span class="due due--@(s.IsOverdue ? "danger" : "muted")">@FollowUpLabels.When(due, now)</span> } else { <span>—</span> }</td>
+                    </tr>
                 }
-            </div>
-        }
+            </tbody>
+        </table>
     </div>
 
-    <div class="panel fu-active-stage">
-        @if (active is null)
-        {
-            <div class="panel-heading"><div><strong>مرحلهٔ فعال</strong><small>@(c.IsOpen ? c.Status == FollowUpStatus.ResolvedPendingApproval ? "همهٔ مراحل انجام شد؛ پرونده آمادهٔ بستن است." : "مرحلهٔ فعالی وجود ندارد." : "پرونده بسته است.")</small></div></div>
-        }
-        else
-        {
-            var remaining = active.Checklist.Count(x => !x.IsDone);
-            var editable = c.IsOpen && c.CanUpdate;
-            var docs = c.Documents.Where(x => x.StageName == active.Name).ToList();
-            <div class="panel-heading"><div><strong>مرحلهٔ فعال: @active.Name</strong><small>مسئول: @(active.Responsible ?? "—") · مهلت: @(active.DueAtUtc is { } d ? Crm.Domain.Common.TehranTime.Format(d) : "—") · وزن @active.Weight٪</small></div><span class="pill pill--@FollowUpLabels.StageTone(active.Status)">@FollowUpLabels.Stage(active.Status)</span></div>
-            <form class="fu-checklist" method="post" action="@basePath/stages/@active.Id/checklist" hx-post="@basePath/stages/@active.Id/checklist" hx-swap="none" data-checklist data-blocked="@(c.Approvals.Any(x => x.Decision is null && x.StageName == active.Name) ? "approval" : null)">
-                @Html.AntiForgeryToken()
-                <fieldset disabled="@(!editable)">
-                    <legend>وظایف این مرحله</legend>
-                    @foreach (var item in active.Checklist)
-                    {
-                        <label class="fu-check@(item.IsDone ? " is-done" : "")"><input type="checkbox" name="done" value="@item.Id" checked="@item.IsDone" /><span>@item.Title</span>@if (item.IsDone) { <small>@item.DoneBy · @(item.DoneAtUtc is { } at ? Crm.Domain.Common.TehranTime.Format(at) : "")</small> }</label>
-                    }
-                    @if (active.Checklist.Count == 0) { <p class="empty-mini">این مرحله چک‌لیست ندارد؛ تکمیل آن با تأیید مسئول انجام می‌شود.</p> }
-                </fieldset>
-                @if (remaining > 0) { <p class="fu-warning" data-checklist-warning><svg><use href="#i-alert"/></svg><span>برای تکمیل مرحله، <b data-checklist-remaining>@remaining</b> مورد باقی‌مانده انجام شود.</span></p> }
-                @if (active.CompleteBlockedReason is { } reason && remaining == 0) { <p class="fu-warning"><svg><use href="#i-lock"/></svg>@reason</p> }
-                @if (editable)
+    @if (active is null)
+    {
+        <p class="fu-note"><svg><use href="#i-info"/></svg><span>@(c.IsOpen ? c.Status == FollowUpStatus.ResolvedPendingApproval ? "همهٔ مراحل انجام شد؛ پرونده آمادهٔ بستن است." : "مرحلهٔ فعالی وجود ندارد." : "پرونده بسته است.")</span></p>
+    }
+    else
+    {
+        var total = active.Checklist.Count;
+        var doneCount = active.Checklist.Count(x => x.IsDone);
+        var remaining = total - doneCount;
+        var stagePercent = total == 0 ? active.Progress : (int)Math.Round(doneCount * 100.0 / total);
+        var editable = c.IsOpen && c.CanUpdate;
+        var docs = c.Documents.Where(x => x.StageName == active.Name).ToList();
+        <form class="fu-active fu-checklist" method="post" action="@basePath/stages/@active.Id/checklist" hx-post="@basePath/stages/@active.Id/checklist" hx-swap="none" data-checklist data-blocked="@(c.Approvals.Any(x => x.Decision is null && x.StageName == active.Name) ? "approval" : null)">
+            @Html.AntiForgeryToken()
+            <h3 class="fu-sec__h"><svg><use href="#i-clipboard"/></svg>چک‌لیست مرحلهٔ فعال: @active.Name<span class="pill pill--sm pill--@FollowUpLabels.StageTone(active.Status)">@FollowUpLabels.Stage(active.Status)</span></h3>
+            <div class="fu-g">
+                <div class="fu-person"><span class="fu-avatar">@ListFormat.Initial(active.Responsible ?? "—")</span><span><small>مسئول مرحله</small><strong>@(active.Responsible ?? "—")</strong></span></div>
+                <div class="fu-person"><span class="fu-avatar"><svg><use href="#i-clock"/></svg></span><span><small>مهلت مرحله</small><strong class="@(active.IsOverdue ? "text-danger" : "")">@FollowUpLabels.When(active.DueAtUtc, now)</strong></span></div>
+            </div>
+            <div class="fu-ready">
+                <div class="fu-ready__top"><strong>پیشرفت مرحله: @FollowUpLabels.Fa(stagePercent)٪</strong><small>@FollowUpLabels.Fa(doneCount) از @FollowUpLabels.Fa(total) مورد تکمیل شده</small></div>
+                <div class="fu-progressbar"><span style="width:@stagePercent%"></span></div>
+            </div>
+            <fieldset disabled="@(!editable)">
+                <legend class="sr-only">وظایف این مرحله</legend>
+                @foreach (var item in active.Checklist)
                 {
-                    <div class="fu-inline-actions">
-                        <button class="button button--ghost" type="submit">ذخیرهٔ وضعیت وظایف</button>
-                        <button class="button button--primary" type="submit" name="complete" value="true" data-complete disabled="@(remaining > 0 || (active.CompleteBlockedReason is not null && remaining == 0))"><svg><use href="#i-lock"/></svg>تکمیل مرحله</button>
-                    </div>
+                    <label class="fu-check@(item.IsDone ? " is-done" : "")"><input type="checkbox" name="done" value="@item.Id" checked="@item.IsDone" /><span>@item.Title</span>@if (item.IsDone) { <small>@item.DoneBy · @(item.DoneAtUtc is { } at ? FollowUpLabels.When(at, now) : "")</small> }</label>
                 }
-            </form>
-            @if (docs.Count > 0)
-            {
-                <h4 class="fu-subhead">مدارک مرحله</h4>
-                <ul class="fu-doc-mini">@foreach (var doc in docs) { <li><a href="@basePath/documents/@doc.Id"><svg><use href="#i-file"/></svg>@doc.Title (نسخه @doc.Version)</a><span class="pill pill--sm pill--@FollowUpLabels.DocumentTone(doc.Status)">@FollowUpLabels.DocumentStatus(doc.Status)</span></li> }</ul>
-            }
+                @if (active.Checklist.Count == 0) { <p class="empty-mini">این مرحله چک‌لیست ندارد؛ تکمیل آن با تأیید مسئول انجام می‌شود.</p> }
+            </fieldset>
+            <div class="fu-active__docs">
+                <span>مستندات مرتبط:</span>
+                @foreach (var doc in docs) { <a class="fu-file" href="@basePath/documents/@doc.Id"><svg><use href="#i-file"/></svg><span>@doc.Title</span><small>نسخهٔ @FollowUpLabels.Fa(doc.Version) · @FollowUpLabels.DocumentStatus(doc.Status)</small></a> }
+                @if (docs.Count == 0) { <small class="fu-f__hint">مدرکی برای این مرحله ثبت نشده است.</small> }
+                @if (editable) { <button class="fu-add" type="button" hx-get="@basePath/documents" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="this"><svg><use href="#i-plus"/></svg>افزودن مدرک</button> }
+            </div>
+            @if (remaining > 0) { <p class="fu-note fu-note--amber" data-checklist-warning><svg><use href="#i-alert"/></svg><span>برای تکمیل مرحله، <b data-checklist-remaining>@FollowUpLabels.Fa(remaining)</b> مورد باقی‌مانده باید انجام شود؛ وظایف تیک‌خورده با نام انجام‌دهنده ثبت می‌شوند.</span></p> }
+            @if (active.CompleteBlockedReason is { } reason && remaining == 0) { <p class="fu-note fu-note--amber"><svg><use href="#i-lock"/></svg><span>@reason</span></p> }
             @if (editable)
             {
-                <div class="fu-stage-actions">
-                    <button class="link-button" type="button" hx-get="@basePath/plan?stageId=@active.Id" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>اقدام برای این مرحله</button>
-                    <button class="link-button" type="button" hx-get="@basePath/refer?scope=Stage" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع مرحله</button>
-                    <button class="link-button" type="button" hx-get="@basePath/documents?tab=request" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-shield"/></svg>درخواست تأیید</button>
-                    @if (c.CanAssign && !active.Required)
-                    {
-                        <form method="post" action="@basePath/stages/@active.Id/skip" hx-post="@basePath/stages/@active.Id/skip" hx-swap="none" data-prompt="دلیل کنار گذاشتن مرحله (شرط برقرار نیست)">@Html.AntiForgeryToken()<button class="link-button" type="submit"><svg><use href="#i-close"/></svg>کنار گذاشتن مرحله</button></form>
-                    }
+                <div class="fu-inline-actions">
+                    <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ذخیرهٔ وضعیت وظایف</button>
+                    <button class="button button--secondary" type="submit" name="complete" value="true" data-complete disabled="@(remaining > 0 || (active.CompleteBlockedReason is not null && remaining == 0))"><svg><use href="#i-lock"/></svg>تکمیل مرحله</button>
                 </div>
-                @if (c.CanAssign)
-                {
-                    <form class="fu-assign" method="post" action="@basePath/stages/@active.Id/assign" hx-post="@basePath/stages/@active.Id/assign" hx-swap="none">
-                        @Html.AntiForgeryToken()
-                        <label><span>مسئول مرحله</span><select name="responsibleUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(active.ResponsibleUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
-                        <button class="button button--ghost button--sm" type="submit">تعیین</button>
-                    </form>
-                }
             }
-        }
-    </div>
-</div>
+        </form>
+    }
+
+    @if (c.IsOpen && c.CanUpdate && (active is not null || c.Rules.Count > 0))
+    {
+        <details class="fu-more-fields">
+            <summary><svg><use href="#i-chevron"/></svg>اقدام‌های مرحله و قواعد الگو</summary>
+            <div class="fu-sheet__body">
+                @if (active is not null)
+                {
+                    <div class="fu-stage-actions">
+                        <button class="link-button" type="button" hx-get="@basePath/plan?stageId=@active.Id" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>اقدام برای این مرحله</button>
+                        <button class="link-button" type="button" hx-get="@basePath/refer?scope=Stage" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع مرحله</button>
+                        <button class="link-button" type="button" hx-get="@basePath/documents?tab=request" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-shield"/></svg>درخواست تأیید</button>
+                        @if (c.CanAssign && !active.Required)
+                        {
+                            <form method="post" action="@basePath/stages/@active.Id/skip" hx-post="@basePath/stages/@active.Id/skip" hx-swap="none" data-prompt="دلیل کنار گذاشتن مرحله (شرط برقرار نیست)">@Html.AntiForgeryToken()<button class="link-button" type="submit"><svg><use href="#i-close"/></svg>کنار گذاشتن مرحله</button></form>
+                        }
+                    </div>
+                    @if (c.CanAssign)
+                    {
+                        <form class="fu-assign" method="post" action="@basePath/stages/@active.Id/assign" hx-post="@basePath/stages/@active.Id/assign" hx-swap="none">
+                            @Html.AntiForgeryToken()
+                            <label><span>مسئول مرحله</span><select name="responsibleUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(active.ResponsibleUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
+                            <button class="button button--ghost button--sm" type="submit">تعیین</button>
+                        </form>
+                    }
+                }
+                @if (c.Rules.Count > 0)
+                {
+                    <div class="fu-rules">
+                        <strong><svg><use href="#i-flow"/></svg>قواعد الگو</strong>
+                        @foreach (var rule in c.Rules)
+                        {
+                            <form method="post" action="@basePath/rules/@rule.Index" hx-post="@basePath/rules/@rule.Index" hx-swap="none" data-confirm="«@rule.Condition» رخ داده است؟ اقدام: @rule.Action">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="chip-action"><span>اگر <b>@rule.Condition</b></span><svg><use href="#i-chevron"/></svg><span>@rule.Action</span></button>
+                            </form>
+                        }
+                    </div>
+                }
+            </div>
+        </details>
+    }
+</section>

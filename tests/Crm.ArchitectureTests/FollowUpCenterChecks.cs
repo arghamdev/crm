@@ -271,6 +271,43 @@ internal static class FollowUpCenterChecks
         var viewId = supervision.SaveView(manager, org, "شعبه مرکزی", new FollowUpSupervisionQuery("B01", null, "week"));
         check(supervision.Get(manager, org, new FollowUpSupervisionQuery(), now).SavedViews.Any(x => x.Id == viewId && x.Query.Contains("branch=B01")),
             "FU: supervisors can save a view of the board.");
+        supervision.DeleteView(manager, org, viewId);
+        check(supervision.Get(manager, org, new FollowUpSupervisionQuery(), now).SavedViews.All(x => x.Id != viewId), "FU: a saved board view can be deleted.");
+        check(board.Attention.All(x => x.Kind is "unassigned" or "nonext" or "overdue" or "stage" or "near" or "referral" or "rejected" or "review") &&
+              board.Attention.Any(x => x.Code == "RQ-24087" && x.Kind == "nonext"),
+            "FU: each attention row carries its kind for the status pill (e.g. «بدون اقدام بعدی»).");
+        var nearCase = service.Create(manager, org, Create("پیگیری نزدیک سررسید " + Guid.NewGuid().ToString("N")[..4]), now);
+        // Two hours before its nearest deadline (whatever the working calendar made of it), the new case counts as near.
+        var nearDue = service.GetCase(manager, org, nearCase.CaseId, now)!.NearestDueUtc!.Value;
+        var nearBoard = supervision.Get(manager, org, new FollowUpSupervisionQuery(), nearDue.AddHours(-2));
+        check(nearBoard.Attention.Any(x => x.Id == nearCase.CaseId && x.Kind == "near" && x.Reason.Contains("تا مهلت")),
+            "FU: a case whose first-response deadline is within four hours shows as «… تا مهلت» on the board.");
+
+        // ── v1.11: «مخاطب» is required for calls when the customer has contacts ──
+        check(Throws<InvalidOperationException>(() => service.PlanAction(manager, org, nearCase.CaseId, new PlanFollowUpActionCommand("Call", "تماس بی‌مخاطب", null, manager,
+                  null, FollowUpChannel.Phone, Day(1), "11:00", 15, null, ActivityPriority.Normal, null, null, null, null, Guid.NewGuid()), now)) &&
+              service.PlanAction(manager, org, nearCase.CaseId, new PlanFollowUpActionCommand("Task", "کار داخلی بی‌مخاطب", null, manager,
+                  null, FollowUpChannel.Phone, Day(1), "11:00", null, null, ActivityPriority.Normal, null, null, null, null, Guid.NewGuid()), now).CaseId == nearCase.CaseId,
+            "FU: a call needs a contact of the customer; an internal task does not.");
+
+        // ── v1.11: server-side drafts of the registration form ──
+        IReadOnlyList<KeyValuePair<string, string>> fields = [new("Subject", "پیش‌نویس آزمون"), new("__RequestVerificationToken", "x"), new("Parts[0].PartCode", "D-1"), new("Description", "")];
+        var savedAt = service.SaveDraft(expert, org, "create", fields, now);
+        var savedDraft = service.GetDraft(expert, org, "create");
+        check(savedDraft is { } sd && sd.SavedAtUtc == savedAt && sd.Fields.Count == 2 && sd.Fields.Any(x => x.Key == "Subject" && x.Value == "پیش‌نویس آزمون") &&
+              service.GetDraft(manager, org, "create") is null,
+            "FU: a draft keeps the user's non-empty fields (without the anti-forgery token) and is private to that user.");
+        service.SaveDraft(expert, org, "create", [new("Subject", "پیش‌نویس دوم")], now.AddMinutes(1));
+        check(store.Read(d => d.FollowUpDrafts.Count(x => x.UserId == expert)) == 1 && service.GetDraft(expert, org, "create")!.Value.Fields.Single().Value == "پیش‌نویس دوم",
+            "FU: saving again replaces the user's single registration draft.");
+        check(Throws<InvalidOperationException>(() => service.SaveDraft(expert, org, "create", [new("Subject", " ")], now)) &&
+              Throws<UnauthorizedAccessException>(() => service.SaveDraft(dealer, org, "create", fields, now)),
+            "FU: an empty draft is rejected and users without FollowUp.Create cannot keep drafts.");
+        service.Create(expert, org, Create("ثبت پس از پیش‌نویس " + Guid.NewGuid().ToString("N")[..4]), now);
+        check(service.GetDraft(expert, org, "create") is null, "FU: creating a case clears the user's registration draft.");
+        service.SaveDraft(expert, org, "create", fields, now);
+        service.DeleteDraft(expert, org, "create");
+        check(service.GetDraft(expert, org, "create") is null, "FU: a draft can be deleted.");
         _ = finance;
     }
 

@@ -25,6 +25,12 @@ public interface IFollowUpSupervisionService
 public sealed class FollowUpSupervisionService(ICrmDataStore store, IAccessSnapshotService access) : IFollowUpSupervisionService
 {
     public const int AttentionLimit = 100;
+    /// <summary>Open cases whose nearest deadline is this close show as «X ساعت تا مهلت».</summary>
+    public const int NearDueHours = 4;
+
+    private static string NearReason(TimeSpan left) => left.TotalMinutes < 60
+        ? $"{Math.Max(1, (int)Math.Ceiling(left.TotalMinutes))} دقیقه تا مهلت"
+        : $"{(int)Math.Ceiling(left.TotalHours)} ساعت تا مهلت";
 
     private AccessSnapshot Require(Guid userId, OrganizationSelection organization)
     {
@@ -76,26 +82,32 @@ public sealed class FollowUpSupervisionService(ICrmDataStore store, IAccessSnaps
         foreach (var c in open)
         {
             var owner = c.OwnerUserId is { } o ? users.GetValueOrDefault(o) : null;
-            FollowUpAttentionDto Row(string reason, string tone, DateTimeOffset? due, int severity) =>
-                new(c.Id, c.Code, customers.GetValueOrDefault(c.CustomerId, "—"), c.Subject, owner, reason, tone, due, severity);
+            FollowUpAttentionDto Row(string reason, string tone, DateTimeOffset? due, int severity, string kind) =>
+                new(c.Id, c.Code, customers.GetValueOrDefault(c.CustomerId, "—"), c.Subject, owner, reason, tone, due, severity) { Kind = kind };
             var caseReferrals = referrals.Where(x => x.CaseId == c.Id).OrderByDescending(x => x.SentAtUtc).ThenByDescending(x => x.CreatedAtUtc).ToList();
             var latest = caseReferrals.FirstOrDefault();
             if (c.OwnerUserId is null)
-                attention.Add(Row("بدون مسئول — در انتظار تخصیص", "danger", c.FirstResponseDueAtUtc, c.Priority == FollowUpPriority.Critical ? 6 : 5));
+                attention.Add(Row("بدون مسئول — در انتظار تخصیص", "danger", c.FirstResponseDueAtUtc, c.Priority == FollowUpPriority.Critical ? 6 : 5, "unassigned"));
             else if (c.NextActionAtUtc is null && !(c.IsWaiting && c.ReviewAtUtc is not null))
-                attention.Add(Row("بدون اقدام بعدی", "danger", c.NearestDueUtc, 5));
+                attention.Add(Row("بدون اقدام بعدی", "danger", c.NearestDueUtc, 5, "nonext"));
             if (latest is { Status: ReferralStatus.Pending } pending && pending.IsLate(nowUtc))
                 attention.Add(Row($"ارجاع پذیرفته نشده به {AccountGuard.UserNames(data, [pending.ToUserId]).GetValueOrDefault(pending.ToUserId, "—")}", "warning",
-                    pending.AcceptDueAtUtc, 4));
+                    pending.AcceptDueAtUtc, 4, "referral"));
+            else if (latest is { Status: ReferralStatus.Pending } waiting)
+                attention.Add(Row($"در انتظار پذیرش {AccountGuard.UserNames(data, [waiting.ToUserId]).GetValueOrDefault(waiting.ToUserId, "—")}", "violet",
+                    waiting.AcceptDueAtUtc, 2, "referral"));
             else if (latest is { Status: ReferralStatus.Rejected } rejected)
-                attention.Add(Row($"ارجاع رد شد: {rejected.ResponseNote}", "warning", rejected.RespondedAtUtc, 3));
+                attention.Add(Row($"ارجاع رد شد: {rejected.ResponseNote}", "warning", rejected.RespondedAtUtc, 3, "rejected"));
             if (c.IsWaiting && c.ReviewAtUtc < nowUtc)
-                attention.Add(Row($"انتظار از موعد بازبینی گذشته ({c.WaitingOn ?? c.WaitReason ?? "—"})", "warning", c.ReviewAtUtc, 4));
+                attention.Add(Row($"انتظار از موعد بازبینی گذشته ({c.WaitingOn ?? c.WaitReason ?? "—"})", "warning", c.ReviewAtUtc, 4, "review"));
             else if (c.IsOverdue(nowUtc))
                 attention.Add(Row(c.NextActionAtUtc < nowUtc ? $"اقدام بعدی عقب‌افتاده: {c.NextAction}" : "مهلت پرونده گذشته", "danger", c.NearestDueUtc,
-                    c.Priority >= FollowUpPriority.High ? 5 : 4));
+                    c.Priority >= FollowUpPriority.High ? 5 : 4, "overdue"));
+            // «۲ ساعت تا مهلت»: the nearest deadline falls within the next four hours.
+            else if (!c.IsPaused && c.NearestDueUtc is { } near && near > nowUtc && near - nowUtc <= TimeSpan.FromHours(NearDueHours))
+                attention.Add(Row(NearReason(near - nowUtc), "warning", near, 2, "near"));
             foreach (var stage in stages.Where(x => x.CaseId == c.Id && x.IsOverdue(nowUtc)))
-                attention.Add(Row($"مرحلهٔ «{stage.Name}» عقب‌افتاده", "warning", stage.DueAtUtc, 3));
+                attention.Add(Row($"مرحلهٔ «{stage.Name}» عقب‌افتاده", "warning", stage.DueAtUtc, 3, "stage"));
         }
         // One row per case: the most severe reason leads, the others follow it.
         var ordered = attention.GroupBy(x => x.Id).Select(g =>

@@ -866,6 +866,41 @@ public sealed class FollowUpSavedView : Entity
 }
 
 /// <summary>
+/// Server-side draft of a form (پیش‌نویس) for one user and company. The payload is the form's own fields as JSON, so the form can be
+/// restored on any device; it is deleted when the record is created from it.
+/// </summary>
+public sealed class FollowUpDraft : Entity
+{
+    public const int MaxPayload = 16000;
+
+    public FollowUpDraft(Guid id, Guid userId, string companyId, string kind, string payload, DateTimeOffset nowUtc) : base(id)
+    {
+        UserId = userId;
+        CompanyId = SlaPolicy.Req(companyId, 32, "شرکت");
+        Kind = SlaPolicy.Req(kind, 32, "نوع پیش‌نویس");
+        Payload = string.Empty;
+        Update(payload, nowUtc);
+    }
+
+    private FollowUpDraft() : base(Guid.Empty) => CompanyId = Kind = Payload = "EF";
+
+    public Guid UserId { get; private set; }
+    public string CompanyId { get; private set; }
+    public string Kind { get; private set; }
+    public string Payload { get; private set; }
+    public DateTimeOffset SavedAtUtc { get; private set; }
+
+    public void Update(string payload, DateTimeOffset nowUtc)
+    {
+        if (string.IsNullOrWhiteSpace(payload)) throw new InvalidOperationException("پیش‌نویس خالی است.");
+        if (payload.Length > MaxPayload) throw new InvalidOperationException("پیش‌نویس بیش از حد بزرگ است.");
+        Payload = payload;
+        SavedAtUtc = nowUtc;
+        Touch();
+    }
+}
+
+/// <summary>
 /// Weighted progress: Σ(stage weight × stage progress) ÷ Σ(weights of the stages that apply). Skipped conditional stages are
 /// left out; a cancelled case keeps its progress (cancelling is not completing).
 /// </summary>

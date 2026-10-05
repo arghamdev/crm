@@ -4275,6 +4275,53 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("Documents", "followup");
                 });
 
+            modelBuilder.Entity("Crm.Domain.FollowUps.FollowUpDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CompanyId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("SavedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CompanyId", "Kind")
+                        .IsUnique();
+
+                    b.ToTable("Drafts", "followup");
+                });
+
             modelBuilder.Entity("Crm.Domain.FollowUps.FollowUpEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7524,6 +7571,15 @@ namespace Crm.Infrastructure.Migrations
                     b.HasOne("Crm.Domain.Accounts.CrmDocument", null)
                         .WithMany()
                         .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Domain.FollowUps.FollowUpDraft", b =>
+                {
+                    b.HasOne("Crm.Domain.Identity.CrmUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

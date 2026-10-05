@@ -125,6 +125,7 @@ public sealed class CrmDataSet
     public List<Crm.Domain.FollowUps.FollowUpEvent> FollowUpEvents => Set<Crm.Domain.FollowUps.FollowUpEvent>();
     public List<Crm.Domain.FollowUps.FollowUpActivityLink> FollowUpActivityLinks => Set<Crm.Domain.FollowUps.FollowUpActivityLink>();
     public List<Crm.Domain.FollowUps.FollowUpSavedView> FollowUpSavedViews => Set<Crm.Domain.FollowUps.FollowUpSavedView>();
+    public List<Crm.Domain.FollowUps.FollowUpDraft> FollowUpDrafts => Set<Crm.Domain.FollowUps.FollowUpDraft>();
     public List<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
     public List<CustomerLogo> CustomerLogos => Set<CustomerLogo>();
     public List<CustomerTimelineEvent> CustomerTimelineEvents => Set<CustomerTimelineEvent>();

@@ -2,6 +2,7 @@
   "use strict";
 
   const root = document.documentElement;
+  const faDigits = value => String(value).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
   const drawer = document.getElementById("drawer");
   const drawerBody = document.getElementById("drawerBody");
   const drawerBackdrop = document.getElementById("drawerBackdrop");
@@ -164,6 +165,8 @@
       openDrawer();
     }
     if (event.detail.target?.id === "modalBody") {
+      // Follow-up forms (فرم‌های ۱–۸) bring their own header with the number badge; the generic popup header steps aside.
+      modal?.classList.toggle("modal--sheet", !!modalBody?.querySelector(".fu-sheet"));
       const heading = modalBody?.querySelector("[data-drawer-title], .form-section h3");
       const title = document.getElementById("modalTitle");
       if (heading && title) title.textContent = heading.textContent.trim();
@@ -296,7 +299,7 @@
     const total = [...form.querySelectorAll("[data-weight]")].filter(x => !x.closest("template")).reduce((sum, x) => sum + (parseInt(x.value, 10) || 0), 0);
     const label = form.querySelector("[data-weight-sum]");
     if (label) {
-      label.querySelector("b").textContent = total;
+      label.querySelector("b").textContent = label.dataset.digits === "fa" ? faDigits(total) : total;
       label.classList.toggle("is-ok", total === 100);
       label.classList.toggle("is-bad", total !== 100);
     }
@@ -342,7 +345,7 @@
     const button = form.querySelector("[data-complete]");
     if (button && !form.dataset.blocked) button.disabled = remaining > 0;
     const counter = form.querySelector("[data-checklist-remaining]");
-    if (counter) counter.textContent = remaining;
+    if (counter) counter.textContent = faDigits(remaining);
     const warning = form.querySelector("[data-checklist-warning]");
     if (warning) warning.hidden = remaining === 0;
   }
@@ -361,6 +364,141 @@
       if (select && box) box.value = select.value;
     });
   }, true);
+
+  // ───────────── v1.11.0 follow-up sheets: notices, priority dot, counters, linked cards, files, drag-and-drop ─────────────
+  document.body.addEventListener("followUpNotice", event => showToast(event.detail?.message || "ذخیره شد."));
+  function fuSync(scope) {
+    scope.querySelectorAll?.("select[data-dot]").forEach(select => {
+      const dot = select.parentElement?.querySelector(".fu-dot");
+      if (dot) dot.dataset.tone = select.value;
+    });
+    scope.querySelectorAll?.("[data-counter]").forEach(field => {
+      const out = field.closest(".fu-f")?.querySelector("[data-counter-out]");
+      if (out) out.textContent = faDigits(field.value.length) + "/" + faDigits(field.maxLength > 0 ? field.maxLength : 500);
+    });
+    scope.querySelectorAll?.("select[data-switch]").forEach(select => {
+      const form = select.closest("form") || document;
+      form.querySelectorAll("[data-switch-for='" + select.dataset.switch + "']").forEach(panel => {
+        panel.hidden = !(panel.dataset.when || "").split(" ").includes(select.value);
+      });
+    });
+    scope.querySelectorAll?.("select[data-receivers]").forEach(fuReceiver);
+  }
+  function fuReceiver(select) {
+    const card = select.closest("form")?.querySelector("[data-capacity-card]");
+    const option = select.selectedOptions?.[0];
+    if (!card) return;
+    if (!option || !option.value) { card.hidden = true; return; }
+    card.hidden = false;
+    const load = parseInt(option.dataset.load || "0", 10);
+    const capacity = parseInt(option.dataset.capacity || "0", 10);
+    const available = option.dataset.available === "true";
+    const full = capacity > 0 && load >= capacity;
+    card.classList.toggle("fu-box--green", available && !full);
+    card.classList.toggle("fu-box--amber", available && full);
+    card.classList.toggle("fu-box--red", !available);
+    card.querySelector("[data-capacity-initial]").textContent = option.dataset.initial || "";
+    card.querySelector("[data-capacity-name]").textContent = option.dataset.name || option.textContent;
+    card.querySelector("[data-capacity-state]").textContent = !available ? (option.dataset.note || "خارج از دسترس") : full ? "ظرفیت تکمیل" : "آماده دریافت";
+    card.querySelector("[data-capacity-load]").textContent = capacity > 0 ? "ظرفیت: " + faDigits(load) + " از " + faDigits(capacity) + " پرونده" : faDigits(load) + " پروندهٔ باز";
+    const bar = card.querySelector("[data-capacity-bar]");
+    if (bar) bar.style.width = (capacity > 0 ? Math.min(100, Math.round(load * 100 / capacity)) : 0) + "%";
+  }
+  document.addEventListener("change", event => {
+    const target = event.target;
+    if (target.matches?.("select[data-dot], [data-counter], select[data-switch], select[data-receivers]")) fuSync(target.closest("form") || document);
+    // «شخص تماس» fills the call number from the contact's phone.
+    if (target.matches?.("select[data-phone-target]")) {
+      const phone = target.closest("form")?.querySelector("[name='" + target.dataset.phoneTarget + "']");
+      const value = target.selectedOptions?.[0]?.dataset.phone;
+      if (phone && value) phone.value = value;
+    }
+    if (target.matches?.("input[type=file][data-file-names]")) {
+      const out = target.closest(".fu-dropzone, .fu-file-row, .fu-f")?.querySelector("[data-file-out]");
+      const names = [...(target.files || [])].map(f => f.name);
+      if (out) out.textContent = names.length ? names.join("، ") : out.dataset.empty || "";
+    }
+  });
+  document.addEventListener("input", event => { if (event.target.matches?.("[data-counter]")) fuSync(event.target.closest("form") || document); });
+  // Supervision filters (۱۲) apply on change.
+  document.addEventListener("change", event => {
+    const form = event.target.closest?.("form[data-autosubmit]");
+    if (form && event.target.matches("select")) form.requestSubmit();
+  });
+  // «تقویم کاری» (۱۰): a named calendar fills the working days, hours and time zone; «سفارشی» opens the editor.
+  document.addEventListener("change", event => {
+    const select = event.target.closest?.("select[data-calendar]");
+    if (!select) return;
+    const form = select.closest("form");
+    const option = select.selectedOptions[0];
+    const editor = form?.querySelector("[data-switch-for='calendar-open']");
+    if (!form || !option) return;
+    if (option.value === "custom") { if (editor) editor.open = true; return; }
+    const days = (option.dataset.days || "").split(" ");
+    form.querySelectorAll("input[name='WorkDays']").forEach(box => { box.checked = days.includes(box.value); });
+    const start = form.querySelector("input[name='WorkStart']"); if (start) start.value = option.dataset.start;
+    const end = form.querySelector("input[name='WorkEnd']"); if (end) end.value = option.dataset.end;
+    const zone = form.querySelector("select[name='TimeZoneId']"); if (zone && option.dataset.zone) zone.value = option.dataset.zone;
+    const summary = form.querySelector("[data-workhours] span:nth-child(2) b");
+    if (summary) summary.textContent = faDigits(option.dataset.start) + " تا " + faDigits(option.dataset.end);
+    const dayNames = form.querySelector("[data-workhours] span:first-child b");
+    if (dayNames) dayNames.textContent = [...form.querySelectorAll("input[name='WorkDays']:checked")].map(x => x.nextElementSibling?.textContent).join("، ");
+  });
+  fuSync(document);
+  document.body.addEventListener("htmx:afterSettle", () => fuSync(document));
+
+  // «+ افزودن نسخه» (۷): opens the upload form with the document's title, so the file becomes its next version.
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.("[data-new-version]");
+    if (!button) return;
+    const sheet = button.closest(".fu-sheet");
+    const upload = sheet?.querySelector("details[data-upload]");
+    if (!upload) return;
+    upload.open = true;
+    const title = upload.querySelector("input[name='title']");
+    if (title) title.value = button.dataset.newVersion;
+    const kind = upload.querySelector("select[name='kind']");
+    if (kind && button.dataset.newVersionKind) kind.value = button.dataset.newVersionKind;
+    upload.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    upload.querySelector("input[type=file]")?.focus();
+  });
+
+  // Template stages (۹): drag a row by its handle to reorder; indexes are renumbered like the arrow buttons do.
+  let fuDragged = null;
+  document.addEventListener("mousedown", event => {
+    const grip = event.target.closest?.("[data-grip]");
+    const row = grip?.closest("[data-row]");
+    if (row) row.draggable = true;
+  });
+  document.addEventListener("dragstart", event => {
+    const row = event.target.closest?.("[data-sortable] [data-row]");
+    if (!row) return;
+    fuDragged = row;
+    row.classList.add("is-dragging");
+    event.dataTransfer.effectAllowed = "move";
+    try { event.dataTransfer.setData("text/plain", ""); } catch { /* some browsers need data */ }
+  });
+  document.addEventListener("dragover", event => {
+    const row = event.target.closest?.("[data-sortable] [data-row]");
+    if (!fuDragged || !row || row === fuDragged || row.parentElement !== fuDragged.parentElement) return;
+    event.preventDefault();
+    document.querySelectorAll("[data-row].is-over").forEach(x => x !== row && x.classList.remove("is-over"));
+    row.classList.add("is-over");
+  });
+  document.addEventListener("drop", event => {
+    const row = event.target.closest?.("[data-sortable] [data-row]");
+    if (!fuDragged || !row || row === fuDragged || row.parentElement !== fuDragged.parentElement) return;
+    event.preventDefault();
+    const rows = [...row.parentElement.children];
+    if (rows.indexOf(fuDragged) < rows.indexOf(row)) row.after(fuDragged); else row.before(fuDragged);
+    const container = fuDragged.closest("[data-rows]");
+    if (container) fuReindex(container);
+  });
+  document.addEventListener("dragend", () => {
+    document.querySelectorAll("[data-row].is-over, [data-row].is-dragging").forEach(x => x.classList.remove("is-over", "is-dragging"));
+    if (fuDragged) fuDragged.draggable = false;
+    fuDragged = null;
+  });
 
   // ───────────── Account file (پرونده حساب): tabs, lazy sections, in-place refresh ─────────────
   const accountRoot = document.querySelector("[data-account-id]");

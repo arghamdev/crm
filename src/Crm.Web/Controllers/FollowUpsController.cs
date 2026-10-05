@@ -22,6 +22,7 @@ public sealed class FollowUpsController(
     IOrganizationContextService organization) : Controller
 {
     private const long MaxUpload = 11 * 1024 * 1024;
+    private const int MaxFiles = 5;
     private Guid UserId => current.CrmUserId;
     private OrganizationSelection Org => current.RequiredOrganization();
     private static DateTimeOffset Now => DateTimeOffset.UtcNow;
@@ -65,28 +66,86 @@ public sealed class FollowUpsController(
     public IActionResult New(Guid? customerId = null, string? caseType = null) => Guarded(() =>
     {
         var command = Blank(customerId, caseType);
-        return View("New", CreateModel(command, null));
+        return View("New", CreateModel(command, null) with { DraftSavedAtUtc = followUps.GetDraft(UserId, Org, "create")?.SavedAtUtc });
     });
 
     /// <summary>Re-renders the registration form when the customer, type or branch changes (contacts, related records, extra fields and SLA follow).</summary>
     [Authorize(Policy = "perm:FollowUp.Create")]
     [HttpGet("/follow-ups/new/form")]
-    public IActionResult NewForm(CreateFollowUpCommand command) => Guarded(() =>
+    public IActionResult NewForm(CreateFollowUpCommand command, bool restore = false) => Guarded(() =>
     {
-        // Opened from a button (popup) with at most a customer: start from the same defaults as the full page.
-        if (!Request.Query.ContainsKey("CaseType")) command = Blank(command.CustomerId == Guid.Empty ? null : command.CustomerId, null);
+        if (restore && followUps.GetDraft(UserId, Org, "create") is { } draft)
+        {
+            var values = draft.Fields.Select(x => (x.Key, x.Value)).ToList();
+            return PartialView("_CreateForm", CreateModel(FromValues(values), null) with { DraftRestoredAtUtc = draft.SavedAtUtc });
+        }
+        // Opened from a button (popup) with at most a customer: start from the same defaults as the full page, and offer a saved draft.
+        if (!Request.Query.ContainsKey("CaseType"))
+        {
+            command = Blank(command.CustomerId == Guid.Empty ? null : command.CustomerId, null);
+            return PartialView("_CreateForm", CreateModel(command, null) with { DraftSavedAtUtc = followUps.GetDraft(UserId, Org, "create")?.SavedAtUtc });
+        }
         return PartialView("_CreateForm", CreateModel(Normalize(command), null));
     });
+
+    /// <summary>«پیش‌نویس»: the registration form's fields are kept on the server for this user and company until the case is created or the draft deleted.</summary>
+    [Authorize(Policy = "perm:FollowUp.Create")]
+    [HttpPost("/follow-ups/drafts/create")]
+    [ValidateAntiForgeryToken]
+    public IActionResult SaveDraft()
+    {
+        try
+        {
+            var fields = Request.Form.Where(x => x.Key != "Files").SelectMany(x => x.Value.Select(v => new KeyValuePair<string, string>(x.Key, v ?? ""))).ToList();
+            var saved = followUps.SaveDraft(UserId, Org, "create", fields, Now);
+            return Notice($"پیش‌نویس روی سرور ذخیره شد ({Crm.Domain.Common.TehranTime.Clock(saved)}).");
+        }
+        catch (InvalidOperationException exception) { return RowError(exception.Message); }
+    }
+
+    [Authorize(Policy = "perm:FollowUp.Create")]
+    [HttpPost("/follow-ups/drafts/create/delete")]
+    [ValidateAntiForgeryToken]
+    public IActionResult DeleteDraft()
+    {
+        followUps.DeleteDraft(UserId, Org, "create");
+        if (!Request.IsHtmx()) return Redirect("/follow-ups/new");
+        Response.Headers.Append("HX-Trigger", System.Text.Json.JsonSerializer.Serialize(new { followUpNotice = new { message = "پیش‌نویس حذف شد." } }));
+        return Content("", "text/html; charset=utf-8");
+    }
+
+    /// <summary>A toast without closing the open form (draft saved, etc.).</summary>
+    private IActionResult Notice(string message)
+    {
+        if (!Request.IsHtmx()) return Redirect(Request.Headers.Referer.FirstOrDefault() ?? "/follow-ups");
+        Response.Headers.Append("HX-Trigger", System.Text.Json.JsonSerializer.Serialize(new { followUpNotice = new { message } }));
+        Response.Headers.Append("HX-Reswap", "none");
+        return NoContent();
+    }
 
     [Authorize(Policy = "perm:FollowUp.Create")]
     [HttpPost("/follow-ups")]
     [ValidateAntiForgeryToken]
-    public IActionResult Create(CreateFollowUpCommand command)
+    [RequestSizeLimit(MaxFiles * MaxUpload)]
+    public async Task<IActionResult> Create(CreateFollowUpCommand command)
     {
         command = Normalize(command);
         try
         {
+            // «افزودن فایل یا تصویر قطعه»: checked before the case is created, attached to it right after.
+            var files = Request.HasFormContentType ? Request.Form.Files.GetFiles("Files").Where(x => x.Length > 0).ToList() : [];
+            if (files.Count > MaxFiles) throw new InvalidOperationException($"حداکثر {MaxFiles} فایل می‌توان پیوست کرد.");
+            if (files.Any(x => x.Length > CrmDocument.MaxBytes)) throw new InvalidOperationException("حجم هر فایل باید کمتر از ۱۰ مگابایت باشد.");
+            var uploads = new List<FollowUpDocumentUpload>();
+            foreach (var file in files) uploads.Add(await Read(file));
             var result = followUps.Create(UserId, Org, command, Now);
+            if (!result.Replayed)
+                foreach (var upload in uploads)
+                {
+                    var kind = upload.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? FollowUpDocumentKind.Photo : FollowUpDocumentKind.Other;
+                    try { followUps.UploadDocument(UserId, Org, result.CaseId, null, kind, Path.GetFileNameWithoutExtension(upload.FileName), false, upload, Now); }
+                    catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException) { /* the case exists; the file can be added from «مدارک» */ }
+                }
             Response.Headers.Append("HX-Redirect", $"/follow-ups/{result.CaseId}?created=1");
             return Request.IsHtmx() ? NoContent() : Redirect($"/follow-ups/{result.CaseId}");
         }
@@ -105,20 +164,47 @@ public sealed class FollowUpsController(
     /// <summary>The related record arrives as one "Kind:Id" choice; the extra fields of the type arrive as Extra_* inputs.</summary>
     private CreateFollowUpCommand Normalize(CreateFollowUpCommand command)
     {
-        var related = Request.Query.ContainsKey("Related") ? Request.Query["Related"].ToString() : Request.HasFormContentType ? Request.Form["Related"].ToString() : "";
+        var values = Request.HasFormContentType ? Request.Form.Select(x => (x.Key, Value: x.Value.ToString())).ToList() : Request.Query.Select(x => (x.Key, Value: x.Value.ToString())).ToList();
+        return Normalize(command, values);
+    }
+
+    private static CreateFollowUpCommand Normalize(CreateFollowUpCommand command, IReadOnlyList<(string Key, string Value)> values)
+    {
+        var related = values.FirstOrDefault(x => x.Key == "Related").Value ?? "";
         var parts = related.Split(':');
         if (parts.Length == 2 && Enum.TryParse<FollowUpRelatedKind>(parts[0], out var kind) && Guid.TryParse(parts[1], out var relatedId))
             command = command with { RelatedKind = kind, RelatedId = relatedId };
         else if (!string.IsNullOrWhiteSpace(command.RelatedCode) && command.RelatedKind == FollowUpRelatedKind.None)
             command = command with { RelatedKind = FollowUpRelatedKind.Invoice };
-        var values = Request.HasFormContentType ? Request.Form.Select(x => (x.Key, Value: x.Value.ToString())) : Request.Query.Select(x => (x.Key, Value: x.Value.ToString()));
-        var extra = values.Where(x => x.Key.StartsWith("Extra_", StringComparison.Ordinal)).ToDictionary(x => x.Key["Extra_".Length..].Replace('_', ' '), x => (string?)x.Value);
+        var extra = values.Where(x => x.Key.StartsWith("Extra_", StringComparison.Ordinal)).GroupBy(x => x.Key)
+            .ToDictionary(x => x.Key["Extra_".Length..].Replace('_', ' '), x => (string?)x.First().Value);
         var partsList = (command.Parts ?? []).Where(x => !string.IsNullOrWhiteSpace(x.PartCode)).ToList();
         return command with
         {
             ExtraFields = extra.Count > 0 ? extra : command.ExtraFields, Parts = partsList,
             OperationId = command.OperationId is { } op && op != Guid.Empty ? op : Guid.NewGuid()
         };
+    }
+
+    /// <summary>Rebuilds the registration command from a saved draft (the same field names the form posts).</summary>
+    private static CreateFollowUpCommand FromValues(IReadOnlyList<(string Key, string Value)> values)
+    {
+        string? Get(string key) => values.FirstOrDefault(x => x.Key == key).Value is { Length: > 0 } v ? v : null;
+        Guid? Id(string key) => Guid.TryParse(Get(key), out var g) ? g : null;
+        TEnum Pick<TEnum>(string key, TEnum fallback) where TEnum : struct, Enum => Enum.TryParse<TEnum>(Get(key), out var e) ? e : fallback;
+        var parts = new List<FollowUpPartInput>();
+        for (var i = 0; i < 50 && values.Any(x => x.Key.StartsWith($"Parts[{i}].", StringComparison.Ordinal)); i++)
+            parts.Add(new FollowUpPartInput(Get($"Parts[{i}].PartCode"), Get($"Parts[{i}].Description"),
+                decimal.TryParse(Get($"Parts[{i}].Quantity"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var q) ? q : null,
+                Get($"Parts[{i}].Unit")));
+        var command = Blank(Id("CustomerId"), Get("CaseType")) with
+        {
+            Subject = Get("Subject"), ContactId = Id("ContactId"), TemplateId = Id("TemplateId"), BranchId = Get("BranchId"), OwnerUserId = Id("OwnerUserId"),
+            QueueId = Id("QueueId"), Channel = Pick("Channel", FollowUpChannel.Phone), Priority = Pick("Priority", FollowUpPriority.Normal),
+            PriorityReason = Get("PriorityReason"), RelatedCode = Get("RelatedCode"), DealerId = Id("DealerId"), Description = Get("Description"),
+            ExpectedOutcome = Get("ExpectedOutcome"), PartFamily = Get("PartFamily"), Language = Get("Language") ?? "fa", Parts = parts
+        };
+        return Normalize(command, values);
     }
 
     private FollowUpCreateModel CreateModel(CreateFollowUpCommand command, IReadOnlyList<FollowUpDuplicateDto>? duplicates)
@@ -157,14 +243,18 @@ public sealed class FollowUpsController(
         var at = Now.AddHours(2);
         at = at.AddMinutes(30 - at.Minute % 30).AddSeconds(-at.Second);
         var stage = stageId ?? dto.ActiveStage?.Id;
-        return PartialView("_PlanForm", new FollowUpPlanModel(dto, new PlanFollowUpActionCommand(kind, null, stage, dto.OwnerUserId ?? UserId, null,
-            kind == "Visit" ? FollowUpChannel.Visit : FollowUpChannel.Phone, Crm.Domain.Common.TehranTime.Date(at), Crm.Domain.Common.TehranTime.Clock(at), kind == "Task" ? null : 15, 15,
-            ActivityPriority.Normal, null, null, DefaultChecklist(kind), [], Guid.NewGuid())));
+        // «مخاطب» starts from the case contact (or the customer's first contact); the call number follows the contact.
+        var contact = kind == "Task" ? null : dto.Contacts.FirstOrDefault(x => x.Label == dto.Contact) ?? dto.Contacts.FirstOrDefault();
+        Guid? contactId = contact is not null && Guid.TryParse(contact.Value, out var cid) ? cid : null;
+        var phone = contact is not null ? dto.ContactPhones.GetValueOrDefault(contact.Value) : null;
+        return PartialView("_PlanForm", new FollowUpPlanModel(dto, new PlanFollowUpActionCommand(kind, null, stage, dto.OwnerUserId ?? UserId, contactId,
+            kind == "Visit" ? FollowUpChannel.Visit : FollowUpChannel.Phone, Crm.Domain.Common.TehranTime.Date(at), Crm.Domain.Common.TehranTime.Clock(at), kind == "Task" ? null : 30, 15,
+            ActivityPriority.Normal, null, null, DefaultChecklist(kind), [], Guid.NewGuid(), kind == "Call" ? phone : null, "Asia/Tehran")));
     });
 
     private static IReadOnlyList<string> DefaultChecklist(string kind) => kind switch
     {
-        "Call" => ["بررسی آخرین سوابق تعامل", "آماده بودن پیش‌فاکتور / اطلاعات قیمت", "مشخص بودن هدف تماس"],
+        "Call" => ["بررسی آخرین پیش‌فاکتور", "دریافت تأیید مدیر فروش", "مشخص بودن هدف تماس"],
         "Meeting" or "Visit" => ["هماهنگی زمان و مکان با مشتری", "آماده‌سازی مدارک و نمونه‌ها", "تعیین شرکت‌کنندگان داخلی"],
         _ => ["مشخص بودن خروجی کار"]
     };
@@ -183,19 +273,54 @@ public sealed class FollowUpsController(
         var dto = Load(id);
         var activity = dto.Activities.SingleOrDefault(x => x.Id == activityId) ?? throw new KeyNotFoundException();
         var next = Now.AddDays(1);
+        // «تاریخ انجام» defaults to the planned time when it has passed, otherwise to now; «انجام‌دهنده» to the activity owner.
+        var doneAt = activity.AtUtc <= Now ? activity.AtUtc : Now;
+        var doer = dto.Users.FirstOrDefault(x => x.Label == activity.Owner) is { } u && Guid.TryParse(u.Value, out var doerId) ? doerId : UserId;
         return PartialView("_ResultForm", new FollowUpResultModel(dto, activity, new RecordFollowUpResultCommand(null, null, null, null, "Call", dto.OwnerUserId ?? UserId,
-            Crm.Domain.Common.TehranTime.Date(next), "10:00", false, activity.Version)));
+            Crm.Domain.Common.TehranTime.Date(next), "10:00", false, activity.Version, Crm.Domain.Common.TehranTime.Date(doneAt), Crm.Domain.Common.TehranTime.Clock(doneAt), doer)));
     });
 
     [HttpPost("/follow-ups/{id:guid}/activities/{activityId:guid}/result")]
     [ValidateAntiForgeryToken]
-    public IActionResult Result(Guid id, Guid activityId, RecordFollowUpResultCommand command) => Mutation(
-        () => Changed(followUps.RecordResult(UserId, Org, id, activityId, command, Now).Message),
-        message =>
+    [RequestSizeLimit(MaxUpload)]
+    public async Task<IActionResult> Result(Guid id, Guid activityId, RecordFollowUpResultCommand command, IFormFile? document)
+    {
+        IActionResult Error(string message)
         {
             var dto = Load(id);
             return FormError("_ResultForm", new FollowUpResultModel(dto, dto.Activities.Single(x => x.Id == activityId), command), message);
-        });
+        }
+        // «مدرک مرتبط»: stored on the activity's stage once the result is saved.
+        if (document is { Length: > CrmDocument.MaxBytes }) return Mutation(() => Error("حجم فایل بیش از ۱۰ مگابایت است."), Error);
+        var upload = document is { Length: > 0 } f ? await Read(f) : null;
+        return Mutation(() =>
+        {
+            var message = followUps.RecordResult(UserId, Org, id, activityId, command, Now).Message;
+            if (upload is not null) message = Attach(id, ActivityStage(id, activityId), FollowUpDocumentKind.Other, null, upload, message);
+            return Changed(message);
+        }, Error);
+    }
+
+    private Guid? ActivityStage(Guid caseId, Guid activityId)
+    {
+        var dto = Load(caseId);
+        var stage = dto.Activities.FirstOrDefault(x => x.Id == activityId)?.Stage;
+        return stage is null ? null : dto.Stages.FirstOrDefault(x => x.Name == stage)?.Id;
+    }
+
+    /// <summary>Attaches a file after the main action succeeded; a failed upload is reported in the toast instead of undoing the action.</summary>
+    private string Attach(Guid caseId, Guid? stageId, FollowUpDocumentKind kind, string? title, FollowUpDocumentUpload upload, string message)
+    {
+        try
+        {
+            followUps.UploadDocument(UserId, Org, caseId, stageId, kind, title ?? Path.GetFileNameWithoutExtension(upload.FileName), false, upload, Now);
+            return message + " پیوست ذخیره شد.";
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException)
+        {
+            return message + $" (پیوست ذخیره نشد: {exception.Message})";
+        }
+    }
 
     // ───────────── ۴. ارجاع و پذیرش مسئولیت ─────────────
 
@@ -203,11 +328,26 @@ public sealed class FollowUpsController(
     public IActionResult Refer(Guid id, string tab = "new", ReferralScope scope = ReferralScope.Stage, string? branchId = null) => Guarded(() =>
     {
         var dto = Load(id);
-        var due = Now.AddHours(4);
-        var command = new ReferFollowUpCommand(dto.ActiveStage is null ? ReferralScope.Case : scope, dto.ActiveStage?.Id, Guid.Empty, branchId ?? dto.BranchId, null,
-            null, Crm.Domain.Common.TehranTime.Date(due), Crm.Domain.Common.TehranTime.Clock(due), true, false, false);
+        var preset = AcceptPresets(Now).First();
+        var command = new ReferFollowUpCommand(dto.ActiveStage is null ? ReferralScope.Case : scope, dto.ActiveStage?.Id, Guid.Empty, branchId ?? dto.BranchId, dto.Queue,
+            null, preset.Date, preset.Time, true, false, false);
         return PartialView("_ReferForm", ReferModel(dto, command, tab));
     });
+
+    /// <summary>«مهلت پذیرش» choices: today 16:00 while it is still ahead (Tehran time), then tomorrow 10:00 and 16:00, and two working days.</summary>
+    public static IReadOnlyList<(string Key, string Label, string Date, string Time)> AcceptPresets(DateTimeOffset nowUtc)
+    {
+        var tehranNow = Crm.Domain.Common.TehranTime.Local(nowUtc);
+        var list = new List<(string, string, string, string)>();
+        var today = Crm.Domain.Common.TehranTime.Date(nowUtc);
+        var tomorrow = Crm.Domain.Common.TehranTime.Date(nowUtc.AddDays(1));
+        if (tehranNow.Hour < 15) list.Add(("today16", "امروز ۱۶:۰۰", today, "16:00"));
+        var four = nowUtc.AddHours(4);
+        list.Add(("4h", $"چهار ساعت دیگر ({FollowUpLabels.Fa(Crm.Domain.Common.TehranTime.Clock(four))})", Crm.Domain.Common.TehranTime.Date(four), Crm.Domain.Common.TehranTime.Clock(four)));
+        list.Add(("tomorrow10", "فردا ۱۰:۰۰", tomorrow, "10:00"));
+        list.Add(("tomorrow16", "فردا ۱۶:۰۰", tomorrow, "16:00"));
+        return list;
+    }
 
     /// <summary>Refreshes the receiver list (and their capacity) when the target branch changes.</summary>
     [HttpGet("/follow-ups/{id:guid}/refer/receivers")]
@@ -219,8 +359,13 @@ public sealed class FollowUpsController(
 
     [HttpPost("/follow-ups/{id:guid}/refer")]
     [ValidateAntiForgeryToken]
-    public IActionResult Refer(Guid id, ReferFollowUpCommand command) => Mutation(
-        () => Changed(followUps.Refer(UserId, Org, id, command, Now).Message),
+    public IActionResult Refer(Guid id, ReferFollowUpCommand command, string? acceptPreset = null) => Mutation(
+        () =>
+        {
+            if (acceptPreset is { Length: > 0 } key && key != "custom" && AcceptPresets(Now).FirstOrDefault(x => x.Key == key) is { Key: not null } p)
+                command = command with { AcceptDate = p.Date, AcceptTime = p.Time };
+            return Changed(followUps.Refer(UserId, Org, id, command, Now).Message);
+        },
         message => FormError("_ReferForm", ReferModel(Load(id), command, "new"), message));
 
     [HttpPost("/follow-ups/referrals/{referralId:guid}/{answer:regex(^(accept|reject)$)}")]
@@ -274,9 +419,19 @@ public sealed class FollowUpsController(
 
     [HttpPost("/follow-ups/{id:guid}/wait")]
     [ValidateAntiForgeryToken]
-    public IActionResult Wait(Guid id, WaitFollowUpCommand command) => Mutation(
-        () => Changed(followUps.Wait(UserId, Org, id, command, Now).Message),
-        message => FormError("_WaitForm", WaitModel(Load(id), command, null, "wait"), message));
+    [RequestSizeLimit(MaxUpload)]
+    public async Task<IActionResult> Wait(Guid id, WaitFollowUpCommand command, IFormFile? requestFile)
+    {
+        IActionResult Error(string message) => FormError("_WaitForm", WaitModel(Load(id), command, null, "wait"), message);
+        if (requestFile is { Length: > CrmDocument.MaxBytes }) return Mutation(() => Error("حجم فایل بیش از ۱۰ مگابایت است."), Error);
+        var upload = requestFile is { Length: > 0 } f ? await Read(f) : null;
+        return Mutation(() =>
+        {
+            var message = followUps.Wait(UserId, Org, id, command, Now).Message;
+            if (upload is not null) message = Attach(id, command.StageId, FollowUpDocumentKind.Other, "درخواست اطلاعات ارسال‌شده", upload, message);
+            return Changed(message);
+        }, Error);
+    }
 
     [HttpPost("/follow-ups/{id:guid}/resume")]
     [ValidateAntiForgeryToken]
@@ -456,7 +611,12 @@ public sealed class FollowUpsController(
     }
 }
 
-public sealed record FollowUpCreateModel(CreateFollowUpCommand Command, FollowUpCreateOptions Options, IReadOnlyList<FollowUpDuplicateDto> Duplicates);
+public sealed record FollowUpCreateModel(CreateFollowUpCommand Command, FollowUpCreateOptions Options, IReadOnlyList<FollowUpDuplicateDto> Duplicates)
+{
+    /// <summary>A saved draft exists (offered for restore) / the form was filled from it.</summary>
+    public DateTimeOffset? DraftSavedAtUtc { get; init; }
+    public DateTimeOffset? DraftRestoredAtUtc { get; init; }
+}
 public sealed record FollowUpPlanModel(FollowUpCaseDto Case, PlanFollowUpActionCommand Command);
 public sealed record FollowUpResultModel(FollowUpCaseDto Case, FollowUpActivityDto Activity, RecordFollowUpResultCommand Command);
 public sealed record FollowUpReferModel(FollowUpCaseDto Case, ReferFollowUpCommand Command, string Tab, IReadOnlyList<AssignmentCandidateDto> Receivers,

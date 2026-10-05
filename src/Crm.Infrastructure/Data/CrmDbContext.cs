@@ -955,6 +955,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     public DbSet<Crm.Domain.FollowUps.FollowUpEvent> FollowUpEvents => Set<Crm.Domain.FollowUps.FollowUpEvent>();
     public DbSet<Crm.Domain.FollowUps.FollowUpActivityLink> FollowUpActivityLinks => Set<Crm.Domain.FollowUps.FollowUpActivityLink>();
     public DbSet<Crm.Domain.FollowUps.FollowUpSavedView> FollowUpSavedViews => Set<Crm.Domain.FollowUps.FollowUpSavedView>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpDraft> FollowUpDrafts => Set<Crm.Domain.FollowUps.FollowUpDraft>();
 
     /// <summary>Follow-up center (مرکز پیگیری): cases, stages, referrals, approvals, templates, SLA policies and queues; schema "followup".</summary>
     private static void ConfigureFollowUps(ModelBuilder modelBuilder)
@@ -1177,6 +1178,15 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
             entity.Property(x => x.Name).HasMaxLength(80).IsRequired();
             entity.Property(x => x.Query).HasMaxLength(500).IsRequired();
             entity.HasIndex(x => new { x.UserId, x.CompanyId, x.Name }).IsUnique();
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpDraft>(entity => {
+            ConfigureEntity(entity, "Drafts", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Kind).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Payload).HasMaxLength(Crm.Domain.FollowUps.FollowUpDraft.MaxPayload).IsRequired();
+            entity.Property(x => x.SavedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.UserId, x.CompanyId, x.Kind }).IsUnique();
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.NoAction);
         });
     }
 

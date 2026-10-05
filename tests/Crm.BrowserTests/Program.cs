@@ -405,7 +405,8 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     // The large forms open in a centered popup; the registration form opens from the list button.
     await page.Locator(".list-head__actions a", new PageLocatorOptions { HasText = "پرونده پیگیری جدید" }).ClickAsync();
     await page.Locator("#modal.is-open #createForm").WaitForAsync();
-    Assert(await page.Locator("#modalTitle").InnerTextAsync() == "ثبت پرونده پیگیری", "The registration popup has no title.");
+    Assert(await page.Locator("#modal.modal--sheet .fu-sheet__title h2").InnerTextAsync() == "ثبت پرونده پیگیری" &&
+        (await page.Locator("#modal .fu-num").InnerTextAsync()).Trim() == "۱", "The registration sheet (۱) has no numbered header.");
     await page.Locator("#createForm select[name='CustomerId']").SelectOptionAsync("20000000-0000-4000-8000-000000000001");
     await page.Locator("#createForm select[name='ContactId'] option", new PageLocatorOptions { HasText = "علی رستگار" }).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await page.Locator("#createForm input[name='Subject']").FillAsync(subject);
@@ -424,7 +425,7 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     Assert(await page.Locator("#drawer.is-open").CountAsync() == 0 && await page.Locator("#modal.is-open").CountAsync() == 1, "The plan form does not open in the popup.");
     await plan.Locator("input[name='Title']").FillAsync("تماس مرورگر " + stamp);
     await plan.Locator("button[type='submit']").DblClickAsync();
-    await page.Locator("#modal[aria-hidden='true']").WaitForAsync();
+    await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await page.Locator(".fu-kpi", new PageLocatorOptions { HasText = "تماس مرورگر " + stamp }).WaitForAsync();
 
     // ۳. Record the result: logging the call does not complete the stage.
@@ -439,7 +440,7 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     await result.Locator("input[name='NextTitle']").FillAsync("ارسال لیست به فنی " + stamp);
     await result.Locator("input[name='RequestStageCompletion']").CheckAsync();
     await result.Locator("button[type='submit']").ClickAsync();
-    await page.Locator("#modal[aria-hidden='true']").WaitForAsync();
+    await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await page.Locator(".fu-kpi", new PageLocatorOptions { HasText = "ارسال لیست به فنی " + stamp }).WaitForAsync();
     await page.Locator("[data-fu-tab='stages']").ClickAsync();
     Assert(!(await page.Locator(".fu-stage-table tbody tr").First.InnerTextAsync()).Contains("تکمیل‌شده"), "A logged call completed the stage.");
@@ -451,7 +452,17 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     foreach (var box in await checklist.Locator("input[name='done']").AllAsync()) await box.CheckAsync();
     Assert(!await completeButton.IsDisabledAsync(), "«تکمیل مرحله» stays locked after the checklist is done.");
     await completeButton.ClickAsync();
-    await page.Locator(".fu-total", new PageLocatorOptions { HasText = "10" }).WaitForAsync();
+    await page.Locator(".fu-total", new PageLocatorOptions { HasText = "۱۰" }).WaitForAsync();
+
+    // ۴. The referral sheet shows the chosen receiver's capacity and offers acceptance-deadline presets.
+    await page.Locator(".fu-head__actions button", new PageLocatorOptions { HasText = "ارجاع" }).ClickAsync();
+    var refer = page.Locator("#modalBody form[action$='/refer']");
+    await refer.WaitForAsync();
+    await refer.Locator("[data-capacity-card]:not([hidden])").WaitForAsync();
+    Assert((await refer.Locator("[data-capacity-load]").InnerTextAsync()).Length > 0 && await refer.Locator("select[name='acceptPreset'] option").CountAsync() >= 3,
+        "The referral sheet has no capacity card or deadline presets.");
+    await page.Locator("#modalBody .fu-sheet__close").ClickAsync();
+    await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
 
     // ۶. Waiting for the customer pauses the SLA; resuming needs a next action.
     await page.Locator(".fu-head__actions button", new PageLocatorOptions { HasText = "انتظار" }).ClickAsync();
@@ -466,16 +477,17 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     await resume.WaitForAsync();
     await resume.Locator("input[name='NextTitle']").FillAsync("بررسی نقشه " + stamp);
     await resume.Locator("button[type='submit']").ClickAsync();
-    await page.Locator("#modal[aria-hidden='true']").WaitForAsync();
+    await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await page.Locator(".fu-banner--wait").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
 
     // ۸. The close form lists the controls and does not allow closing an incomplete case.
     await page.Locator(".fu-head__actions button", new PageLocatorOptions { HasText = "بستن پرونده" }).ClickAsync();
     var close = page.Locator("#modalBody form[action$='/close']");
     await close.WaitForAsync();
-    Assert(await close.Locator(".fu-checks .is-fail").CountAsync() > 0 && await close.Locator("button[type='submit']").IsDisabledAsync(),
+    Assert(await close.Locator(".fu-close-checks .is-fail").CountAsync() > 0 && await close.Locator("button[type='submit']").IsDisabledAsync(),
         "An incomplete case can be closed from the form.");
-    await page.Locator("#modalClose").ClickAsync();
+    await page.Locator("#modalBody .fu-sheet__close").ClickAsync();
+    await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     // Short forms (change owner / merge) keep the side drawer.
     await page.Locator(".fu-more summary").ClickAsync();
     await page.Locator(".fu-more a", new PageLocatorOptions { HasText = "تغییر مسئول" }).ClickAsync();
@@ -495,7 +507,7 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     await page.Locator("button", new PageLocatorOptions { HasText = "پیش‌نمایش محاسبه" }).ClickAsync();
     await page.Locator("#slaPreview .fu-facts").WaitForAsync();
     await page.GotoAsync(baseUrl + "/follow-ups/supervision", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-    await page.Locator(".fu-super table").GetByText("RQ-24087").First.WaitForAsync();
+    await page.Locator(".fu-attention").GetByText("RQ-24087").First.WaitForAsync();
 }
 
 static async Task VerifyActivityForm(IPage page, string baseUrl)

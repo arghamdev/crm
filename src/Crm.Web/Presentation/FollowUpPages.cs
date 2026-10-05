@@ -67,6 +67,12 @@ public static class FollowUpLabels
         FollowUpChannel.Portal => "پرتال", _ => "مراجعه حضوری"
     };
 
+    public static string ChannelIcon(FollowUpChannel channel) => channel switch
+    {
+        FollowUpChannel.Phone => "i-phone", FollowUpChannel.Email => "i-mail", FollowUpChannel.Message => "i-chat", FollowUpChannel.Visit => "i-pin",
+        FollowUpChannel.Portal => "i-globe", _ => "i-building"
+    };
+
     public static string Related(FollowUpRelatedKind kind) => kind switch
     {
         FollowUpRelatedKind.Opportunity => "فرصت فروش", FollowUpRelatedKind.Quote => "پیش‌فاکتور", FollowUpRelatedKind.Order => "سفارش",
@@ -165,6 +171,51 @@ public static class FollowUpLabels
         FollowUpTemplateStatus.Draft => "پیش‌نویس", FollowUpTemplateStatus.Published => "منتشرشده", _ => "بایگانی"
     };
 
+    /// <summary>Western digits to Persian digits («۱۴۰۵/۰۷/۱۳ ۱۶:۳۰»).</summary>
+    public static string Fa(object? value)
+    {
+        var text = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "";
+        var chars = text.ToCharArray();
+        for (var i = 0; i < chars.Length; i++) if (chars[i] is >= '0' and <= '9') chars[i] = (char)('۰' + (chars[i] - '0'));
+        return new string(chars);
+    }
+
+    private static readonly string[] Ones = ["صفر", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه", "ده", "یازده", "دوازده", "سیزده", "چهارده",
+        "پانزده", "شانزده", "هفده", "هجده", "نوزده"];
+    private static readonly string[] Tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
+
+    /// <summary>0–100 in Persian words («هفتاد و پنج») as the case page reads them («هفتاد درصد»).</summary>
+    public static string Words(int value)
+    {
+        if (value is < 0 or > 100) return Fa(value);
+        if (value == 100) return "صد";
+        if (value < 20) return Ones[value];
+        return value % 10 == 0 ? Tens[value / 10] : $"{Tens[value / 10]} و {Ones[value % 10]}";
+    }
+
+    /// <summary>Tehran date and time relative to today («امروز ۱۶:۳۰», «فردا ۱۰:۰۰», «۱۴۰۵/۰۷/۱۶ ۱۰:۰۰»).</summary>
+    public static string When(DateTimeOffset? utc, DateTimeOffset nowUtc)
+    {
+        if (utc is not { } at) return "—";
+        var day = Crm.Domain.Common.TehranTime.Today(at);
+        var today = Crm.Domain.Common.TehranTime.Today(nowUtc);
+        var clock = Fa(Crm.Domain.Common.TehranTime.Clock(at));
+        return day == today ? $"امروز {clock}" : day == today.AddDays(1) ? $"فردا {clock}" : day == today.AddDays(-1) ? $"دیروز {clock}" :
+            Fa(Crm.Domain.Common.TehranTime.Format(at));
+    }
+
+    public static string StageIcon(string name) => name switch
+    {
+        _ when name.Contains("نیاز") || name.Contains("دریافت") => "i-inbox",
+        _ when name.Contains("فنی") || name.Contains("بررسی") => "i-flask",
+        _ when name.Contains("موجودی") || name.Contains("انبار") || name.Contains("تأمین") => "i-box",
+        _ when name.Contains("پیش‌فاکتور") || name.Contains("قیمت") => "i-file",
+        _ when name.Contains("تأیید") => "i-shield",
+        _ when name.Contains("ارسال") || name.Contains("تحویل") => "i-send",
+        _ when name.Contains("پرداخت") || name.Contains("وصول") => "i-check",
+        _ => "i-task"
+    };
+
     /// <summary>Working minutes as «۲ روز و ۳ ساعت کاری» (a working day is nine hours by default).</summary>
     public static string Minutes(int minutes)
     {
@@ -198,4 +249,10 @@ public sealed record FollowUpListPage(FollowUpListDto List, ListState State, IRe
         }), branches, inbox, nowUtc);
 
     public string BranchName(string branchId) => Branches.FirstOrDefault(x => string.Equals(x.Id, branchId, StringComparison.OrdinalIgnoreCase))?.Name ?? branchId;
+}
+
+/// <summary>Header of a follow-up form sheet (v1.11.0): the numbered badge of the form image, the title, a subtitle and the case chip.</summary>
+public sealed record FollowUpSheetHead(int Number, string Title, string? Subtitle = null, string? Chip = null, string ChipTone = "", string? CloseHref = null)
+{
+    public static string CaseChip(FollowUpCaseDto c) => $"{c.Code} / {c.CustomerName}";
 }

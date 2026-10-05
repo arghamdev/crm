@@ -7,82 +7,101 @@
     var steps = (p.Escalations ?? []).ToList();
     if (steps.Count == 0) steps.Add(new SlaEscalation(0, EscalationTarget.Supervisor));
     var when = new[] { (-60, "۶۰ دقیقه قبل از سررسید"), (-30, "۳۰ دقیقه قبل از سررسید"), (-15, "۱۵ دقیقه قبل از سررسید"), (0, "در زمان سررسید"), (60, "۱ ساعت پس از سررسید"), (120, "۲ ساعت پس از سررسید"), (240, "۴ ساعت پس از سررسید"), (1440, "۱ روز پس از سررسید") };
+    // «تقویم کاری»: named calendars fill the working days and hours; «سفارشی» keeps what is entered below.
+    var calendars = new[]
+    {
+        ("iran-hq", "ایران · دفتر مرکزی", "Saturday Sunday Monday Tuesday Wednesday", "08:00", "17:00", "Asia/Tehran"),
+        ("iran-branch", "ایران · شعب (تا پنجشنبه)", "Saturday Sunday Monday Tuesday Wednesday Thursday", "08:00", "16:00", "Asia/Tehran"),
+        ("uae", "امارات · دفتر دبی", "Monday Tuesday Wednesday Thursday Friday", "09:00", "18:00", "Asia/Dubai")
+    };
+    var dayKey = string.Join(' ', FollowUpLabels.WeekDays.Where(days.Contains));
+    var calendar = calendars.FirstOrDefault(x => x.Item3 == dayKey && x.Item4 == p.WorkStart && x.Item5 == p.WorkEnd && x.Item6 == p.TimeZoneId).Item1 ?? "custom";
+    var holidays = (p.Holidays ?? "").Split([',', '،', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
+    var dayNames = string.Join("، ", FollowUpLabels.WeekDays.Where(days.Contains).Select(FollowUpLabels.Day));
 }
 <nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><a href="/follow-ups/settings?tab=policies">تنظیمات</a><svg><use href="#i-chevron"/></svg><span>مهلت‌ها و هشدارها</span></nav>
-<header class="list-head">
-    <div class="list-head__title">
-        <span class="list-head__icon"><svg><use href="#i-clock"/></svg></span>
-        <div><h1>مهلت‌ها و هشدارها</h1><p>مهلت‌های مستقل، تقویم کاری شعبه، توقف مجاز و هشدار سلسله‌مراتبی (هشدار مالک پرونده را تغییر نمی‌دهد)</p></div>
-    </div>
-</header>
+<div class="fu-page">
 @if (Context.Request.Query.ContainsKey("saved")) { <p class="account-banner"><svg><use href="#i-check"/></svg>سیاست ذخیره شد؛ برای پرونده‌های جدید و محاسبهٔ بعدی مهلت‌ها اعمال می‌شود.</p> }
-<form id="policyForm" class="fu-form" method="post" action="/follow-ups/settings/policies">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="id" value="@Model.Id" />
-    <input type="hidden" name="ExpectedVersion" value="@p.ExpectedVersion" />
-    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <div class="fu-form__grid">
-        <section class="form-section">
-            <h3>سیاست</h3>
-            <div class="form-grid">
-                <label class="field--full"><span>نام سیاست *</span><input name="Name" value="@p.Name" required maxlength="120" /></label>
-                <label><span>اولویت</span><select name="Priority">@foreach (var x in Enum.GetValues<FollowUpPriority>()) { <option value="@x" selected="@(p.Priority == x)">@FollowUpLabels.Priority(x)</option> }</select></label>
-                <label><span>نوع پیگیری</span><select name="CaseType"><option value="">همهٔ انواع</option>@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(p.CaseType == x.Key)">@x.Label</option> }</select></label>
-                <label class="consent-row field--full"><input type="checkbox" name="IsActive" value="true" checked="@p.IsActive" /><span>فعال</span></label>
-            </div>
-        </section>
-        <section class="form-section">
-            <h3>تقویم کاری</h3>
-            <div class="form-grid">
-                <label><span>منطقهٔ زمانی</span><select name="TimeZoneId"><option value="Asia/Tehran" selected="@(p.TimeZoneId == "Asia/Tehran")">تهران (Asia/Tehran)</option><option value="Asia/Dubai" selected="@(p.TimeZoneId == "Asia/Dubai")">دبی (Asia/Dubai)</option><option value="Europe/Istanbul" selected="@(p.TimeZoneId == "Europe/Istanbul")">استانبول</option><option value="UTC" selected="@(p.TimeZoneId == "UTC")">UTC</option></select></label>
-                <label><span>ساعات کاری</span><span class="fu-range"><input name="WorkStart" value="@p.WorkStart" dir="ltr" aria-label="شروع" /> تا <input name="WorkEnd" value="@p.WorkEnd" dir="ltr" aria-label="پایان" /></span></label>
-                <fieldset class="field--full fu-days"><legend>روزهای کاری</legend>
-                    @foreach (var d in FollowUpLabels.WeekDays) { <label class="fu-day"><input type="checkbox" name="WorkDays" value="@d" checked="@days.Contains(d)" /><span>@FollowUpLabels.Day(d)</span></label> }
-                </fieldset>
-                <label class="field--full"><span>تعطیلات (تاریخ شمسی، هر مورد با ویرگول یا خط جدید)</span><textarea name="Holidays" rows="2" maxlength="2000" placeholder="۱۴۰۵/۰۷/۲۰، ۱۴۰۵/۰۸/۱۲">@p.Holidays</textarea></label>
-            </div>
-        </section>
-        <section class="form-section">
-            <h3>مهلت‌های مستقل (ساعت کاری)</h3>
-            <div class="form-grid fu-grid-3">
-                <label><span>پاسخ اولیه</span><input name="FirstResponseHours" value="@p.FirstResponseHours" type="number" min="1" max="720" dir="ltr" /></label>
-                <label><span>هر مرحله</span><input name="StageHours" value="@p.StageHours" type="number" min="1" max="2000" dir="ltr" /></label>
-                <label><span>حل کامل</span><input name="ResolutionHours" value="@p.ResolutionHours" type="number" min="1" max="5000" dir="ltr" /></label>
-            </div>
-            <h3 class="fu-h3-gap">توقف مجاز مهلت</h3>
-            <label class="consent-row"><input type="checkbox" name="PauseOnWaitingCustomer" value="true" checked="@p.PauseOnWaitingCustomer" /><span>در انتظار مشتری — بله</span></label>
-            <label class="consent-row"><input type="checkbox" name="PauseOnWaitingInternal" value="true" checked="@p.PauseOnWaitingInternal" /><span>در انتظار واحد داخلی / تأمین‌کننده</span></label>
-            <small class="field-help">وضعیت «متوقف» مهلت را متوقف نمی‌کند؛ توقف فقط با علت ثبت و در گزارش «زمان کل» و «زمان مهلت» جدا نمایش داده می‌شود.</small>
-        </section>
-        <section class="form-section">
-            <h3>هشدار سلسله‌مراتبی</h3>
-            <div class="fu-esc" data-rows>
-                @foreach (var step in steps)
-                {
-                    <div class="fu-esc__row" data-row>
-                        <select name="EscalationOffset" aria-label="زمان">@foreach (var (value, label) in when.Append((step.OffsetMinutes, $"{step.OffsetMinutes} دقیقه")).DistinctBy(x => x.Item1).OrderBy(x => x.Item1)) { <option value="@value" selected="@(value == step.OffsetMinutes)">@label</option> }</select>
-                        <span>←</span>
-                        <select name="EscalationTarget" aria-label="گیرنده">@foreach (var target in Enum.GetValues<EscalationTarget>()) { <option value="@target" selected="@(step.Target == target)">@FollowUpLabels.Escalation(target)</option> }</select>
-                        <button type="button" class="icon-button" data-remove-row aria-label="حذف"><svg><use href="#i-close"/></svg></button>
-                    </div>
-                }
-                <template data-row-template><div class="fu-esc__row" data-row><select name="EscalationOffset" aria-label="زمان">@foreach (var (value, label) in when) { <option value="@value">@label</option> }</select><span>←</span><select name="EscalationTarget" aria-label="گیرنده">@foreach (var target in Enum.GetValues<EscalationTarget>()) { <option value="@target">@FollowUpLabels.Escalation(target)</option> }</select><button type="button" class="icon-button" data-remove-row aria-label="حذف"><svg><use href="#i-close"/></svg></button></div></template>
-                <button type="button" class="link-button" data-add-row><svg><use href="#i-plus"/></svg>افزودن سطح هشدار</button>
-            </div>
-            <p class="fu-sla-note"><svg><use href="#i-info"/></svg><span>هشدار به سطح بعدی مدیریت می‌رسد اما مالک پرونده را تغییر نمی‌دهد. اجرای هشدارها در سرور است و هر پیام فقط یک بار ارسال می‌شود.</span></p>
-        </section>
-    </div>
-    <section class="form-section fu-preview">
-        <h3>پیش‌نمایش محاسبه</h3>
-        <div class="form-grid fu-grid-3">
-            <label><span>زمان ثبت فرضی (تاریخ)</span><input name="previewDate" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></label>
-            <label><span>ساعت</span><input name="previewTime" value="16:30" dir="ltr" /></label>
-            <div class="fu-preview__btn"><button class="button button--ghost" type="button" hx-post="/follow-ups/settings/policies/preview" hx-include="#policyForm" hx-target="#slaPreview" hx-swap="innerHTML"><svg><use href="#i-clock"/></svg>پیش‌نمایش محاسبه</button></div>
+<form id="policyForm" class="fu-sheet fu-sheet--card" method="post" action="/follow-ups/settings/policies">
+    <partial name="/Views/FollowUps/_SheetHead.cshtml" model="@(new FollowUpSheetHead(10, "مهلت‌ها و هشدارها", "سیاست پاسخ‌گویی و رسیدگی", p.IsActive ? "فعال" : "غیرفعال", p.IsActive ? "" : "muted", "/follow-ups/settings?tab=policies"))" />
+    <div class="fu-sheet__body">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input type="hidden" name="ExpectedVersion" value="@p.ExpectedVersion" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="fu-g">
+            <label class="fu-f"><span class="fu-f__l">نام سیاست<i>*</i></span><span class="fu-f__c"><svg><use href="#i-shield"/></svg><input name="Name" value="@p.Name" required maxlength="120" /></span></label>
+            <label class="fu-f"><span class="fu-f__l">اولویت</span><span class="fu-f__c"><span class="fu-dot" data-tone="@p.Priority"></span><select name="Priority" data-dot>@foreach (var x in Enum.GetValues<FollowUpPriority>()) { <option value="@x" selected="@(p.Priority == x)">@FollowUpLabels.Priority(x)</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">تقویم کاری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><select name="calendarPreset" data-calendar>
+                @foreach (var (key, label, d, start, end, zone) in calendars) { <option value="@key" data-days="@d" data-start="@start" data-end="@end" data-zone="@zone" selected="@(calendar == key)">@label</option> }
+                <option value="custom" selected="@(calendar == "custom")">تقویم سفارشی…</option>
+            </select></span></label>
+            <label class="fu-f"><span class="fu-f__l">منطقهٔ زمانی</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="TimeZoneId"><option value="Asia/Tehran" selected="@(p.TimeZoneId == "Asia/Tehran")">تهران (GMT+۳:۳۰)</option><option value="Asia/Dubai" selected="@(p.TimeZoneId == "Asia/Dubai")">دبی (GMT+۴)</option><option value="Europe/Istanbul" selected="@(p.TimeZoneId == "Europe/Istanbul")">استانبول (GMT+۳)</option><option value="UTC" selected="@(p.TimeZoneId == "UTC")">UTC</option></select></span></label>
+            <label class="fu-f"><span class="fu-f__l">نوع پیگیری</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="CaseType"><option value="">همهٔ انواع</option>@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(p.CaseType == x.Key)">@x.Label</option> }</select></span></label>
+            <label class="fu-checks-inline fu-f--toggle"><input type="checkbox" name="IsActive" value="true" checked="@p.IsActive" /><span>سیاست فعال است</span></label>
         </div>
-        <div id="slaPreview" aria-live="polite"></div>
-    </section>
-    <div class="fu-form__actions">
-        <a class="button button--ghost" href="/follow-ups/settings?tab=policies">انصراف</a>
-        <button class="button button--primary" type="submit"><svg><use href="#i-check"/></svg>ذخیرهٔ سیاست</button>
+        <section class="fu-box fu-box--blue">
+            <p class="fu-box__h"><svg><use href="#i-clock"/></svg>ساعات کاری</p>
+            <p class="fu-workhours" data-workhours><span>روزها: <b>@(dayNames.Length > 0 ? dayNames : "—")</b></span><span>ساعت: <b>@FollowUpLabels.Fa(p.WorkStart) تا @FollowUpLabels.Fa(p.WorkEnd)</b></span><span>تعطیلات ثبت‌شده: <b>@FollowUpLabels.Fa(holidays)</b></span></p>
+            <details class="fu-more-fields fu-box--plain" open="@(calendar == "custom")" data-switch-for="calendar-open">
+                <summary><svg><use href="#i-chevron"/></svg>ویرایش روزها، ساعت‌ها و تعطیلات</summary>
+                <div class="fu-g">
+                    <fieldset class="fu-days fu-span"><legend>روزهای کاری</legend>
+                        @foreach (var d in FollowUpLabels.WeekDays) { <label class="fu-day"><input type="checkbox" name="WorkDays" value="@d" checked="@days.Contains(d)" /><span>@FollowUpLabels.Day(d)</span></label> }
+                    </fieldset>
+                    <label class="fu-f"><span class="fu-f__l">شروع ساعت کاری</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="WorkStart" value="@p.WorkStart" dir="ltr" /></span></label>
+                    <label class="fu-f"><span class="fu-f__l">پایان ساعت کاری</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="WorkEnd" value="@p.WorkEnd" dir="ltr" /></span></label>
+                    <label class="fu-f fu-span"><span class="fu-f__l">تعطیلات (تاریخ شمسی، با ویرگول یا خط جدید)</span><span class="fu-f__c"><textarea name="Holidays" rows="2" maxlength="2000" placeholder="۱۴۰۵/۰۷/۲۰، ۱۴۰۵/۰۸/۱۲">@p.Holidays</textarea></span></label>
+                </div>
+            </details>
+        </section>
+        <section class="fu-sec">
+            <h3 class="fu-sec__h"><svg><use href="#i-hourglass"/></svg>مهلت‌های مستقل<small class="fu-f__hint">محاسبه براساس ساعات کاری</small></h3>
+            <div class="fu-g fu-g--3">
+                <label class="fu-f"><span class="fu-f__l">پاسخ اولیه</span><span class="fu-f__c fu-f__c--suffix" data-suffix="ساعت"><input name="FirstResponseHours" value="@p.FirstResponseHours" type="number" min="1" max="720" dir="ltr" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">هر مرحله</span><span class="fu-f__c fu-f__c--suffix" data-suffix="ساعت"><input name="StageHours" value="@p.StageHours" type="number" min="1" max="2000" dir="ltr" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">حل کامل</span><span class="fu-f__c fu-f__c--suffix" data-suffix="ساعت"><input name="ResolutionHours" value="@p.ResolutionHours" type="number" min="1" max="5000" dir="ltr" /></span></label>
+            </div>
+        </section>
+        <section class="fu-sec">
+            <h3 class="fu-sec__h"><svg><use href="#i-pause"/></svg>توقف مجاز زمان</h3>
+            <div class="fu-checks-inline">
+                <label><input type="checkbox" name="PauseOnWaitingCustomer" value="true" checked="@p.PauseOnWaitingCustomer" /><span>در انتظار مشتری</span></label>
+                <label><input type="checkbox" name="PauseOnWaitingInternal" value="true" checked="@p.PauseOnWaitingInternal" /><span>در انتظار واحد داخلی / تأمین‌کننده</span></label>
+            </div>
+            <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>وضعیت «متوقف» مهلت را متوقف نمی‌کند؛ زمان توقف جداگانه در گزارش «زمان کل» و «زمان مهلت» نمایش داده می‌شود.</span></p>
+        </section>
+        <section class="fu-sec" data-rows>
+            <h3 class="fu-sec__h"><svg><use href="#i-bell"/></svg>هشدار سلسله‌مراتبی<button type="button" class="fu-add" data-add-row><svg><use href="#i-plus"/></svg>افزودن سطح هشدار</button></h3>
+            <table class="fu-t">
+                <thead><tr><th>زمان هشدار</th><th>گیرندهٔ هشدار</th><th class="fu-t__ops"><span class="sr-only">حذف</span></th></tr></thead>
+                <tbody>
+                    @foreach (var step in steps)
+                    {
+                        <tr data-row>
+                            <td><select name="EscalationOffset" aria-label="زمان هشدار">@foreach (var (value, label) in when.Append((step.OffsetMinutes, $"{step.OffsetMinutes} دقیقه")).DistinctBy(x => x.Item1).OrderBy(x => x.Item1)) { <option value="@value" selected="@(value == step.OffsetMinutes)">@label</option> }</select></td>
+                            <td><select name="EscalationTarget" aria-label="گیرندهٔ هشدار">@foreach (var target in Enum.GetValues<EscalationTarget>()) { <option value="@target" selected="@(step.Target == target)">@FollowUpLabels.Escalation(target)</option> }</select></td>
+                            <td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف سطح هشدار"><svg><use href="#i-trash"/></svg></button></td>
+                        </tr>
+                    }
+                    <template data-row-template><tr data-row><td><select name="EscalationOffset" aria-label="زمان هشدار">@foreach (var (value, label) in when) { <option value="@value">@label</option> }</select></td><td><select name="EscalationTarget" aria-label="گیرندهٔ هشدار">@foreach (var target in Enum.GetValues<EscalationTarget>()) { <option value="@target">@FollowUpLabels.Escalation(target)</option> }</select></td><td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف سطح هشدار"><svg><use href="#i-trash"/></svg></button></td></tr></template>
+                </tbody>
+            </table>
+            <p class="fu-note fu-note--amber"><svg><use href="#i-alert"/></svg><span>هشدار به مدیر، مسئول پرونده را تغییر نمی‌دهد. اجرای هشدارها در سرور است و هر پیام فقط یک بار ارسال می‌شود.</span></p>
+        </section>
+        <section class="fu-sec fu-box fu-box--plain">
+            <h3 class="fu-sec__h"><svg><use href="#i-pulse"/></svg>پیش‌نمایش محاسبه</h3>
+            <div class="fu-g">
+                <label class="fu-f"><span class="fu-f__l">زمان ثبت فرضی (تاریخ)</span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="previewDate" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></span></label>
+                <label class="fu-f"><span class="fu-f__l">ساعت</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="previewTime" value="16:30" dir="ltr" /></span></label>
+            </div>
+            <div id="slaPreview" aria-live="polite"><p class="fu-f__hint">زمان فرضی را وارد کنید و «پیش‌نمایش محاسبه» را بزنید تا سررسیدها و زمان هشدارها با همین تنظیمات نمایش داده شود.</p></div>
+        </section>
     </div>
+    <footer class="fu-sheet__foot">
+        <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ذخیرهٔ سیاست</button>
+        <button class="button button--secondary" type="button" hx-post="/follow-ups/settings/policies/preview" hx-include="#policyForm" hx-target="#slaPreview" hx-swap="innerHTML" hx-disabled-elt="this"><svg><use href="#i-pulse"/></svg>پیش‌نمایش محاسبه</button>
+        <a class="button button--ghost fu-foot__end" href="/follow-ups/settings?tab=policies">انصراف</a>
+    </footer>
 </form>
+</div>

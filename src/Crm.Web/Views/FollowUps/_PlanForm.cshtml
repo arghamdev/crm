@@ -3,51 +3,77 @@
     var c = Model.Case;
     var cmd = Model.Command;
     var action = $"/follow-ups/{c.Id}/plan";
-    var kinds = new[] { ("Call", "تماس", "i-phone"), ("Meeting", "جلسه", "i-calendar"), ("Visit", "بازدید", "i-pin"), ("Task", "کار داخلی", "i-task") };
+    var kinds = new[] { ("Call", "تماس", "i-phone"), ("Meeting", "جلسه", "i-users"), ("Visit", "بازدید", "i-pin"), ("Task", "کار داخلی", "i-task") };
     var checklist = cmd.PreChecklist ?? [];
     var done = (cmd.PreChecklistDone ?? []).ToHashSet();
     var reminders = new[] { (0, "بدون یادآوری"), (15, "۱۵ دقیقه قبل"), (30, "۳۰ دقیقه قبل"), (60, "۱ ساعت قبل"), (1440, "۱ روز قبل") };
+    var durations = new[] { 15, 30, 45, 60, 90, 120 };
+    var zones = new[] { ("Asia/Tehran", "تهران (GMT+۳:۳۰)"), ("Asia/Dubai", "دبی (GMT+۴)"), ("Europe/Istanbul", "استانبول (GMT+۳)") };
+    var noun = cmd.Kind switch { "Call" => "تماس", "Meeting" => "جلسه", "Visit" => "بازدید", _ => "اقدام" };
+    var needsContact = cmd.Kind != "Task" && c.Contacts.Count > 0;
 }
-<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="OperationId" value="@cmd.OperationId" />
-    <span data-drawer-title hidden>برنامه‌ریزی اقدام</span>
-    <partial name="_CaseContext" model="c" />
-    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <section class="form-section form-section--wide">
-        <h3>نوع اقدام</h3>
-        <div class="fu-segment" role="radiogroup" aria-label="نوع اقدام">
-            @foreach (var (value, label, icon) in kinds)
+<form class="fu-sheet" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <partial name="_SheetHead" model="@(new FollowUpSheetHead(2, "برنامه‌ریزی اقدام", null, FollowUpSheetHead.CaseChip(c)))" />
+    <div class="fu-sheet__body">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OperationId" value="@cmd.OperationId" />
+        <input type="hidden" name="Kind" value="@cmd.Kind" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="fu-f">
+            <span class="fu-f__l">نوع اقدام<i>*</i></span>
+            <div class="fu-kind" role="radiogroup" aria-label="نوع اقدام">
+                @foreach (var (value, label, icon) in kinds)
+                {
+                    <a class="@(cmd.Kind == value ? "is-active" : "")" role="radio" aria-checked="@(cmd.Kind == value ? "true" : "false")" href="/follow-ups/@c.Id/plan?kind=@value" hx-disabled-elt="this" hx-get="/follow-ups/@c.Id/plan?kind=@value@(cmd.StageId is { } sid ? $"&stageId={sid}" : "")" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#@icon"/></svg>@label</a>
+                }
+            </div>
+        </div>
+        <div class="fu-g">
+            <label class="fu-f fu-span"><span class="fu-f__l">عنوان اقدام<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="Title" value="@cmd.Title" required maxlength="200" placeholder="مثلاً @noun برای تأیید اقلام پیش‌فاکتور" /></span></label>
+            <label class="fu-f"><span class="fu-f__l">مرحلهٔ مرتبط</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is not (FollowUpStageStatus.Done or FollowUpStageStatus.Skipped))) { <option value="@s.Id" selected="@(cmd.StageId == s.Id)">@s.Name</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">مسئول اقدام<i>*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="OwnerUserId" required>@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.OwnerUserId.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">مخاطب<i hidden="@(!needsContact)">*</i></span><span class="fu-f__c"><svg><use href="#i-users"/></svg><select name="ContactId" required="@needsContact" data-phone-target="Phone"><option value="">—</option>@foreach (var x in c.Contacts) { <option value="@x.Value" data-phone="@c.ContactPhones.GetValueOrDefault(x.Value)" selected="@(cmd.ContactId?.ToString() == x.Value)">@x.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">کانال ارتباط</span><span class="fu-f__c"><svg><use href="#@FollowUpLabels.ChannelIcon(cmd.Channel)"/></svg><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(cmd.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></span></label>
+        </div>
+        <div class="fu-g fu-g--3">
+            <label class="fu-f"><span class="fu-f__l">تاریخ<i>*</i></span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="Date" value="@cmd.Date" required placeholder="۱۴۰۵/۰۷/۱۴" inputmode="numeric" data-jalali /></span></label>
+            <label class="fu-f"><span class="fu-f__l">ساعت شروع<i>*</i></span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="Time" value="@cmd.Time" required placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></span></label>
+            @if (cmd.Kind == "Call")
             {
-                <a class="fu-segment__item@(cmd.Kind == value ? " is-active" : "")" href="/follow-ups/@c.Id/plan?kind=@value" hx-disabled-elt="this" hx-get="/follow-ups/@c.Id/plan?kind=@value@(cmd.StageId is { } sid ? $"&stageId={sid}" : "")" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#@icon"/></svg>@label</a>
+                <label class="fu-f"><span class="fu-f__l">شماره تماس</span><span class="fu-f__c"><svg><use href="#i-phone"/></svg><input name="Phone" value="@cmd.Phone" maxlength="30" dir="ltr" inputmode="tel" placeholder="021-..." /></span></label>
+            }
+            else if (cmd.Kind is "Meeting" or "Visit")
+            {
+                <label class="fu-f"><span class="fu-f__l">محل</span><span class="fu-f__c"><svg><use href="#i-pin"/></svg><input name="Location" value="@cmd.Location" maxlength="250" placeholder="@(cmd.Kind == "Visit" ? "کارخانه / انبار مشتری" : "دفتر مشتری یا پیوند جلسه")" /></span></label>
+            }
+            else
+            {
+                <span></span>
             }
         </div>
-        <input type="hidden" name="Kind" value="@cmd.Kind" />
-    </section>
-    <section class="form-section">
-        <h3>جزئیات</h3>
-        <div class="form-grid">
-            <label class="field--full"><span>عنوان *</span><input name="Title" value="@cmd.Title" required maxlength="200" placeholder="مثلاً تماس برای تأیید اقلام پیش‌فاکتور" /></label>
-            <label><span>مرحلهٔ مرتبط</span><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is not (FollowUpStageStatus.Done or FollowUpStageStatus.Skipped))) { <option value="@s.Id" selected="@(cmd.StageId == s.Id)">@s.Name</option> }</select></label>
-            <label><span>مسئول *</span><select name="OwnerUserId" required>@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.OwnerUserId.ToString() == u.Value)">@u.Label</option> }</select></label>
-            <label><span>شخص تماس</span><select name="ContactId"><option value="">—</option>@foreach (var x in c.Contacts) { <option value="@x.Value" selected="@(cmd.ContactId?.ToString() == x.Value || cmd.ContactId is null && x.Label == c.Contact)">@x.Label</option> }</select></label>
-            <label><span>کانال</span><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(cmd.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></label>
-            <label><span>تاریخ *</span><input name="Date" value="@cmd.Date" required placeholder="۱۴۰۵/۰۷/۱۴" inputmode="numeric" data-jalali /></label>
-            <label><span>ساعت (تهران)</span><input name="Time" value="@cmd.Time" placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></label>
-            @if (cmd.Kind != "Task") { <label><span>مدت (دقیقه)</span><input name="DurationMinutes" type="number" min="1" max="600" value="@cmd.DurationMinutes" dir="ltr" /></label> }
-            <label><span>یادآوری</span><select name="ReminderMinutes">@foreach (var (value, label) in reminders) { <option value="@(value == 0 ? "" : value.ToString())" selected="@((cmd.ReminderMinutes ?? 0) == value)">@label</option> }</select></label>
-            <label><span>اولویت</span><select name="Priority">@foreach (var p in Enum.GetValues<ActivityPriority>()) { <option value="@p" selected="@(cmd.Priority == p)">@AccountActivityService.PriorityLabel(p)</option> }</select></label>
-            @if (cmd.Kind is "Meeting" or "Visit") { <label class="field--full"><span>محل</span><input name="Location" value="@cmd.Location" maxlength="250" placeholder="@(cmd.Kind == "Visit" ? "محل بازدید (کارخانه / انبار مشتری)" : "دفتر مشتری یا پیوند جلسه")" /></label> }
-            <label class="field--full"><span>دستورالعمل</span><textarea name="Instructions" rows="3" maxlength="4000" placeholder="هدف اقدام و نکات لازم">@cmd.Instructions</textarea></label>
+        <div class="fu-g">
+            @if (cmd.Kind != "Task")
+            {
+                <label class="fu-f"><span class="fu-f__l">مدت</span><span class="fu-f__c"><svg><use href="#i-hourglass"/></svg><select name="DurationMinutes">@foreach (var d in durations) { <option value="@d" selected="@(cmd.DurationMinutes == d)">@FollowUpLabels.Fa(d) دقیقه</option> }</select></span></label>
+            }
+            <label class="fu-f"><span class="fu-f__l">منطقهٔ زمانی</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="TimeZone">@foreach (var (id, label) in zones) { <option value="@id" selected="@((cmd.TimeZone ?? "Asia/Tehran") == id)">@label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">یادآوری</span><span class="fu-f__c"><svg><use href="#i-bell"/></svg><select name="ReminderMinutes">@foreach (var (value, label) in reminders) { <option value="@(value == 0 ? "" : value.ToString())" selected="@((cmd.ReminderMinutes ?? 0) == value)">@label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">اولویت</span><span class="fu-f__c"><span class="fu-dot" data-tone="@cmd.Priority"></span><select name="Priority" data-dot>@foreach (var p in Enum.GetValues<ActivityPriority>()) { <option value="@p" selected="@(cmd.Priority == p)">@AccountActivityService.PriorityLabel(p)</option> }</select></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">دستور کار</span><span class="fu-f__c"><textarea name="Instructions" rows="3" maxlength="4000" placeholder="هدف @noun و نکاتی که باید مطرح شود">@cmd.Instructions</textarea></span></label>
         </div>
-    </section>
-    <section class="form-section">
-        <h3>چک‌لیست پیش از @(cmd.Kind == "Call" ? "تماس" : "اقدام")</h3>
-        @foreach (var item in checklist)
-        {
-            <label class="consent-row"><input type="hidden" name="PreChecklist" value="@item" /><input type="checkbox" name="PreChecklistDone" value="@item" checked="@done.Contains(item)" /><span>@item</span></label>
-        }
-        <p class="fu-sla-note"><svg><use href="#i-clock"/></svg><span>زمان‌ها به وقت تهران ثبت می‌شوند؛ یادآوری در سرور ارسال می‌شود و به باز بودن مرورگر وابسته نیست.</span></p>
-    </section>
-    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیرهٔ اقدام</button></div>
+        <section class="fu-box fu-box--blue">
+            <p class="fu-box__h"><svg><use href="#i-clipboard"/></svg>چک‌لیست قبل از @noun</p>
+            <div class="fu-checks-inline fu-checks-inline--col">
+                @foreach (var item in checklist)
+                {
+                    <label><input type="hidden" name="PreChecklist" value="@item" /><input type="checkbox" name="PreChecklistDone" value="@item" checked="@done.Contains(item)" /><span>@item</span></label>
+                }
+            </div>
+        </section>
+        <p class="fu-note fu-note--plain"><svg><use href="#i-clock"/></svg><span>زمان‌ها به وقت شعبهٔ تهران نمایش داده می‌شوند؛ یادآوری در سرور ارسال می‌شود و به باز بودن مرورگر وابسته نیست.</span></p>
+    </div>
+    <footer class="fu-sheet__foot">
+        <button class="button button--primary" type="submit"><svg><use href="#i-calendar"/></svg>ثبت برنامه</button>
+        <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+    </footer>
 </form>

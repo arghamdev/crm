@@ -23,6 +23,10 @@ public interface IFollowUpService
     FollowUpActionResult Create(Guid userId, OrganizationSelection organization, CreateFollowUpCommand command, DateTimeOffset nowUtc);
     FollowUpCaseDto? GetCase(Guid userId, OrganizationSelection organization, Guid caseId, DateTimeOffset nowUtc);
     IReadOnlyList<FollowUpReferralDto> GetInbox(Guid userId, OrganizationSelection organization, DateTimeOffset nowUtc);
+    /// <summary>Saves the user's draft of a form (kind "create" = ثبت پرونده) on the server; returns when it was saved.</summary>
+    DateTimeOffset SaveDraft(Guid userId, OrganizationSelection organization, string kind, IReadOnlyList<KeyValuePair<string, string>> fields, DateTimeOffset nowUtc);
+    (IReadOnlyList<KeyValuePair<string, string>> Fields, DateTimeOffset SavedAtUtc)? GetDraft(Guid userId, OrganizationSelection organization, string kind);
+    void DeleteDraft(Guid userId, OrganizationSelection organization, string kind);
     IReadOnlyList<AssignmentCandidateDto> GetReceivers(Guid userId, OrganizationSelection organization, Guid caseId, string? branchId, DateTimeOffset nowUtc);
 
     FollowUpActionResult PlanAction(Guid userId, OrganizationSelection organization, Guid caseId, PlanFollowUpActionCommand command, DateTimeOffset nowUtc);
@@ -349,6 +353,8 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
                 Notify(data, c, Supervisors(data, c, nowUtc), $"پرونده {c.Code} بدون مسئول", $"{c.Subject} — در صف تخصیص فرد آزاد نبود.", $"fu-unassigned:{c.Id}", nowUtc);
             }
             ClientOperations.Record(data, userId, command.OperationId, "FollowUpCase", c.Id);
+            var drafts = data.Table<FollowUpDraft>();
+            foreach (var draft in data.Find<FollowUpDraft>(x => x.UserId == userId && x.CompanyId == organization.CompanyId && x.Kind == "create")) drafts.Remove(draft);
             if (assignedTo != Guid.Empty && assignedTo != userId)
                 Notify(data, c, [assignedTo], $"پرونده {c.Code} به شما سپرده شد", c.Subject, $"fu-owner:{c.Id}:{assignedTo}", nowUtc);
             return new FollowUpActionResult(c.Id, $"پرونده {c.Code} ثبت شد.");
@@ -516,6 +522,48 @@ public sealed partial class FollowUpService(ICrmDataStore store, IAccessSnapshot
         checks.Add(new("ارجاع در انتظار پذیرش وجود ندارد", pendingRefs == 0, pendingRefs == 0 ? null : $"{pendingRefs} ارجاع پاسخ داده نشده"));
         return checks;
     }
+
+    // ───────────── پیش‌نویس (server-side drafts) ─────────────
+
+    private static readonly System.Text.Json.JsonSerializerOptions DraftJson = new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    private static string DraftPermission(string kind) => kind == "create" ? P.Create : throw new InvalidOperationException("نوع پیش‌نویس معتبر نیست.");
+
+    public DateTimeOffset SaveDraft(Guid userId, OrganizationSelection organization, string kind, IReadOnlyList<KeyValuePair<string, string>> fields, DateTimeOffset nowUtc)
+    {
+        var snapshot = Snapshot(userId);
+        if (!Has(snapshot, organization.CompanyId, DraftPermission(kind))) throw new UnauthorizedAccessException("Draft permission is required.");
+        var kept = fields.Where(x => x.Key is not ("__RequestVerificationToken" or "OperationId") && !string.IsNullOrWhiteSpace(x.Value)).ToList();
+        if (kept.Count == 0) throw new InvalidOperationException("برای پیش‌نویس حداقل یک فیلد را پر کنید.");
+        var payload = System.Text.Json.JsonSerializer.Serialize(kept.Select(x => new[] { x.Key, x.Value }), DraftJson);
+        return store.Write(data =>
+        {
+            var draft = data.Find<FollowUpDraft>(x => x.UserId == userId && x.CompanyId == organization.CompanyId && x.Kind == kind).SingleOrDefault();
+            if (draft is null) data.Append(new FollowUpDraft(Guid.NewGuid(), userId, organization.CompanyId, kind, payload, nowUtc));
+            else draft.Update(payload, nowUtc);
+            return nowUtc;
+        });
+    }
+
+    public (IReadOnlyList<KeyValuePair<string, string>> Fields, DateTimeOffset SavedAtUtc)? GetDraft(Guid userId, OrganizationSelection organization, string kind)
+    {
+        var snapshot = Snapshot(userId);
+        if (!Has(snapshot, organization.CompanyId, DraftPermission(kind))) return null;
+        return store.Read(data =>
+        {
+            var draft = data.Find<FollowUpDraft>(x => x.UserId == userId && x.CompanyId == organization.CompanyId && x.Kind == kind).SingleOrDefault();
+            if (draft is null) return ((IReadOnlyList<KeyValuePair<string, string>>, DateTimeOffset)?)null;
+            var rows = System.Text.Json.JsonSerializer.Deserialize<string[][]>(draft.Payload) ?? [];
+            return (rows.Where(x => x.Length == 2).Select(x => new KeyValuePair<string, string>(x[0], x[1])).ToList(), draft.SavedAtUtc);
+        });
+    }
+
+    public void DeleteDraft(Guid userId, OrganizationSelection organization, string kind) => store.Write(data =>
+    {
+        var table = data.Table<FollowUpDraft>();
+        foreach (var draft in data.Find<FollowUpDraft>(x => x.UserId == userId && x.CompanyId == organization.CompanyId && x.Kind == kind)) table.Remove(draft);
+        return 0;
+    });
 
     /// <summary>Possible receivers of a referral in the target branch, with their open cases against their queue capacity.</summary>
     public IReadOnlyList<AssignmentCandidateDto> GetReceivers(Guid userId, OrganizationSelection organization, Guid caseId, string? branchId, DateTimeOffset nowUtc)

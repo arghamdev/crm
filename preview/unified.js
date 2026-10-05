@@ -93,11 +93,11 @@
   }
   // Large forms open in a centered popup (same as the MVC follow-up center); short forms keep the drawer.
   function showPopupForm(title,fields,kind,id=''){
-    closeDrawer();$('#modal').classList.add('modal--form');$('#modalTitle').textContent=title;$('#modalFooter').innerHTML='';
+    closeDrawer();$('#modal').classList.remove('modal--sheet');$('#modal').classList.add('modal--form');$('#modalTitle').textContent=title;$('#modalFooter').innerHTML='';
     $('#modalBody').innerHTML=`<form class="u-form" data-u-form="${kind}" data-id="${id}">${fields}<div class="u-actions"><button class="button button--primary" type="submit">ثبت</button><button type="button" class="button button--ghost" data-action="close-modal">انصراف</button></div><div class="u-form-error" role="alert"></div></form>`;
     $('#modal').classList.add('is-open');$('#modalBackdrop').classList.add('is-open');$('#modal').setAttribute('aria-hidden','false');
   }
-  const legacyOpenModal=openModal;openModal=function(...args){$('#modal').classList.remove('modal--form');legacyOpenModal(...args);};
+  const legacyOpenModal=openModal;openModal=function(...args){$('#modal').classList.remove('modal--form','modal--sheet');legacyOpenModal(...args);};
   function closeForms(){closeDrawer();closeModal();}
   function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
   function csvCell(v){let s=String(v??'');if(/^[\s]*[=+\-@]/.test(s)||/[\r\n\t]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}

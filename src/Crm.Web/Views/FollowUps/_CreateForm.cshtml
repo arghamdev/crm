@@ -6,103 +6,125 @@
     var parts = (c.Parts ?? []).ToList();
     if (parts.Count == 0) parts.Add(new FollowUpPartInput(null, null, null, "عدد"));
     var extras = c.ExtraFields ?? new Dictionary<string, string?>();
+    // «تیم مسئول» and «مسئول پرونده» start from what the assignment rules suggest for this customer and type.
+    var queueId = c.QueueId ?? o.SuggestedQueueId;
+    var ownerId = c.OwnerUserId ?? o.SuggestedOwnerId;
+    var hasMore = !string.IsNullOrWhiteSpace(c.RelatedCode) || !string.IsNullOrWhiteSpace(c.PriorityReason) || !string.IsNullOrWhiteSpace(c.PartFamily) ||
+        (c.Language is { Length: > 0 } lang && lang != "fa") || extras.Values.Any(x => !string.IsNullOrWhiteSpace(x));
 }
-<form id="createForm" class="fu-form" method="post" action="/follow-ups" hx-post="/follow-ups" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]">
-    @Html.AntiForgeryToken()
-    <span data-drawer-title hidden>ثبت پرونده پیگیری</span>
-    <input type="hidden" name="OperationId" value="@c.OperationId" />
-    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    @if (Model.Duplicates.Count > 0)
-    {
-        <section class="callout callout--danger fu-duplicates">
-            <strong><svg><use href="#i-copy"/></svg>پروندهٔ باز مشابه برای این مشتری وجود دارد</strong>
-            <ul>@foreach (var d in Model.Duplicates) { <li><a href="/follow-ups/@d.Id" target="_blank"><bdi>@d.Code</bdi> · @d.Subject</a> <small>(@d.Reason · @FollowUpLabels.Status(d.Status))</small></li> }</ul>
-            <p>پیگیری را به همان پرونده اضافه کنید؛ اگر واقعاً موضوعی مستقل است، دلیل را بنویسید تا پرونده جداگانه ثبت شود.</p>
-            <label class="consent-row"><input type="checkbox" name="AllowDuplicate" value="true" checked="@c.AllowDuplicate" /><span>پرونده مستقل ثبت شود</span></label>
-            <label class="field--full"><span>دلیل ثبت پرونده مستقل *</span><input name="DuplicateReason" value="@c.DuplicateReason" maxlength="300" /></label>
+<form id="createForm" class="fu-sheet" method="post" action="/follow-ups" enctype="multipart/form-data" hx-post="/follow-ups" hx-encoding="multipart/form-data" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]">
+    <partial name="_SheetHead" model="@(new FollowUpSheetHead(1, "ثبت پرونده پیگیری", "ایجاد مسیر رسیدگی برای مشتری", o.CustomerName))" />
+    <div class="fu-sheet__body">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OperationId" value="@c.OperationId" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        @if (Model.DraftSavedAtUtc is { } saved)
+        {
+            <div class="fu-draft" id="fuDraftBanner">
+                <svg><use href="#i-save"/></svg>
+                <span>پیش‌نویس ذخیره‌شده روی سرور از @FollowUpLabels.When(saved, DateTimeOffset.UtcNow) موجود است.</span>
+                <button type="button" class="fu-add" hx-get="/follow-ups/new/form?restore=true" hx-target="#createForm" hx-swap="outerHTML" hx-disabled-elt="this"><svg><use href="#i-refresh"/></svg>بازیابی پیش‌نویس</button>
+                <button type="button" class="button button--ghost button--sm" hx-post="/follow-ups/drafts/create/delete" hx-include="#createForm [name='__RequestVerificationToken']" hx-target="#fuDraftBanner" hx-swap="outerHTML" hx-disabled-elt="this">حذف</button>
+            </div>
+        }
+        @if (Model.DraftRestoredAtUtc is { } restored)
+        {
+            <p class="fu-note fu-note--green"><svg><use href="#i-check"/></svg><span>فرم از پیش‌نویس @FollowUpLabels.When(restored, DateTimeOffset.UtcNow) بازیابی شد. پیوست‌ها در پیش‌نویس نگه داشته نمی‌شوند.</span></p>
+        }
+        @if (Model.Duplicates.Count > 0)
+        {
+            <section class="fu-box fu-box--red fu-duplicates">
+                <p class="fu-box__h"><svg><use href="#i-copy"/></svg>پروندهٔ باز مشابه برای این مشتری وجود دارد</p>
+                <ul>@foreach (var d in Model.Duplicates) { <li><a href="/follow-ups/@d.Id" target="_blank"><bdi>@d.Code</bdi> · @d.Subject</a> <small>(@d.Reason · @FollowUpLabels.Status(d.Status))</small></li> }</ul>
+                <p>پیگیری را به همان پرونده اضافه کنید؛ اگر واقعاً موضوعی مستقل است، دلیل را بنویسید تا پرونده جداگانه ثبت شود.</p>
+                <div class="fu-g">
+                    <label class="fu-checks-inline"><input type="checkbox" name="AllowDuplicate" value="true" checked="@c.AllowDuplicate" /><span>پرونده مستقل ثبت شود</span></label>
+                    <label class="fu-f"><span class="fu-f__l">دلیل ثبت پرونده مستقل<i>*</i></span><span class="fu-f__c"><input name="DuplicateReason" value="@c.DuplicateReason" maxlength="300" /></span></label>
+                </div>
+            </section>
+        }
+        <div class="fu-g">
+            <label class="fu-f fu-span"><span class="fu-f__l">موضوع<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="Subject" value="@c.Subject" required maxlength="200" placeholder="مثلاً پیش‌فاکتور قطعات یدکی خط بسته‌بندی" /></span></label>
+            <label class="fu-f"><span class="fu-f__l">مشتری / حساب<i>*</i></span><span class="fu-f__c"><svg><use href="#i-building"/></svg><select name="CustomerId" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
+                <option value="">— انتخاب مشتری —</option>
+                @foreach (var x in o.Customers) { <option value="@x.Value" selected="@(o.CustomerId?.ToString() == x.Value)">@x.Label</option> }
+            </select></span></label>
+            <label class="fu-f"><span class="fu-f__l">شخص تماس</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="ContactId"><option value="">—</option>@foreach (var x in o.Contacts) { <option value="@x.Value" selected="@(c.ContactId?.ToString() == x.Value)">@x.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">نوع پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="CaseType" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
+                @foreach (var t in FollowUpCaseTypes.All) { <option value="@t.Key" selected="@(o.CaseType == t.Key)">@t.Label</option> }
+            </select></span></label>
+            <label class="fu-f"><span class="fu-f__l">رکورد مرتبط</span><span class="fu-f__c"><svg><use href="#i-link"/></svg><select name="Related">
+                <option value="">— بدون رکورد مرتبط —</option>
+                @foreach (var r in o.RelatedRecords) { <option value="@r.Kind:@r.Id" selected="@(related == $"{r.Kind}:{r.Id}")">@r.Label</option> }
+            </select></span></label>
+            <label class="fu-f"><span class="fu-f__l">شعبه<i>*</i></span><span class="fu-f__c"><svg><use href="#i-pin"/></svg><select name="BranchId" hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
+                <option value="">— شعبهٔ مشتری —</option>
+                @foreach (var b in o.Branches) { <option value="@b.Value" selected="@(string.Equals(c.BranchId, b.Value, StringComparison.OrdinalIgnoreCase))">@b.Label</option> }
+            </select></span></label>
+            <label class="fu-f"><span class="fu-f__l">نمایندگی</span><span class="fu-f__c"><svg><use href="#i-store"/></svg><select name="DealerId"><option value="">— فروش مستقیم —</option>@foreach (var d in o.Dealers) { <option value="@d.Value" selected="@(c.DealerId?.ToString() == d.Value)">@d.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">تیم مسئول<i hidden="@(queueId is null)">*</i></span><span class="fu-f__c"><svg><use href="#i-users"/></svg><select name="QueueId" required="@(queueId is not null)"><option value="">— براساس قواعد تخصیص —</option>@foreach (var q in o.Queues) { <option value="@q.Value" selected="@(queueId?.ToString() == q.Value)">@q.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">مسئول پرونده<i hidden="@(ownerId is null)">*</i>@if (o.SuggestedOwner is not null) { <em>پیشنهاد: @o.SuggestedOwner</em> }</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="OwnerUserId" required="@(ownerId is not null)"><option value="">— تخصیص خودکار —</option>@foreach (var u in o.Owners) { <option value="@u.Value" selected="@(ownerId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">کانال ورود</span><span class="fu-f__c"><svg><use href="#@FollowUpLabels.ChannelIcon(c.Channel)"/></svg><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(c.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">اولویت</span><span class="fu-f__c"><span class="fu-dot" data-tone="@c.Priority"></span><select name="Priority" data-dot>@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@(c.Priority == p)">@FollowUpLabels.Priority(p) — @FollowUpLabels.PriorityHint(p)</option> }</select></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">الگوی گردش کار<i>*</i></span><span class="fu-f__c"><svg><use href="#i-flow"/></svg><select name="TemplateId"><option value="">آخرین نسخهٔ منتشرشدهٔ «@FollowUpLabels.Type(o.CaseType)»</option>@foreach (var t in o.Templates) { <option value="@t.Value" selected="@(c.TemplateId?.ToString() == t.Value)">@t.Label</option> }</select></span><small class="fu-f__hint">پرونده تا پایان با همین نسخه اجرا می‌شود؛ نسخه‌های جدید فقط برای پرونده‌های جدید اعمال می‌شوند.</small></label>
+        </div>
+
+        <section class="fu-sec" data-rows>
+            <h3 class="fu-sec__h"><svg><use href="#i-box"/></svg>قطعات مرتبط<button type="button" class="fu-add" data-add-row><svg><use href="#i-plus"/></svg>افزودن قطعه</button></h3>
+            <table class="fu-t fu-parts-table">
+                <thead><tr><th>کد قطعه</th><th>شرح</th><th class="fu-t__num">تعداد</th><th class="fu-t__ops">عملیات</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < parts.Count; i++)
+                    {
+                        <tr data-row>
+                            <td><input name="Parts[@i].PartCode" value="@parts[i].PartCode" maxlength="60" dir="ltr" aria-label="کد قطعه" placeholder="BRG-6205" /></td>
+                            <td><input name="Parts[@i].Description" value="@parts[i].Description" maxlength="200" aria-label="شرح قطعه" placeholder="شرح قطعه" /></td>
+                            <td class="fu-t__num"><input name="Parts[@i].Quantity" value="@parts[i].Quantity" type="number" min="0" step="0.001" dir="ltr" aria-label="تعداد" /><input type="hidden" name="Parts[@i].Unit" value="@(parts[i].Unit ?? "عدد")" /></td>
+                            <td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف ردیف"><svg><use href="#i-trash"/></svg></button></td>
+                        </tr>
+                    }
+                    <template data-row-template>
+                        <tr data-row>
+                            <td><input name="Parts[__i__].PartCode" maxlength="60" dir="ltr" aria-label="کد قطعه" /></td>
+                            <td><input name="Parts[__i__].Description" maxlength="200" aria-label="شرح قطعه" /></td>
+                            <td class="fu-t__num"><input name="Parts[__i__].Quantity" type="number" min="0" step="0.001" dir="ltr" aria-label="تعداد" /><input type="hidden" name="Parts[__i__].Unit" value="عدد" /></td>
+                            <td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف ردیف"><svg><use href="#i-trash"/></svg></button></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
         </section>
-    }
-    <div class="fu-form__grid">
-        <section class="form-section">
-            <h3>اطلاعات پرونده</h3>
-            <div class="form-grid">
-                <label class="field--full"><span>موضوع پیگیری *</span><input name="Subject" value="@c.Subject" required maxlength="200" placeholder="مثلاً پیش‌فاکتور قطعات یدکی خط بسته‌بندی" /></label>
-                <label><span>مشتری / حساب *</span><select name="CustomerId" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
-                    <option value="">— انتخاب مشتری —</option>
-                    @foreach (var x in o.Customers) { <option value="@x.Value" selected="@(o.CustomerId?.ToString() == x.Value)">@x.Label</option> }
-                </select></label>
-                <label><span>شخص تماس</span><select name="ContactId"><option value="">—</option>@foreach (var x in o.Contacts) { <option value="@x.Value" selected="@(c.ContactId?.ToString() == x.Value)">@x.Label</option> }</select></label>
-                <label><span>نوع پیگیری *</span><select name="CaseType" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
-                    @foreach (var t in FollowUpCaseTypes.All) { <option value="@t.Key" selected="@(o.CaseType == t.Key)">@t.Label</option> }
-                </select></label>
-                <label><span>رکورد مرتبط</span><select name="Related">
-                    <option value="">— بدون رکورد مرتبط —</option>
-                    @foreach (var r in o.RelatedRecords) { <option value="@r.Kind:@r.Id" selected="@(related == $"{r.Kind}:{r.Id}")">@r.Label</option> }
-                </select></label>
-                <label><span>شمارهٔ سند در سامانهٔ دیگر</span><input name="RelatedCode" value="@c.RelatedCode" maxlength="40" dir="ltr" placeholder="مثلاً INV-1405-0731" /><small class="field-help">فاکتور/ارسال در حسابداری ارقام؛ برای جلوگیری از پرونده تکراری بررسی می‌شود.</small></label>
+
+        <label class="fu-f"><span class="fu-f__l">شرح درخواست</span><span class="fu-f__c"><textarea name="Description" rows="3" maxlength="4000" placeholder="جزئیات درخواست مشتری">@c.Description</textarea></span></label>
+        <label class="fu-dropzone">
+            <svg><use href="#i-upload"/></svg>
+            <span>افزودن فایل یا تصویر قطعه</span>
+            <small data-file-out data-empty="حداکثر ۵ فایل، هر فایل تا ۱۰ مگابایت">حداکثر ۵ فایل، هر فایل تا ۱۰ مگابایت</small>
+            <input type="file" name="Files" multiple data-file-names accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.dwg,.zip" aria-label="افزودن فایل یا تصویر قطعه" />
+        </label>
+
+        <details class="fu-more-fields" open="@hasMore">
+            <summary><svg><use href="#i-chevron"/></svg>اطلاعات تکمیلی (سند در سامانهٔ دیگر، دلیل اولویت، معیار پایان و فیلدهای نوع پیگیری)</summary>
+            <div class="fu-g">
+                <label class="fu-f"><span class="fu-f__l">شمارهٔ سند در سامانهٔ دیگر</span><span class="fu-f__c"><svg><use href="#i-hash"/></svg><input name="RelatedCode" value="@c.RelatedCode" maxlength="40" dir="ltr" placeholder="INV-1405-0731" /></span><small class="fu-f__hint">فاکتور/ارسال در حسابداری؛ برای جلوگیری از پرونده تکراری بررسی می‌شود.</small></label>
+                <label class="fu-f"><span class="fu-f__l">دلیل اولویت</span><span class="fu-f__c"><svg><use href="#i-flag"/></svg><input name="PriorityReason" value="@c.PriorityReason" maxlength="300" placeholder="مثلاً توقف خط تولید مشتری" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">خانوادهٔ قطعه</span><span class="fu-f__c"><svg><use href="#i-tag"/></svg><input name="PartFamily" value="@c.PartFamily" maxlength="80" placeholder="مثلاً بلبرینگ و تسمه" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">زبان مشتری</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="Language"><option value="fa" selected="@(c.Language != "en" && c.Language != "ar")">فارسی</option><option value="en" selected="@(c.Language == "en")">انگلیسی</option><option value="ar" selected="@(c.Language == "ar")">عربی</option></select></span></label>
+                <label class="fu-f fu-span"><span class="fu-f__l">معیار پایان (نتیجهٔ مورد انتظار)</span><span class="fu-f__c"><svg><use href="#i-target"/></svg><input name="ExpectedOutcome" value="@(c.ExpectedOutcome ?? o.ClosingCriteria)" maxlength="500" /></span></label>
                 @foreach (var field in o.ExtraFields)
                 {
                     var key = "Extra_" + field.Replace(' ', '_');
-                    <label><span>@field</span><input name="@key" value="@(extras.TryGetValue(field, out var v) ? v : null)" maxlength="200" /></label>
+                    <label class="fu-f"><span class="fu-f__l">@field</span><span class="fu-f__c"><input name="@key" value="@(extras.TryGetValue(field, out var v) ? v : null)" maxlength="200" /></span></label>
                 }
             </div>
-        </section>
-        <section class="form-section">
-            <h3>مسئولیت و مسیر</h3>
-            <div class="form-grid">
-                <label><span>شعبه *</span><select name="BranchId" hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
-                    <option value="">— شعبهٔ مشتری —</option>
-                    @foreach (var b in o.Branches) { <option value="@b.Value" selected="@(string.Equals(c.BranchId, b.Value, StringComparison.OrdinalIgnoreCase))">@b.Label</option> }
-                </select></label>
-                <label><span>نمایندگی</span><select name="DealerId"><option value="">— فروش مستقیم —</option>@foreach (var d in o.Dealers) { <option value="@d.Value" selected="@(c.DealerId?.ToString() == d.Value)">@d.Label</option> }</select></label>
-                <label><span>صف / تیم</span><select name="QueueId"><option value="">— براساس قواعد تخصیص —</option>@foreach (var q in o.Queues) { <option value="@q.Value" selected="@(c.QueueId?.ToString() == q.Value)">@q.Label</option> }</select></label>
-                <label><span>مسئول پرونده</span><select name="OwnerUserId"><option value="">— تخصیص خودکار —</option>@foreach (var u in o.Owners) { <option value="@u.Value" selected="@(c.OwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select>
-                    @if (o.SuggestedOwner is not null) { <small class="field-help"><svg><use href="#i-info"/></svg>پیشنهاد: @o.SuggestedOwner</small> }</label>
-                <label><span>کانال دریافت</span><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(c.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></label>
-                <label><span>اولویت</span><select name="Priority">@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@(c.Priority == p)">@FollowUpLabels.Priority(p) — @FollowUpLabels.PriorityHint(p)</option> }</select></label>
-                <label><span>دلیل اولویت</span><input name="PriorityReason" value="@c.PriorityReason" maxlength="300" placeholder="مثلاً توقف خط تولید مشتری" /></label>
-                <label><span>خانوادهٔ قطعه</span><input name="PartFamily" value="@c.PartFamily" maxlength="80" placeholder="مثلاً بلبرینگ و تسمه" /></label>
-                <label><span>زبان مشتری</span><select name="Language"><option value="fa" selected="@(c.Language != "en" && c.Language != "ar")">فارسی</option><option value="en" selected="@(c.Language == "en")">انگلیسی</option><option value="ar" selected="@(c.Language == "ar")">عربی</option></select></label>
-            </div>
-        </section>
-        <section class="form-section">
-            <h3>الگوی گردش کار</h3>
-            <div class="form-grid">
-                <label class="field--full"><span>الگو و نسخه</span><select name="TemplateId"><option value="">— آخرین نسخهٔ منتشرشدهٔ این نوع —</option>@foreach (var t in o.Templates) { <option value="@t.Value" selected="@(c.TemplateId?.ToString() == t.Value)">@t.Label</option> }</select><small class="field-help">پرونده تا پایان با همین نسخه اجرا می‌شود؛ نسخه‌های جدید فقط برای پرونده‌های جدید اعمال می‌شوند.</small></label>
-                <label class="field--full"><span>معیار پایان (نتیجهٔ مورد انتظار)</span><input name="ExpectedOutcome" value="@(c.ExpectedOutcome ?? o.ClosingCriteria)" maxlength="500" /></label>
-                <label class="field--full"><span>شرح</span><textarea name="Description" rows="3" maxlength="4000" placeholder="جزئیات درخواست مشتری">@c.Description</textarea></label>
-            </div>
-        </section>
-        <section class="form-section">
-            <h3>قطعات مرتبط</h3>
-            <div class="fu-parts" data-rows>
-                <div class="fu-parts__head"><span>کد قطعه</span><span>شرح</span><span>تعداد</span><span>واحد</span><span></span></div>
-                @for (var i = 0; i < parts.Count; i++)
-                {
-                    <div class="fu-parts__row" data-row>
-                        <input name="Parts[@i].PartCode" value="@parts[i].PartCode" maxlength="60" dir="ltr" aria-label="کد قطعه" placeholder="BRG-6205" />
-                        <input name="Parts[@i].Description" value="@parts[i].Description" maxlength="200" aria-label="شرح قطعه" />
-                        <input name="Parts[@i].Quantity" value="@parts[i].Quantity" type="number" min="0" step="0.001" dir="ltr" aria-label="تعداد" />
-                        <input name="Parts[@i].Unit" value="@(parts[i].Unit ?? "عدد")" maxlength="20" aria-label="واحد" />
-                        <button type="button" class="icon-button" data-remove-row aria-label="حذف ردیف"><svg><use href="#i-close"/></svg></button>
-                    </div>
-                }
-                <template data-row-template>
-                    <div class="fu-parts__row" data-row>
-                        <input name="Parts[__i__].PartCode" maxlength="60" dir="ltr" aria-label="کد قطعه" />
-                        <input name="Parts[__i__].Description" maxlength="200" aria-label="شرح قطعه" />
-                        <input name="Parts[__i__].Quantity" type="number" min="0" step="0.001" dir="ltr" aria-label="تعداد" />
-                        <input name="Parts[__i__].Unit" value="عدد" maxlength="20" aria-label="واحد" />
-                        <button type="button" class="icon-button" data-remove-row aria-label="حذف ردیف"><svg><use href="#i-close"/></svg></button>
-                    </div>
-                </template>
-                <button type="button" class="link-button" data-add-row><svg><use href="#i-plus"/></svg>افزودن قطعه</button>
-            </div>
-        </section>
+        </details>
+
+        <p class="fu-note"><svg><use href="#i-info"/></svg><span>مهلت پاسخ اولیه براساس نوع درخواست تعیین می‌شود. <b>@o.SlaPreview</b> (ساعات کاری و تعطیلات شعبهٔ مسئول، به وقت تهران).</span></p>
     </div>
-    <p class="fu-sla-note"><svg><use href="#i-clock"/></svg><span><b>مهلت‌ها:</b> @o.SlaPreview. مهلت‌ها با ساعات کاری و تعطیلات شعبهٔ مسئول (به وقت تهران) محاسبه می‌شوند. مدارک پس از ثبت از بخش «مدارک و تأییدها» پیوست می‌شوند.</span></p>
-    <div class="fu-form__actions">
-        <a class="button button--ghost" href="/follow-ups">انصراف</a>
-        <button class="button button--primary" type="submit"><svg><use href="#i-play"/></svg>ذخیره و شروع پیگیری</button>
-    </div>
+    <footer class="fu-sheet__foot">
+        <button class="button button--primary" type="submit"><svg><use href="#i-send"/></svg>ذخیره و شروع پیگیری</button>
+        <button class="button button--secondary" type="button" hx-post="/follow-ups/drafts/create" hx-include="closest form" hx-encoding="application/x-www-form-urlencoded" hx-swap="none" hx-disabled-elt="this"><svg><use href="#i-save"/></svg>پیش‌نویس</button>
+        @if (ViewData["FullPage"] is true) { <a class="button button--ghost fu-foot__end" href="/follow-ups">انصراف</a> }
+        else { <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button> }
+    </footer>
 </form>

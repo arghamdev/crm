@@ -1,16 +1,17 @@
 @model AssignmentSuggestionDto
-<div class="fu-assign-result">
-    <p class="account-banner@(Model.UserId is null ? " account-banner--muted" : "")"><svg><use href="#@(Model.UserId is null ? "i-alert" : "i-check")"/></svg><span>@if (Model.UserId is not null) { <b>پیشنهاد: @Model.UserName</b><text> — </text> }@Model.Explanation</span></p>
+<section class="fu-box @(Model.UserId is null ? "fu-box--amber" : "fu-box--green") fu-assign-result">
+    <p class="fu-box__h"><svg><use href="#@(Model.UserId is null ? "i-alert" : "i-check")"/></svg>@(Model.UserId is null ? "پیشنهاد تخصیص: فرد آماده‌ای نیست" : $"پیشنهاد تخصیص: {Model.UserName}")@if (Model.QueueName is not null) { <span class="fu-chip fu-chip--muted fu-box__end">صف «@Model.QueueName»</span> }</p>
+    <p>@Model.Explanation</p>
     @if (Model.Candidates.Count > 0)
     {
-        <div class="table-wrap"><table class="list-table">
-            <thead><tr><th>فرد</th><th>ظرفیت</th><th>وضعیت</th></tr></thead>
+        <table class="fu-t">
+            <thead><tr><th>کارشناس</th><th>ظرفیت مصرف‌شده</th><th>وضعیت</th></tr></thead>
             <tbody>
                 @foreach (var c in Model.Candidates)
                 {
-                    <tr class="@(c.UserId == Model.UserId ? "is-current" : "")"><td>@c.Name</td><td>@c.Load از @c.Capacity</td><td><span class="pill pill--sm pill--@(c.Eligible ? "success" : c.Available ? "warning" : "neutral")">@(c.Eligible ? "آماده" : c.Available ? "ظرفیت تکمیل" : c.Note ?? "خارج از شیفت")</span></td></tr>
+                    <tr class="@(c.UserId == Model.UserId ? "is-current" : "")"><td><span class="fu-person"><span class="fu-avatar">@ListFormat.Initial(c.Name)</span>@c.Name</span></td><td>@FollowUpLabels.Fa(c.Load) از @FollowUpLabels.Fa(c.Capacity)</td><td><span class="pill pill--sm pill--@(c.Eligible ? "success" : c.Available ? "warning" : "neutral")">@(c.Eligible ? "آماده" : c.Available ? "ظرفیت تکمیل" : c.Note ?? "خارج از شیفت")</span></td></tr>
                 }
             </tbody>
-        </table></div>
+        </table>
     }
-</div>
+</section>

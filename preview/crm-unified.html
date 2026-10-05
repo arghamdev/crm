@@ -1641,11 +1641,350 @@ body.has-modal { overflow: hidden; }
 .modal--form .u-form > :is(fieldset, p, ul, .u-actions, .u-form-error, input[type="hidden"]) { grid-column: 1 / -1; }
 @media (max-width: 760px) { .modal--form .u-form { grid-template-columns: minmax(0, 1fr); } }
 
+/* ───────────── v1.11.0 — follow-up sheets matching the twelve form images (فرم‌های ۱ تا ۱۲) ───────────── */
+:root { --fu-orange: #c2410c; --fu-orange-100: #ffedd5; --fu-purple: #7e22ce; --fu-purple-100: #f3e8ff; }
+[data-theme="dark"] { --fu-orange: #fdba74; --fu-orange-100: #431407; --fu-purple: #d8b4fe; --fu-purple-100: #3b0764; }
+.modal--sheet { width: min(860px, 96vw); }
+.modal--sheet .modal__header { display: none; }
+.modal--sheet .modal__body { padding: 0; }
+.fu-sheet { display: flex; flex-direction: column; min-width: 0; margin: 0; background: var(--surface); }
+.fu-page .fu-sheet, .fu-sheet--card { max-width: 980px; margin-inline: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: clip; }
+.fu-sheet__head { position: sticky; z-index: 4; top: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 16px 22px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.fu-num { display: grid; flex: 0 0 auto; place-items: center; width: 34px; height: 34px; color: #fff; border-radius: 99px; background: var(--primary-700); font-size: 16px; font-weight: 800; box-shadow: 0 0 0 4px var(--primary-100); }
+.fu-sheet__title { flex: 1 1 200px; min-width: 0; }
+.fu-sheet__title h2 { margin: 0; font-size: 18px; line-height: 1.5; }
+.fu-sheet__title p { margin: 1px 0 0; color: var(--ink-3); font-size: 12.5px; }
+.fu-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 12px; color: var(--primary-800); border: 1px solid color-mix(in srgb, var(--primary-600) 25%, var(--line)); border-radius: 99px; background: var(--primary-50); font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fu-chip svg { flex: 0 0 auto; width: 15px; height: 15px; }
+.fu-chip--orange { color: var(--fu-orange); border-color: color-mix(in srgb, var(--fu-orange) 30%, var(--line)); background: var(--fu-orange-100); }
+.fu-chip--muted { color: var(--ink-2); border-color: var(--line); background: var(--surface-2); }
+.fu-sheet__close { flex: 0 0 auto; }
+.fu-sheet__body { display: grid; gap: 16px; padding: 20px 22px; min-width: 0; }
+.fu-sheet__foot { position: sticky; z-index: 4; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface); box-shadow: 0 -10px 24px rgba(15,23,42,.05); }
+.fu-sheet__foot .button--primary { min-width: min(260px, 100%); justify-content: center; }
+.fu-sheet__foot .fu-foot__end { margin-inline-start: auto; }
+.fu-sheet__foot .fu-foot__end ~ .fu-foot__end { margin-inline-start: 0; }
+.fu-sheet__foot small { color: var(--ink-3); font-size: 12px; }
+.fu-sheet .validation-summary:empty, .fu-sheet .validation-summary.validation-summary-valid { display: none; }
+
+/* fields: label above, icon inside the control at inline-start, red required star */
+.fu-g { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; min-width: 0; }
+.fu-g--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fu-g--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fu-span { grid-column: 1 / -1; }
+.fu-f { display: grid; align-content: start; gap: 6px; min-width: 0; margin: 0; }
+.fu-f__l { display: flex; align-items: center; gap: 4px; color: var(--ink-2); font-size: 12.5px; font-weight: 750; }
+.fu-f__l i { color: var(--red-600); font-style: normal; font-weight: 800; }
+.fu-f__l em { margin-inline-start: auto; color: var(--ink-3); font-size: 11.5px; font-style: normal; font-weight: 600; }
+.fu-f__c { position: relative; display: flex; align-items: center; min-width: 0; }
+.fu-f__c > svg { position: absolute; z-index: 1; inset-inline-start: 12px; width: 17px; height: 17px; color: var(--ink-3); pointer-events: none; }
+.fu-f__c > :is(input, select, textarea), .fu-sheet .fu-ctl { width: 100%; min-height: 42px; padding: 8px 12px; color: var(--ink); border: 1px solid var(--field-border); border-radius: 10px; background: var(--surface); font: inherit; font-size: 13.5px; }
+.fu-f__c > textarea { min-height: 84px; resize: vertical; line-height: 1.8; }
+.fu-f__c:has(> svg) > :is(input, select) { padding-inline-start: 38px; }
+.fu-f__c > :is(input, select, textarea):focus { outline: none; border-color: var(--primary-600); box-shadow: var(--focus-ring); }
+.fu-f__c > :is(input, select, textarea):disabled, .fu-f__c > input[readonly] { color: var(--ink-2); background: var(--surface-2); }
+.fu-f__c--suffix::after { content: attr(data-suffix); position: absolute; inset-inline-end: 12px; color: var(--ink-3); font-size: 12.5px; pointer-events: none; }
+.fu-f__c--suffix > input { padding-inline-end: 52px; }
+.fu-f__c--pair { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
+.fu-f__c--pair > span { position: relative; display: flex; align-items: center; }
+.fu-f__c--pair > span > svg { position: absolute; inset-inline-start: 12px; width: 16px; height: 16px; color: var(--ink-3); pointer-events: none; }
+.fu-f__c--pair > span > input { width: 100%; min-height: 42px; padding: 8px 12px 8px 12px; padding-inline-start: 36px; border: 1px solid var(--field-border); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13.5px; }
+.fu-f__hint { color: var(--ink-3); font-size: 11.5px; }
+.fu-f--row { grid-template-columns: 170px minmax(0, 1fr); align-items: center; gap: 12px; }
+.fu-dot { position: absolute; z-index: 1; inset-inline-start: 14px; width: 10px; height: 10px; border-radius: 99px; background: var(--blue-700); pointer-events: none; }
+.fu-dot + select { padding-inline-start: 34px !important; }
+.fu-dot[data-tone="Low"] { background: var(--ink-3); }
+.fu-dot[data-tone="Normal"], .fu-dot[data-tone="Medium"] { background: var(--blue-700); }
+.fu-dot[data-tone="High"] { background: #f59e0b; }
+.fu-dot[data-tone="Critical"] { background: var(--red-600); }
+.fu-counter { color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; text-align: end; }
+
+/* tinted boxes */
+.fu-box { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); min-width: 0; }
+.fu-box__h { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13.5px; font-weight: 800; }
+.fu-box__h svg { width: 18px; height: 18px; }
+.fu-box__h .fu-box__end { margin-inline-start: auto; }
+.fu-box p { margin: 0; font-size: 12.5px; }
+.fu-box--blue { border-color: color-mix(in srgb, var(--primary-600) 22%, var(--line)); background: color-mix(in srgb, var(--primary-50) 75%, var(--surface)); }
+.fu-box--blue .fu-box__h { color: var(--primary-800); }
+.fu-box--green { border-color: color-mix(in srgb, var(--green-600) 30%, var(--line)); background: color-mix(in srgb, var(--green-100) 55%, var(--surface)); }
+.fu-box--green .fu-box__h { color: var(--green-700); }
+.fu-box--amber { border-color: color-mix(in srgb, var(--amber-600) 35%, var(--line)); background: color-mix(in srgb, var(--amber-100) 60%, var(--surface)); }
+.fu-box--amber .fu-box__h, .fu-box--amber p { color: var(--amber-700); }
+.fu-box--orange { border-color: color-mix(in srgb, var(--fu-orange) 30%, var(--line)); background: color-mix(in srgb, var(--fu-orange-100) 65%, var(--surface)); }
+.fu-box--orange .fu-box__h, .fu-box--orange p { color: var(--fu-orange); }
+.fu-box--red { border-color: color-mix(in srgb, var(--red-600) 30%, var(--line)); background: color-mix(in srgb, var(--red-100) 50%, var(--surface)); }
+.fu-box--red .fu-box__h { color: var(--red-700); }
+.fu-box--plain { background: var(--surface); }
+.fu-note { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 12px; color: var(--primary-800); border-radius: 10px; background: color-mix(in srgb, var(--primary-50) 80%, var(--surface)); font-size: 12.5px; }
+.fu-note svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 2px; }
+.fu-note--amber { color: var(--amber-700); background: color-mix(in srgb, var(--amber-100) 70%, var(--surface)); }
+.fu-note--green { color: var(--green-700); background: color-mix(in srgb, var(--green-100) 70%, var(--surface)); }
+.fu-note--plain { padding: 0; color: var(--ink-3); background: none; }
+.fu-note ul { margin: 0; padding-inline-start: 16px; }
+
+/* tabs */
+.fu-tabs-fill { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-3); }
+.fu-tabs-fill > * { flex: 1 1 0; display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 38px; padding: 6px 10px; color: var(--ink-2); border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13.5px; font-weight: 750; text-decoration: none; cursor: pointer; }
+.fu-tabs-fill > .is-active, .fu-tabs-fill > [aria-selected="true"] { color: #fff; background: var(--primary-700); box-shadow: var(--shadow-sm); }
+.fu-tabs-fill > [disabled] { opacity: .45; cursor: not-allowed; }
+.fu-tabs-fill svg { width: 16px; height: 16px; }
+.fu-utabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
+.fu-utabs > * { display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px; padding: 8px 2px 10px; color: var(--ink-3); border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 13.5px; font-weight: 750; cursor: pointer; }
+.fu-utabs > .is-active, .fu-utabs > [aria-selected="true"] { color: var(--primary-700); border-bottom-color: var(--primary-700); }
+.fu-utabs > [disabled] { opacity: .45; cursor: not-allowed; }
+.fu-utabs b { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; color: #fff; border-radius: 99px; background: var(--red-600); font-size: 11px; }
+
+/* tiles (نوع اقدام) and segmented decisions */
+.fu-kind { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.fu-kind > * { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 13px; font-weight: 750; text-decoration: none; cursor: pointer; }
+.fu-kind svg { width: 22px; height: 22px; }
+.fu-kind > .is-active { color: var(--primary-700); border-color: var(--primary-700); background: var(--primary-50); box-shadow: inset 0 0 0 1px var(--primary-700); }
+.fu-decide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fu-decide label { position: relative; display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 42px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 13.5px; font-weight: 750; cursor: pointer; }
+.fu-decide input { position: absolute; opacity: 0; }
+.fu-decide label:has(input:focus-visible) { box-shadow: var(--focus-ring); }
+.fu-decide label:nth-child(1):has(input:checked) { color: #fff; border-color: var(--green-700); background: var(--green-700); }
+.fu-decide label:nth-child(2):has(input:checked) { color: #fff; border-color: #d97706; background: #d97706; }
+.fu-decide label:nth-child(3):has(input:checked) { color: #fff; border-color: var(--red-700); background: var(--red-700); }
+.fu-decide svg { width: 16px; height: 16px; }
+.fu-radios, .fu-checks-inline { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; border: 0; }
+.fu-radios label, .fu-checks-inline label { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
+.fu-radios input, .fu-checks-inline input { width: 17px; height: 17px; accent-color: var(--primary-700); }
+.fu-radios legend, .fu-checks-inline legend { margin-bottom: 8px; color: var(--ink-2); font-size: 12.5px; font-weight: 750; }
+
+/* tables and files */
+.fu-t { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 13px; }
+.fu-t th { padding: 9px 10px; color: var(--ink-3); background: var(--surface-2); font-size: 12px; font-weight: 750; text-align: start; white-space: nowrap; }
+.fu-t td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+.fu-t td :is(input, select) { width: 100%; min-height: 36px; padding: 6px 9px; color: var(--ink); border: 1px solid var(--field-border); border-radius: 8px; background: var(--surface); font: inherit; font-size: 13px; }
+.fu-t .fu-t__num { width: 92px; }
+.fu-t .fu-t__ops { width: 64px; text-align: center; }
+.fu-t tr.is-current td { background: color-mix(in srgb, var(--primary-50) 70%, var(--surface)); }
+.fu-t tfoot td { background: var(--surface-2); font-weight: 750; }
+.fu-sec { display: grid; gap: 10px; min-width: 0; }
+.fu-sec__h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 800; }
+.fu-sec__h svg { width: 18px; height: 18px; color: var(--primary-700); }
+.fu-sec__h > :last-child:not(:first-child):not(svg) { margin-inline-start: auto; }
+.fu-add { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--primary-700); border: 1px solid color-mix(in srgb, var(--primary-600) 30%, var(--line)); border-radius: 9px; background: var(--primary-50); font: inherit; font-size: 12.5px; font-weight: 750; cursor: pointer; text-decoration: none; }
+.fu-add svg { width: 15px; height: 15px; }
+.fu-trash { display: inline-grid; place-items: center; width: 32px; height: 32px; color: var(--red-700); border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.fu-trash:hover { background: var(--red-100); }
+.fu-trash svg { width: 17px; height: 17px; }
+.fu-dropzone { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px; color: var(--ink-2); border: 1.5px dashed color-mix(in srgb, var(--primary-600) 40%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--primary-50) 45%, var(--surface)); font-size: 13px; font-weight: 700; text-align: center; cursor: pointer; }
+.fu-dropzone svg { width: 24px; height: 24px; color: var(--primary-700); }
+.fu-dropzone small { color: var(--ink-3); font-size: 11.5px; font-weight: 500; }
+.fu-dropzone input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.fu-dropzone:has(input:focus-visible) { box-shadow: var(--focus-ring); }
+.fu-dropzone [data-file-names] { color: var(--primary-800); }
+.fu-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 7px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 12.5px; }
+.fu-file svg { width: 17px; height: 17px; color: var(--red-700); }
+.fu-file small { color: var(--ink-3); }
+.fu-file-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fu-file-pick { position: relative; overflow: hidden; }
+.fu-file-pick input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.fu-avatar { display: inline-grid; flex: 0 0 auto; place-items: center; width: 30px; height: 30px; color: var(--primary-800); border-radius: 99px; background: var(--primary-100); font-size: 11.5px; font-weight: 800; }
+.fu-person { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.fu-person strong { display: block; font-size: 13px; }
+.fu-person small { display: block; color: var(--ink-3); font-size: 11.5px; }
+.fu-draft { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; color: var(--fu-orange); border: 1px solid color-mix(in srgb, var(--fu-orange) 30%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--fu-orange-100) 60%, var(--surface)); font-size: 13px; }
+.fu-draft svg { width: 17px; height: 17px; }
+.fu-draft span { flex: 1 1 200px; }
+.fu-draft form { margin: 0; }
+.fu-more-fields { border: 1px solid var(--line); border-radius: 12px; }
+.fu-more-fields > summary { display: flex; align-items: center; gap: 8px; padding: 11px 14px; color: var(--ink-2); font-size: 13px; font-weight: 750; cursor: pointer; list-style: none; }
+.fu-more-fields > summary::-webkit-details-marker { display: none; }
+.fu-more-fields > summary svg { width: 16px; height: 16px; transition: transform .15s; }
+.fu-more-fields[open] > summary svg { transform: rotate(90deg); }
+.fu-more-fields > .fu-g { padding: 0 14px 14px; }
+
+/* ۳ and ۸ — status cards */
+.fu-done-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--green-600) 30%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--green-100) 55%, var(--surface)); }
+.fu-done-card__icon { display: grid; flex: 0 0 auto; place-items: center; width: 40px; height: 40px; color: #fff; border-radius: 12px; background: var(--green-700); }
+.fu-done-card__icon svg { width: 20px; height: 20px; }
+.fu-done-card div { flex: 1 1 auto; min-width: 0; }
+.fu-done-card strong { display: block; font-size: 14px; }
+.fu-done-card small { color: var(--ink-2); font-size: 12px; }
+.fu-ready { display: grid; gap: 8px; }
+.fu-ready__top { display: flex; align-items: center; gap: 10px; }
+.fu-ready__top svg { width: 22px; height: 22px; }
+.fu-ready__top strong { font-size: 15px; }
+.fu-ready__top b { margin-inline-start: auto; font-size: 18px; }
+.fu-progressbar { position: relative; height: 8px; overflow: hidden; border-radius: 99px; background: color-mix(in srgb, var(--ink-3) 18%, transparent); }
+.fu-progressbar > span { position: absolute; inset: 0 0 0 auto; border-radius: inherit; background: var(--primary-700); }
+.fu-box--green .fu-progressbar > span { background: var(--green-700); }
+.fu-box--amber .fu-progressbar > span { background: #d97706; }
+.fu-ticks { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.fu-ticks li { display: flex; align-items: flex-start; gap: 8px; }
+.fu-ticks svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; padding: 2px; border-radius: 99px; }
+.fu-ticks .is-ok svg { color: #fff; background: var(--green-700); }
+.fu-ticks .is-fail svg { color: #fff; background: var(--red-600); }
+.fu-ticks small { display: block; color: var(--ink-3); font-size: 11.5px; }
+
+/* ۴ — receiver capacity card */
+.fu-capacity { display: flex; align-items: center; gap: 12px; }
+.fu-capacity .fu-avatar { width: 40px; height: 40px; font-size: 13px; }
+.fu-capacity div { flex: 1 1 auto; min-width: 0; }
+.fu-capacity strong { display: block; font-size: 14px; }
+.fu-capacity small { color: var(--ink-2); font-size: 12px; }
+.fu-capacity .fu-progressbar { margin-top: 6px; }
+.fu-capacity.is-full { color: var(--red-700); }
+
+/* ۵ — stages card */
+.fu-stagecard { display: grid; gap: 16px; padding: 18px 20px 20px; }
+.fu-stagecard__top { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); }
+.fu-stagecard__total { display: grid; gap: 6px; }
+.fu-stagecard__total > div { display: flex; align-items: baseline; gap: 10px; }
+.fu-stagecard__total b { color: var(--primary-700); font-size: 26px; font-weight: 850; line-height: 1; }
+.fu-stagecard__total span { color: var(--ink-2); font-size: 13px; }
+.fu-stagecard .fu-progressbar { height: 10px; }
+.fu-stage-ico { display: inline-grid; flex: 0 0 auto; place-items: center; width: 32px; height: 32px; color: var(--primary-700); border-radius: 9px; background: var(--primary-50); }
+.fu-stage-ico svg { width: 17px; height: 17px; }
+.fu-stage-name { display: flex; align-items: center; gap: 10px; font-weight: 750; }
+.fu-stage-name small { display: block; color: var(--ink-3); font-size: 11.5px; font-weight: 500; }
+.fu-state { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 99px; }
+.fu-state svg { width: 15px; height: 15px; }
+.fu-state--done { color: #fff; background: var(--green-700); }
+.fu-state--active { color: #fff; background: var(--primary-700); }
+.fu-state--active svg { stroke-width: 3; }
+.fu-state--pending { color: var(--ink-3); border: 2px solid var(--line-strong, var(--line)); }
+.fu-state--waiting { color: #fff; background: var(--violet-700); }
+.fu-state--returned { color: #fff; background: var(--red-600); }
+.fu-state--skipped { color: var(--ink-3); background: var(--surface-3); }
+.fu-active { display: grid; gap: 12px; padding: 16px; border: 1px solid color-mix(in srgb, var(--primary-600) 25%, var(--line)); border-radius: 14px; background: color-mix(in srgb, var(--primary-50) 40%, var(--surface)); }
+.fu-active .fu-check { background: var(--surface); }
+.fu-active__docs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fu-active__docs > span { color: var(--ink-2); font-size: 12.5px; font-weight: 750; }
+
+/* ۹–۱۲ pages */
+.fu-page { display: grid; gap: 16px; }
+.fu-page .fu-sheet__head { position: static; }
+.fu-page .fu-sheet__foot { position: sticky; bottom: 0; }
+.fu-steps .fu-step { cursor: default; }
+.fu-steps .fu-step.is-dragging { opacity: .45; }
+.fu-steps .fu-step.is-over td { box-shadow: inset 0 3px 0 var(--primary-700); }
+.fu-grip { display: inline-grid; place-items: center; width: 28px; height: 32px; color: var(--ink-3); border: 0; background: none; cursor: grab; }
+.fu-grip:active { cursor: grabbing; }
+.fu-grip svg { width: 18px; height: 18px; }
+.fu-step-more { grid-column: 1 / -1; }
+.fu-step-more > summary { color: var(--primary-700); font-size: 12px; font-weight: 700; cursor: pointer; }
+.fu-step-more .fu-g { margin-top: 10px; }
+.fu-sum { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 800; }
+.fu-sum.is-ok { color: var(--green-700); background: color-mix(in srgb, var(--green-100) 70%, var(--surface)); }
+.fu-sum.is-bad { color: var(--red-700); background: color-mix(in srgb, var(--red-100) 60%, var(--surface)); }
+.fu-sum svg { width: 18px; height: 18px; }
+.fu-if { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) 36px; gap: 8px; align-items: center; font-size: 13px; font-weight: 800; color: var(--primary-800); }
+.fu-if input { min-height: 40px; padding: 6px 10px; color: var(--ink); border: 1px solid var(--field-border); border-radius: 9px; background: var(--surface); font: inherit; font-size: 13px; font-weight: 500; }
+.fu-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.fu-tile { display: grid; gap: 4px; padding: 14px 16px; border-radius: 14px; color: var(--primary-800); background: color-mix(in srgb, var(--primary-50) 85%, var(--surface)); text-decoration: none; }
+.fu-tile small { font-size: 12.5px; font-weight: 750; }
+.fu-tile strong { font-size: 26px; font-weight: 850; line-height: 1.2; }
+.fu-tile span { color: var(--ink-3); font-size: 11.5px; }
+.fu-tile--red { color: var(--red-700); background: color-mix(in srgb, var(--red-100) 75%, var(--surface)); }
+.fu-tile--amber { color: var(--amber-700); background: color-mix(in srgb, var(--amber-100) 80%, var(--surface)); }
+.fu-tile--purple { color: var(--fu-purple); background: color-mix(in srgb, var(--fu-purple-100) 80%, var(--surface)); }
+.pill--violet, .pill--purple { color: var(--fu-purple); background: var(--fu-purple-100); }
+.fu-rank { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: rank; }
+.fu-rank li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; counter-increment: rank; }
+.fu-rank li::before { content: counter(rank, persian); display: grid; place-items: center; width: 24px; height: 24px; color: var(--ink-2); border-radius: 99px; background: var(--surface-3); font-size: 12px; font-weight: 800; }
+.fu-rank b { font-variant-numeric: tabular-nums; }
+.fu-rank .is-red { color: var(--red-700); }
+.fu-rank .is-amber { color: var(--amber-700); }
+.fu-rank .is-blue { color: var(--primary-700); }
+.fu-updated { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12.5px; }
+.fu-updated svg { width: 15px; height: 15px; }
+.fu-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+.fu-workhours { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
+.fu-workhours b { color: var(--ink); }
+@media (max-width: 900px) {
+  .fu-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fu-cols, .fu-stagecard__top { grid-template-columns: minmax(0, 1fr); }
+  .fu-g--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .fu-g, .fu-g--3 { grid-template-columns: minmax(0, 1fr); }
+  .fu-kind { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fu-sheet__head, .fu-sheet__body, .fu-sheet__foot { padding-inline: 14px; }
+  .fu-sheet__foot .button { flex: 1 1 auto; }
+  .fu-sheet__foot .fu-foot__end { margin-inline-start: 0; }
+  .fu-f--row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .fu-if { grid-template-columns: auto minmax(0, 1fr) 36px; }
+  .fu-t { display: block; overflow-x: auto; }
+}
+.button--secondary { color: var(--primary-700); border-color: color-mix(in srgb, var(--primary-600) 35%, var(--line)); background: var(--primary-50); }
+.button--secondary:hover { background: var(--primary-100); }
+.fu-checks-inline--col { display: grid; gap: 8px; }
+.fu-dot[data-tone="Urgent"] { background: var(--red-600); }
+.fu-req { color: var(--red-600); font-style: normal; font-weight: 800; }
+.fu-sheet__body--tabs { padding-bottom: 0; }
+.fu-sheet__body--tabs + * > .fu-sheet__body, .fu-sheet__body--tabs ~ [data-fu-panel] > .fu-sheet__body { padding-top: 16px; }
+.fu-inbox__list--sheet { padding: 0; }
+.fu-stagecard__head { position: static; padding: 0 0 4px; border: 0; background: none; }
+.fu-stagecard .fu-more-fields .fu-sheet__body { padding: 0 14px 14px; }
+.fu-stagecard .fu-stage-actions { margin-top: 0; padding-top: 0; border: 0; }
+.fu-stagecard .fu-rules { padding: 10px 0 0; }
+.fu-pill-lg { min-height: 42px; display: inline-flex; align-items: center; padding-inline: 14px; border-radius: 10px; font-size: 13px; }
+.fu-tabs-fill b { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: color-mix(in srgb, currentColor 18%, transparent); font-size: 11px; }
+.fu-more-fields > form { padding: 0 14px 14px; display: grid; gap: 12px; }
+.fu-f__c:has(> svg) > input[dir="ltr"], .fu-f__c--pair > span > input[dir="ltr"] { padding-left: 12px; padding-right: 38px; text-align: right; }
+.fu-sheet__fields { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.fu-steps { display: grid; gap: 8px; }
+.fu-steps__head, .fu-step { display: grid; grid-template-columns: 32px minmax(160px, 2fr) 96px minmax(140px, 1.3fr) 76px; gap: 10px; align-items: center; }
+.fu-steps__head { padding: 0 10px; color: var(--ink-3); font-size: 12px; font-weight: 750; }
+.fu-step { padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.fu-step > select, .fu-step__name input, .fu-step .fu-f__c--suffix > input { width: 100%; min-height: 38px; padding: 6px 10px; color: var(--ink); border: 1px solid var(--field-border); border-radius: 9px; background: var(--surface); font: inherit; font-size: 13px; }
+.fu-step__name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fu-step__ops { display: inline-flex; justify-content: flex-end; }
+.fu-step__ops [data-move] { color: var(--ink-3); }
+.fu-step__ops [data-move] svg { transform: rotate(-90deg); }
+.fu-step__ops [data-move]:hover { background: var(--surface-3); }
+.fu-step-more { grid-column: 1 / -1; padding-inline-start: 42px; }
+.fu-sum small { margin-inline-start: auto; font-size: 11.5px; font-weight: 600; opacity: .85; }
+@media (max-width: 760px) {
+  .fu-steps__head { display: none; }
+  .fu-step { grid-template-columns: 28px minmax(0, 1fr) 84px; }
+  .fu-step > select { grid-column: 2 / -1; }
+  .fu-step__ops { grid-column: 1 / -1; }
+  .fu-step-more { padding-inline-start: 0; }
+}
+.fu-f--toggle { align-self: end; min-height: 42px; }
+.fu-sec__h small { margin-inline-start: 6px; font-weight: 600; }
+.fu-box .fu-more-fields { background: var(--surface); }
+.fu-cap { display: grid; grid-template-columns: auto 72px; gap: 4px 8px; align-items: center; }
+.fu-cap b { font-size: 13px; }
+.fu-cap .fu-progressbar { grid-column: 1 / -1; height: 6px; }
+.fu-members-t .fu-person select { min-width: 140px; }
+.fu-rank--plain li { grid-template-columns: minmax(0, 1fr) auto auto; counter-increment: none; }
+.fu-rank--plain li::before { display: none; }
+.fu-rank--plain form { margin: 0; }
+#assignmentLive:empty { display: none; }
+.fu-h { margin: 0; font-size: 18px; line-height: 1.5; }
+.fu-super-sheet .fu-sheet__head { position: static; }
+.fu-super-apply { align-self: end; }
+.fu-super-apply .fu-f__l { visibility: hidden; }
+.fu-super-sheet .fu-attention td { vertical-align: top; }
+.fu-super-sheet .fu-attention .pill { white-space: nowrap; }
+.fu-save-view2 { display: flex; flex: 1 1 360px; flex-wrap: wrap; gap: 8px; margin: 0; }
+.fu-save-view2 .fu-f__c { flex: 1 1 220px; }
+.fu-sheet h2.fu-sec__h { font-size: 14px; }
+@media (min-width: 641px) { .fu-super-sheet .fu-sheet__foot { position: static; } }
+.fu-page > .fu-sheet { width: 100%; }
+.fu-f__c--suffix > input, .fu-f__c--suffix > input[dir="ltr"] { padding-left: 52px; padding-right: 12px; text-align: right; }
+.fu-t td input[type="checkbox"], .fu-t td input[type="radio"] { width: 17px; min-height: 0; height: 17px; padding: 0; }
+.fu-members-t td { white-space: nowrap; }
+.fu-attention td, .fu-attention .cell-sub, .fu-attention .cell-title { white-space: normal; }
+.fu-attention td:first-child { min-width: 180px; }
+.fu-attention td:last-child { white-space: nowrap; }
+.fu-attention .cell-sub { display: block; max-width: 260px; }
+.fu-cols { grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); }
+tr.fu-members__row { display: table-row; padding: 0; border: 0; }
+.fu-members-t .fu-checks-inline { flex-wrap: nowrap; }
+
 </style>
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
-    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3.5 6.5 12 13l8.5-6.5"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M4 5h16v16H4zM4 10h16M8 3v4M16 3v4M8 14h3M8 17h6"/></symbol><symbol id="i-task" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol><symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4zM16 4v4h4M8 12h8M8 16h5"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol><symbol id="i-unlink" viewBox="0 0 24 24"><path d="M18.8 13.2l1.7-1.7a5 5 0 0 0-7-7l-1.7 1.7M5.2 10.8l-1.7 1.7a5 5 0 0 0 7 7l1.7-1.7M8 2v3M2 8h3M16 22v-3M22 16h-3"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol><symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m6 17 5-5-5-5M13 17l5-5-5-5"/></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9 4.5 4h15L21 9M3 9h18M3 9v1.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9M5 13v7h14v-7M10 20v-4h4v4"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v3a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1ZM17 9a4 4 0 0 1 0 6M7 15l1 5h3"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0ZM12 9v4M12 17v.5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.5M3.5 12h.5M3.5 18h.5"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol><symbol id="i-flow" viewBox="0 0 24 24"><path d="M5 3h6v6H5zM13 15h6v6h-6zM8 9v3a3 3 0 0 0 3 3h2M16 15v-3"/><circle cx="16" cy="9" r="3"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/></symbol><symbol id="i-drag" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3.5 6.5 12 13l8.5-6.5"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M4 5h16v16H4zM4 10h16M8 3v4M16 3v4M8 14h3M8 17h6"/></symbol><symbol id="i-task" viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol><symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4zM16 4v4h4M8 12h8M8 16h5"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol><symbol id="i-unlink" viewBox="0 0 24 24"><path d="M18.8 13.2l1.7-1.7a5 5 0 0 0-7-7l-1.7 1.7M5.2 10.8l-1.7 1.7a5 5 0 0 0 7 7l1.7-1.7M8 2v3M2 8h3M16 22v-3M22 16h-3"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol><symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m6 17 5-5-5-5M13 17l5-5-5-5"/></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9 4.5 4h15L21 9M3 9h18M3 9v1.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9M5 13v7h14v-7M10 20v-4h4v4"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v3a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1ZM17 9a4 4 0 0 1 0 6M7 15l1 5h3"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0ZM12 9v4M12 17v.5"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.5M3.5 12h.5M3.5 18h.5"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol><symbol id="i-flow" viewBox="0 0 24 24"><path d="M5 3h6v6H5zM13 15h6v6h-6zM8 9v3a3 3 0 0 0 3 3h2M16 15v-3"/><circle cx="16" cy="9" r="3"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/></symbol><symbol id="i-drag" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-case" viewBox="0 0 24 24"><path d="M3 8h18v12H3zM8 8V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3M3 13h18"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5zM3 13l9 5 9-5"/></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-clip" viewBox="0 0 24 24"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5zM8 3v6h7V3M8 21v-7h8v7"/></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol><symbol id="i-box" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 4h6v3H9zM9 5H6v16h12V5h-3M9 12h6M9 16h4"/></symbol><symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8zM7.5 8.5h.01"/></symbol><symbol id="i-org" viewBox="0 0 24 24"><path d="M9 3h6v5H9zM3 16h6v5H3zM15 16h6v5h-6zM12 8v4M6 16v-4h12v4"/></symbol><symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol><symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3v9h9a9 9 0 1 1-9-9ZM15 3.5A9 9 0 0 1 20.5 9H15z"/></symbol><symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4"/></symbol><symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 19a1.4 1.4 0 0 0 1.2 2h12.6a1.4 1.4 0 0 0 1.2-2L14 9V3M7 15h10"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><path d="M5 9h15M4 15h15M10 3 8 21M16 3l-2 18"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><path d="M3 5h18v14H3z"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5-8 8"/></symbol><symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 20v-4M9 20v-8M14 20V8M19 20V4"/></symbol><symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
     <symbol id="i-lead" viewBox="0 0 24 24"><path d="M12 2 3 7l9 5 9-5-9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
@@ -1721,7 +2060,7 @@ body.has-modal { overflow: hidden; }
         </form>
         <div id="startupMessage" role="status">در حال آماده‌سازی… اگر دکمه ورود فعال نشد، فایل را دانلود و در مرورگر باز کنید.</div><noscript>اجرای JavaScript برای پیش‌نمایش لازم است. فایل را دانلود و با Chrome یا Edge باز کنید.</noscript><div class="login-note"><span class="status-dot status-dot--success"></span> محیط نمایشی آماده است؛ اطلاعات ورود از قبل تکمیل شده‌اند.</div>
       </div>
-      <p class="login-footer">ارقام CRM · نسخه v1.10.2 · 1405/07/13 · پیش‌نمایش آفلاین</p>
+      <p class="login-footer">ارقام CRM · نسخه v1.11.0 · 1405/07/13 · پیش‌نمایش آفلاین</p>
     </div>
   </section>
 
@@ -1730,7 +2069,7 @@ body.has-modal { overflow: hidden; }
       <div class="sidebar__header">
         <div class="brand brand--light">
           <span class="brand__mark">آ</span>
-          <span><strong>ارقام CRM</strong><small>نسخه <bdi dir="ltr">1.10.2</bdi> · پیش‌نمایش</small></span>
+          <span><strong>ارقام CRM</strong><small>نسخه <bdi dir="ltr">1.11.0</bdi> · پیش‌نمایش</small></span>
         </div>
         <button class="icon-button icon-button--sidebar sidebar-close" type="button" id="sidebarClose" aria-label="بستن منو"><svg><use href="#i-close"/></svg></button>
       </div>
@@ -1772,7 +2111,7 @@ body.has-modal { overflow: hidden; }
             <kbd>⌘ K</kbd>
           </label>
         </div>
-        <div class="topbar__left"><a class="version-pill" href="#/version" data-route="version" title="نسخه و تغییرات"><span class="version-pill__dot" aria-hidden="true"></span><span class="version-pill__label">نسخه</span><bdi dir="ltr">v1.10.2</bdi></a>
+        <div class="topbar__left"><a class="version-pill" href="#/version" data-route="version" title="نسخه و تغییرات"><span class="version-pill__dot" aria-hidden="true"></span><span class="version-pill__label">نسخه</span><bdi dir="ltr">v1.11.0</bdi></a>
           <label class="company-select">
             <svg><use href="#i-building"/></svg>
             <select id="companySelect" aria-label="شرکت جاری">
@@ -2302,7 +2641,7 @@ document.addEventListener("keydown", (event)=>{ if((event.metaKey||event.ctrlKey
 
 </script>
 <script>
-window.CRM_VERSION="1.10.2";window.CRM_RELEASES=[{"version":"1.10.2","date":"1405/07/13","title":"آماده‌سازی سرور برای فرم‌های تصویری ۱ تا ۳","changes":["ثبت پرونده: کاربر بدون مجوز تخصیص هم می‌تواند همان مسئولی را انتخاب کند که قواعد صف پیشنهاد می‌دهند؛ تیم و مسئول پیشنهادی برای پیش‌انتخاب در فرم آماده است.","برنامه‌ریزی اقدام: پشتیبانی از «شماره تماس» (برای تماس) و «منطقهٔ زمانی» زمان اقدام؛ زمان به وقت منطقهٔ انتخابی وارد و یکسان ذخیره می‌شود.","ثبت نتیجه: ثبت «تاریخ و ساعت انجام» واقعی (نه در آینده) و «انجام‌دهنده» در تاریخچهٔ پرونده.","اطلاعات شماره تماس مخاطبان و فهرست تیم‌ها برای فرم‌های بعدی در اختیار صفحهٔ پرونده قرار گرفت."]},{"version":"1.10.1","date":"1405/07/13","title":"فرم‌های بزرگ در پنجرهٔ بازشو","changes":["فرم‌های پرجزئیات مرکز پیگیری حالا در پنجرهٔ بازشوی بزرگ وسط صفحه (دو ستونه) باز می‌شوند: ثبت پرونده پیگیری، برنامه‌ریزی اقدام، ثبت نتیجه، ارجاع و پذیرش مسئولیت، انتظار و ازسرگیری، مدارک و تأییدها، بستن و بازگشایی.","فرم‌های کوتاه مثل «تغییر مسئول / انتقال شعبه / ادغام» و فرم‌های سریع پروندهٔ حساب (تماس، جلسه، وظیفه، یادداشت) مثل قبل از کنار صفحه باز می‌شوند.","دکمه‌های ثبت و انصراف در پایین پنجره ثابت می‌مانند؛ پنجره با Esc، دکمهٔ بستن یا کلیک بیرون آن بسته می‌شود و در موبایل تمام‌صفحه است.","پیش‌نمایش آفلاین هم به همین شکل به‌روز شد."]},{"version":"1.10.0","date":"1405/07/13","title":"مرکز پیگیری حرفه‌ای","changes":["منوی جدید «مرکز پیگیری»: هر پیگیری یک «پرونده» با شناسهٔ ثابت (RQ-…)، مسئول نهایی، مرحلهٔ فعال، اقدام بعدی و مهلت است. یک مشتری می‌تواند چند پروندهٔ مستقل داشته باشد و شناسه با انتقال شعبه تغییر نمی‌کند.","فهرست پرونده‌ها با نماهای «پرونده‌های من، ارجاع به من، در انتظار، بسته‌شده» و شمارنده‌های «عقب‌افتاده، بدون اقدام بعدی، ارجاع نپذیرفته»؛ جست‌وجو و فیلتر نوع، وضعیت، اولویت، شعبه و مسئول.","فرم ۱ «ثبت پرونده پیگیری»: موضوع، مشتری، شخص تماس، نوع، رکورد مرتبط، شعبه، نمایندگی، صف، مسئول (یا تخصیص خودکار)، کانال، اولویت (تا «توقف تولید»)، الگو و نسخه، قطعات و فیلدهای ویژهٔ هر نوع. پروندهٔ تکراری روی همان رکورد یا موضوع مشابه تشخیص داده می‌شود و ثبت مستقل فقط با ذکر دلیل ممکن است؛ ارسال دوباره، پرونده تکراری نمی‌سازد.","صفحهٔ پرونده: پیشرفت وزنی (Σ وزن × پیشرفت مرحله)، مهلت پاسخ اولیه و حل، زمان سپری‌شده و زمان توقف، مرحلهٔ فعال با چک‌لیست؛ «تکمیل مرحله» تا انجام همهٔ وظایف قفل است و ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.","فرم‌های ۲ تا ۸: برنامه‌ریزی تماس، جلسه، بازدید یا کار داخلی با چک‌لیست پیش از تماس؛ ثبت نتیجه با کد نتیجه و اقدام بعدی اجباری؛ ارجاع مرحله یا کل پرونده با مهلت پذیرش و ظرفیت گیرنده (تا پذیرش، مسئول فعلی پاسخ‌گو می‌ماند)؛ انتظار و ازسرگیری با موعد بازبینی و توقف مهلت فقط در وضعیت‌های مجاز؛ مدارک نسخه‌دار و درخواست/ثبت تصمیم تأیید (تأیید، نیازمند اصلاح، رد) با جداسازی وظایف؛ بستن با کنترل‌های پیش از بستن و بازگشایی با دلیل، مسئول و مهلت جدید بدون حذف سابقهٔ بستن.","فرم ۹ «طراحی الگوی گردش کار»: مراحل با وزن، نقش مسئول، الزامی/هم‌زمان، چک‌لیست و شرط؛ مجموع وزن باید ۱۰۰٪ باشد؛ قواعد «اگر … آنگاه …»؛ نسخهٔ منتشرشده ویرایش نمی‌شود و نسخهٔ جدید فقط برای پرونده‌های جدید اعمال می‌شود.","فرم ۱۰ «مهلت‌ها و هشدارها»: سیاست بر اساس اولویت و نوع، تقویم کاری (شنبه تا چهارشنبه ۸ تا ۱۷، تعطیلات و منطقهٔ زمانی تهران)، مهلت‌های مستقل پاسخ اولیه/مرحله/حل، توقف مجاز و هشدار سلسله‌مراتبی (مسئول مرحله، سرپرست، مدیر شعبه) که مالک پرونده را تغییر نمی‌دهد؛ «پیش‌نمایش محاسبه».","فرم ۱۱ «صف‌ها و تخصیص کار»: شرایط ورود (شعبه، نوع، خانوادهٔ قطعه، زبان)، روش «بیشترین ظرفیت آزاد» یا نوبت چرخشی، ظرفیت و وضعیت آمادگی افراد، صف پشتیبان و اعلان سرپرست، «آزمون تخصیص» و بازتوزیع پرونده‌های فرد غایب.","فرم ۱۲ «نظارت مدیر»: شمارنده‌ها، پرونده‌های نیازمند توجه با علت و مسئول، طولانی‌ترین انتظار مراحل، رعایت مهلت و نرخ بازگشایی، بار کاری مسئولان، ذخیرهٔ نما و خروجی CSV.","پایش سمت سرور (مستقل از مرورگر) هر ۵ دقیقه: تخصیص پرونده‌های بدون مسئول، هشدار مهلت، یادآوری اقدام و مرحلهٔ عقب‌افتاده و ارجاع پذیرفته‌نشده؛ هر پیام فقط یک بار ارسال می‌شود.","پروندهٔ حساب مشتری پرونده‌های پیگیری باز را نشان می‌دهد و فعالیت‌ها و مدارک پرونده در پروندهٔ مشتری هم دیده می‌شوند. مجوزهای جدید FollowUp.* برای نقش‌ها تعریف شد و کاربران نماینده به مرکز پیگیری دسترسی ندارند.","پایگاه داده: مایگریشن 202610040018_FollowUpCenter با اسکریپت‌های idempotent و rollback در scripts/sql/. راهنما: docs/follow-up-center-fa.md."]},{"version":"1.9.4","date":"1405/07/12","title":"فونت سازمانی ایران‌سنس","changes":["فونت اصلی سامانه به ایران‌سنس (IRANSansX) تغییر کرد. اگر ایران‌سنس در دسترس نباشد، به‌ترتیب Vazirmatn، Segoe UI و Tahoma استفاده می‌شوند.","برای بارگذاری فونت از خود سامانه کافی است فایل‌های woff2 دارای مجوز در wwwroot/fonts قرار بگیرند. سامانه هنگام شروع آن‌ها را پیدا می‌کند و برای همه صفحه‌ها، از جمله صفحه ورود، فعال می‌کند. بدون این فایل‌ها هیچ درخواست ناموفقی (۴۰۴) ارسال نمی‌شود.","ایران‌سنس فونت تجاری است و فایل آن همراه کد منتشر نمی‌شود. راهنمای نام فایل‌ها و نسخه اعداد فارسی (FaNum) در docs/brand-font-fa.md آمده است."]},{"version":"1.9.3","date":"1405/07/12","title":"جابه‌جایی «عملیات اصلی» در پرونده حساب","changes":["پنل «عملیات اصلی» (ایجاد فرصت، برنامه‌ریزی تماس و جلسه، ایجاد وظیفه، یادداشت و سرنخ) از ستون کناری به بالای صفحه، کنار کارت اطلاعات مشتری منتقل شد.","ستون کناری حالا فقط «پیگیری» و «یادداشت‌ها» را دارد و زودتر در دسترس است.","در صفحه‌های باریک‌تر کارت مشتری بالا و «عملیات اصلی» زیر آن قرار می‌گیرد.","پیش‌نمایش آفلاین هم همین چیدمان را دارد."]},{"version":"1.9.2","date":"1405/07/12","title":"پنل پیگیری در پرونده حساب","changes":["بلوک «اطلاعات حساب» از زبانه «نمای کلی» حذف شد؛ همین اطلاعات در کارت بالای پرونده هست. نمای کلی حالا خلاصه رکوردهای مرتبط، اطلاعات تکمیلی فرم، کیفیت داده، نشانی‌ها و تاریخچه مالکیت را نشان می‌دهد.","پنل فعالیت‌ها (با فیلتر نوع، وضعیت، مسئول و بازه زمانی، و دکمه‌های ثبت نتیجه، زمان جدید، ویرایش و لغو) به زبانه «فعالیت‌ها و تعاملات» منتقل شد. خط زمانی تعاملات زیر آن به شکل بخش بازشونده ماند.","ستون کناری حالا «پیگیری» دارد: همه کارهای باقی‌مانده حساب در یک فهرست، گروه‌بندی‌شده به «معوق / امروز / پیش رو / بدون زمان مشخص». این فهرست تماس‌ها، جلسه‌ها، وظایف و بازدیدهای برنامه‌ریزی‌شده و اقدام بعدی فرصت‌ها و سرنخ‌های باز را در بر می‌گیرد.","دکمه «انجام شد» روی هر فعالیت پیگیری فرم ثبت نتیجه را باز می‌کند و «پیگیری جدید» یک وظیفه برای حساب می‌سازد. پنل بعد از هر ثبت خودش به‌روز می‌شود.","فرصت‌ها و سرنخ‌های دیگران در پیگیری کارشناس نمایش داده نمی‌شوند و حساب خارج از دسترسی پیدا نمی‌شود.","پیش‌نمایش آفلاین هم همین چیدمان را دارد."]},{"version":"1.9.1","date":"1405/07/12","title":"رنگ سازمانی","changes":["رنگ‌های سامانه بر اساس رنگ سازمانی یکپارچه شد: منوی اصلی سرمه‌ای عمیق (#14263D)، دکمه اصلی، لینک و بخش انتخاب‌شده آبی (#1D4ED8) و حالت نشانگر آبی تیره (#1E40AF).","سبزآبی (#0F766E) فقط برای نوار پیشرفت، امتیاز و کیفیت داده و تأکید مکمل استفاده می‌شود.","زمینه صفحات #F4F7FB، کارت‌ها و جدول‌ها سفید، متن اصلی #0F172A، متن توضیحی #475569 و خطوط جداکننده #D8E0EB.","کادرهای ورودی (فرم‌ها، جست‌وجو و فیلترهای فهرست) مرز قابل تشخیص #64748B دارند و حلقه تمرکز صفحه‌کلید آبی و پررنگ است.","رنگ وضعیت‌ها یکسان شد: موفق سبز (#166534 روی #DCFCE7)، هشدار کهربایی (#92400E روی #FEF3C7)، خطا و تأخیر قرمز (#B91C1C روی #FEE2E2)، اطلاع‌رسانی و وضعیت فعال آبی (#1D4ED8 روی #DBEAFE).","صفحه ورود، منوی کناری، نشان سامانه، حالت تیره و پیش‌نمایش آفلاین هم با همین رنگ‌ها هماهنگ شدند."]},{"version":"1.9.0","date":"1405/07/12","title":"طراحی جدید فهرست‌ها (سرنخ، مشتری و سایر صفحات)","changes":["فهرست سرنخ‌ها با چیدمان جدید: سربرگ با «سرنخ جدید» و «ورود اطلاعات»، زبانه‌های «همه سرنخ‌ها / سرنخ‌های من / بدون اقدام بعدی / معوق» با شمارنده.","چهار کاشی رنگی «سرنخ»، «نیازمند اقدام»، «معوق» و «مشکوک به تکرار»؛ کلیک روی هر کاشی فهرست را فیلتر می‌کند.","نوار فیلتر با برچسب (شعبه، کارشناس فروش، منبع، وضعیت، نمایش بسته‌ها)، جست‌وجوی زنده و تغییر نما بین فهرست و کارت.","ستون‌های جدید: منبع با آیکون، شعبه/کارشناس، وضعیت رنگی با آیکون، امتیاز «x از 100» با نوار، اقدام بعدی و سررسید نسبی («امروز، ۱۴:۳۰» سبز، «فردا» آبی، «۲ روز تأخیر» قرمز)؛ مرتب‌سازی بر اساس نام، امتیاز و سررسید.","انتخاب چند ردیف و نوار عملیات گروهی: «ارجاع» و «افزودن فعالیت» (اقدام بعدی) برای همه موارد انتخاب‌شده؛ هر مورد جداگانه کنترل و نتیجه گزارش می‌شود.","منوی «⋮» در هر ردیف (جزئیات، ارجاع، تغییر وضعیت، تبدیل به فرصت) و صفحه‌بندی شماره‌دار با «نمایش ۱ تا ۱۰ از … مورد» و انتخاب «مورد در صفحه».","«ورود اطلاعات»: بارگذاری فایل CSV سرنخ‌ها (فایل نمونه قابل دریافت) با همان قواعد ثبت دستی؛ ردیف‌های ناموفق با شماره ردیف گزارش می‌شوند.","فهرست مشتریان و حساب‌ها به همین سبک: زبانه‌های «همه / حساب‌های من / بدون پیگیری / غیرفعال»، کاشی‌های «حساب / پیگیری امروز / نیازمند تکمیل / مشکوک به تکرار»، فیلتر شعبه، نوع رابطه، شخصیت، بخش، مالک و وضعیت، کیفیت داده و پیگیری بعدی هر حساب، و «ثبت وظیفه پیگیری» گروهی.","نشانی صفحه همراه نما، فیلتر، مرتب‌سازی و صفحه به‌روز می‌شود تا قابل اشتراک و بازگشت باشد؛ همه فیلترها و شمارنده‌ها در پایگاه‌داده و در محدوده دسترسی کاربر اجرا می‌شوند.","سایر فهرست‌ها (پیشنهاد قیمت، سفارش، خدمات، نمایندگان، کاربران و …) با همان قلم، کاشی‌ها، جدول و صفحه‌بندی هماهنگ شدند؛ نسخه موبایل فهرست‌ها ستون‌های کم‌اهمیت را پنهان می‌کند.","پیش‌نمایش آفلاین (preview) هم فهرست جدید سرنخ‌ها و مشتریان را دارد."]},{"version":"1.8.2","date":"1405/07/12","title":"کارت اطلاعات حساب","changes":["کارت «اطلاعات حساب» با چیدمان جدید: نشان، نام، وضعیت، کد حساب، صنعت و منطقه در یک سو؛ تلفن، ایمیل، وب‌سایت و نشانی با آیکون در سوی دیگر.","این کارت بالای پرونده حساب و بالای فرم ویرایش مشتری نمایش داده می‌شود و در موبایل زیر هم قرار می‌گیرد.","تلفن، ایمیل و وب‌سایت قابل کلیک‌اند؛ مقادیر پوشانده‌شده (بدون مجوز) لینک نمی‌شوند.","همین کارت در پیش‌نمایش آفلاین هم اعمال شد.","عنوان کشوی فرم ویرایش و تعریف مشتری درست نمایش داده می‌شود و نشانی تکراری («تهران، تهران») حذف شد."]},{"version":"1.8.1","date":"1405/07/12","title":"به‌روزرسانی پیش‌نمایش آفلاین","changes":["پیش‌نمایش آفلاین (index.html و preview/crm-unified.html) با نسخه‌های ۱٫۱ تا ۱٫۸ هم‌سطح شد.","پرونده یکپارچه حساب در پیش‌نمایش: شش عملیات اصلی، پنل فعالیت با ثبت نتیجه و اقدام بعدی، رکوردهای مرتبط با اتصال و قطع ارتباط، و تاریخچه تغییرات.","فرم مشتری حقیقی/حقوقی با اعتبارسنجی کد ملی و شناسهٔ ملی، و صفحه‌های خدمات و SLA، کمیسیون و رتبه‌بندی، اعلان‌ها و «نسخه و تغییرات».","نسخه و فهرست تغییرات پیش‌نمایش از همان منبع برنامهٔ اصلی خوانده می‌شود و آزمون خودکار دارد."]},{"version":"1.8.0","date":"1405/07/12","title":"نسخه‌گذاری سامانه","changes":["شمارهٔ نسخه در نوار کناری، نوار بالا و صفحهٔ ورود نمایش داده می‌شود.","صفحهٔ «تغییرات نسخه» (/system/version) فهرست همهٔ نسخه‌ها و تغییرات هر کدام را نشان می‌دهد.","آزمون خودکار بررسی می‌کند که نسخهٔ برنامه و بالاترین نسخهٔ این فهرست یکی باشند.","رفع اسکرول افقی نوار بالا در موبایل."]},{"version":"1.7.0","date":"1405/07/12","title":"پرونده یکپارچه حساب","changes":["صفحهٔ واحد هر حساب با سربرگ، شاخص‌های دارای تعریف و شش عملیات اصلی (فرصت، تماس، جلسه، وظیفه، یادداشت، سرنخ).","پنل فعالیت با فیلتر، نمایش معوق‌ها، ثبت نتیجه جدا از برنامه‌ریزی و اقدام بعدی؛ یادآوری از طریق صف اعلان.","۲۷ بخش رکوردهای مرتبط با ایجاد، اتصال موجود و قطع ارتباط بدون حذف؛ پرداخت‌ها با تأیید دومرحله‌ای و جمع به تفکیک ارز.","جلوگیری از ثبت تکراری، مجوزهای جداگانه برای هر حوزه و تاریخچهٔ کامل تغییرات."]},{"version":"1.6.1","date":"1405/07/11","title":"اصلاحات ظاهری و مستندات","changes":["چک‌باکس‌ها در فرم‌ها در یک ردیف نمایش داده می‌شوند.","گزارش تحلیل و مستند فاز ۷ به‌روز شد."]},{"version":"1.6.0","date":"1405/07/11","title":"اعلان ایمیل و پیامک","changes":["صف اعلان با تلاش مجدد، جلوگیری از ارسال تکراری و تنظیمات اعلان برای هر کاربر."]},{"version":"1.5.0","date":"1405/07/11","title":"تکمیل فاز ۷ نمایندگان","changes":["تضمین‌ها و آموزش نمایندگان، تقسیم اعتبار فروش و ارسال کمیسیون تأییدشده به حسابداری."]},{"version":"1.4.0","date":"1405/07/11","title":"شکایت پرتال و شاخص‌های خدمات","changes":["شکایت ثبت‌شده در پرتال نماینده به پروندهٔ خدمات تبدیل می‌شود؛ شاخص‌های خدمات به گزارش‌ها اضافه شد."]},{"version":"1.3.0","date":"1405/07/11","title":"دوره‌های شمسی","changes":["دوره‌های کمیسیون و رتبه‌بندی بر اساس ماه‌های شمسی."]},{"version":"1.2.0","date":"1405/07/11","title":"فرم تعریف مشتری","changes":["فرم کامل مشتری حقیقی و حقوقی با افراد رابط، نشان (لوگو) و اعتبارسنجی شناسه‌های ایرانی."]},{"version":"1.1.0","date":"1405/07/11","title":"کمیسیون و رتبه‌بندی نمایندگان","changes":["محاسبه و تأیید کمیسیون، ارزیابی و رتبه‌بندی نمایندگان."]},{"version":"1.0.0","date":"1405/07/11","title":"نسخهٔ پایه","changes":["اولویت‌های ۱ تا ۱۰ نقشهٔ راه: هویت و دسترسی، ساختار چندشرکتی، مشتری ۳۶۰، سرنخ و فرصت، پیش‌فاکتور، سفارش، نمایندگان، گزارش‌ها، پرتال و موبایل، و خدمات و SLA."]}];
+window.CRM_VERSION="1.11.0";window.CRM_RELEASES=[{"version":"1.11.0","date":"1405/07/13","title":"فرم‌های مرکز پیگیری دقیقاً مطابق تصاویر (۱ تا ۱۲)","changes":["هر ۱۲ فرم مطابق تصویر مرجع خود بازطراحی شد:","فرم‌های بزرگ در پنجرهٔ بازشو و فرم‌های کوچک از کنار صفحه باز می‌شوند.","ثبت پرونده (۱):","برنامه‌ریزی اقدام (۲):","ثبت نتیجه (۳):","ارجاع (۴):","مراحل و وظایف (۵):","انتظار (۶):","مدارک (۷):","بستن (۸): کارت «آماده بستن» و کنترل‌های پیش از بستن اضافه شد.","طراحی الگو (۹):","مهلت‌ها (۱۰):","صف‌ها (۱۱):","نظارت مدیر (۱۲):","پایگاه داده: مایگریشن FollowUpDrafts (جدول followup.Drafts) همراه با اسکریپت‌های مستقل اجرا و بازگشت.","اصلاح: حذف نمای ذخیره‌شدهٔ نظارت در پایگاه دادهٔ SQL Server ماندگار می‌شود.","پیش‌نمایش آفلاین و آزمون‌های خودکار به‌روز شد."]},{"version":"1.10.2","date":"1405/07/13","title":"آماده‌سازی سرور برای فرم‌های تصویری ۱ تا ۳","changes":["ثبت پرونده: کاربر بدون مجوز تخصیص هم می‌تواند همان مسئولی را انتخاب کند که قواعد صف پیشنهاد می‌دهند؛ تیم و مسئول پیشنهادی برای پیش‌انتخاب در فرم آماده است.","برنامه‌ریزی اقدام: پشتیبانی از «شماره تماس» (برای تماس) و «منطقهٔ زمانی» زمان اقدام؛ زمان به وقت منطقهٔ انتخابی وارد و یکسان ذخیره می‌شود.","ثبت نتیجه: ثبت «تاریخ و ساعت انجام» واقعی (نه در آینده) و «انجام‌دهنده» در تاریخچهٔ پرونده.","اطلاعات شماره تماس مخاطبان و فهرست تیم‌ها برای فرم‌های بعدی در اختیار صفحهٔ پرونده قرار گرفت."]},{"version":"1.10.1","date":"1405/07/13","title":"فرم‌های بزرگ در پنجرهٔ بازشو","changes":["فرم‌های پرجزئیات مرکز پیگیری حالا در پنجرهٔ بازشوی بزرگ وسط صفحه (دو ستونه) باز می‌شوند: ثبت پرونده پیگیری، برنامه‌ریزی اقدام، ثبت نتیجه، ارجاع و پذیرش مسئولیت، انتظار و ازسرگیری، مدارک و تأییدها، بستن و بازگشایی.","فرم‌های کوتاه مثل «تغییر مسئول / انتقال شعبه / ادغام» و فرم‌های سریع پروندهٔ حساب (تماس، جلسه، وظیفه، یادداشت) مثل قبل از کنار صفحه باز می‌شوند.","دکمه‌های ثبت و انصراف در پایین پنجره ثابت می‌مانند؛ پنجره با Esc، دکمهٔ بستن یا کلیک بیرون آن بسته می‌شود و در موبایل تمام‌صفحه است.","پیش‌نمایش آفلاین هم به همین شکل به‌روز شد."]},{"version":"1.10.0","date":"1405/07/13","title":"مرکز پیگیری حرفه‌ای","changes":["منوی جدید «مرکز پیگیری»: هر پیگیری یک «پرونده» با شناسهٔ ثابت (RQ-…)، مسئول نهایی، مرحلهٔ فعال، اقدام بعدی و مهلت است. یک مشتری می‌تواند چند پروندهٔ مستقل داشته باشد و شناسه با انتقال شعبه تغییر نمی‌کند.","فهرست پرونده‌ها با نماهای «پرونده‌های من، ارجاع به من، در انتظار، بسته‌شده» و شمارنده‌های «عقب‌افتاده، بدون اقدام بعدی، ارجاع نپذیرفته»؛ جست‌وجو و فیلتر نوع، وضعیت، اولویت، شعبه و مسئول.","فرم ۱ «ثبت پرونده پیگیری»: موضوع، مشتری، شخص تماس، نوع، رکورد مرتبط، شعبه، نمایندگی، صف، مسئول (یا تخصیص خودکار)، کانال، اولویت (تا «توقف تولید»)، الگو و نسخه، قطعات و فیلدهای ویژهٔ هر نوع. پروندهٔ تکراری روی همان رکورد یا موضوع مشابه تشخیص داده می‌شود و ثبت مستقل فقط با ذکر دلیل ممکن است؛ ارسال دوباره، پرونده تکراری نمی‌سازد.","صفحهٔ پرونده: پیشرفت وزنی (Σ وزن × پیشرفت مرحله)، مهلت پاسخ اولیه و حل، زمان سپری‌شده و زمان توقف، مرحلهٔ فعال با چک‌لیست؛ «تکمیل مرحله» تا انجام همهٔ وظایف قفل است و ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.","فرم‌های ۲ تا ۸: برنامه‌ریزی تماس، جلسه، بازدید یا کار داخلی با چک‌لیست پیش از تماس؛ ثبت نتیجه با کد نتیجه و اقدام بعدی اجباری؛ ارجاع مرحله یا کل پرونده با مهلت پذیرش و ظرفیت گیرنده (تا پذیرش، مسئول فعلی پاسخ‌گو می‌ماند)؛ انتظار و ازسرگیری با موعد بازبینی و توقف مهلت فقط در وضعیت‌های مجاز؛ مدارک نسخه‌دار و درخواست/ثبت تصمیم تأیید (تأیید، نیازمند اصلاح، رد) با جداسازی وظایف؛ بستن با کنترل‌های پیش از بستن و بازگشایی با دلیل، مسئول و مهلت جدید بدون حذف سابقهٔ بستن.","فرم ۹ «طراحی الگوی گردش کار»: مراحل با وزن، نقش مسئول، الزامی/هم‌زمان، چک‌لیست و شرط؛ مجموع وزن باید ۱۰۰٪ باشد؛ قواعد «اگر … آنگاه …»؛ نسخهٔ منتشرشده ویرایش نمی‌شود و نسخهٔ جدید فقط برای پرونده‌های جدید اعمال می‌شود.","فرم ۱۰ «مهلت‌ها و هشدارها»: سیاست بر اساس اولویت و نوع، تقویم کاری (شنبه تا چهارشنبه ۸ تا ۱۷، تعطیلات و منطقهٔ زمانی تهران)، مهلت‌های مستقل پاسخ اولیه/مرحله/حل، توقف مجاز و هشدار سلسله‌مراتبی (مسئول مرحله، سرپرست، مدیر شعبه) که مالک پرونده را تغییر نمی‌دهد؛ «پیش‌نمایش محاسبه».","فرم ۱۱ «صف‌ها و تخصیص کار»: شرایط ورود (شعبه، نوع، خانوادهٔ قطعه، زبان)، روش «بیشترین ظرفیت آزاد» یا نوبت چرخشی، ظرفیت و وضعیت آمادگی افراد، صف پشتیبان و اعلان سرپرست، «آزمون تخصیص» و بازتوزیع پرونده‌های فرد غایب.","فرم ۱۲ «نظارت مدیر»: شمارنده‌ها، پرونده‌های نیازمند توجه با علت و مسئول، طولانی‌ترین انتظار مراحل، رعایت مهلت و نرخ بازگشایی، بار کاری مسئولان، ذخیرهٔ نما و خروجی CSV.","پایش سمت سرور (مستقل از مرورگر) هر ۵ دقیقه: تخصیص پرونده‌های بدون مسئول، هشدار مهلت، یادآوری اقدام و مرحلهٔ عقب‌افتاده و ارجاع پذیرفته‌نشده؛ هر پیام فقط یک بار ارسال می‌شود.","پروندهٔ حساب مشتری پرونده‌های پیگیری باز را نشان می‌دهد و فعالیت‌ها و مدارک پرونده در پروندهٔ مشتری هم دیده می‌شوند. مجوزهای جدید FollowUp.* برای نقش‌ها تعریف شد و کاربران نماینده به مرکز پیگیری دسترسی ندارند.","پایگاه داده: مایگریشن 202610040018_FollowUpCenter با اسکریپت‌های idempotent و rollback در scripts/sql/. راهنما: docs/follow-up-center-fa.md."]},{"version":"1.9.4","date":"1405/07/12","title":"فونت سازمانی ایران‌سنس","changes":["فونت اصلی سامانه به ایران‌سنس (IRANSansX) تغییر کرد. اگر ایران‌سنس در دسترس نباشد، به‌ترتیب Vazirmatn، Segoe UI و Tahoma استفاده می‌شوند.","برای بارگذاری فونت از خود سامانه کافی است فایل‌های woff2 دارای مجوز در wwwroot/fonts قرار بگیرند. سامانه هنگام شروع آن‌ها را پیدا می‌کند و برای همه صفحه‌ها، از جمله صفحه ورود، فعال می‌کند. بدون این فایل‌ها هیچ درخواست ناموفقی (۴۰۴) ارسال نمی‌شود.","ایران‌سنس فونت تجاری است و فایل آن همراه کد منتشر نمی‌شود. راهنمای نام فایل‌ها و نسخه اعداد فارسی (FaNum) در docs/brand-font-fa.md آمده است."]},{"version":"1.9.3","date":"1405/07/12","title":"جابه‌جایی «عملیات اصلی» در پرونده حساب","changes":["پنل «عملیات اصلی» (ایجاد فرصت، برنامه‌ریزی تماس و جلسه، ایجاد وظیفه، یادداشت و سرنخ) از ستون کناری به بالای صفحه، کنار کارت اطلاعات مشتری منتقل شد.","ستون کناری حالا فقط «پیگیری» و «یادداشت‌ها» را دارد و زودتر در دسترس است.","در صفحه‌های باریک‌تر کارت مشتری بالا و «عملیات اصلی» زیر آن قرار می‌گیرد.","پیش‌نمایش آفلاین هم همین چیدمان را دارد."]},{"version":"1.9.2","date":"1405/07/12","title":"پنل پیگیری در پرونده حساب","changes":["بلوک «اطلاعات حساب» از زبانه «نمای کلی» حذف شد؛ همین اطلاعات در کارت بالای پرونده هست. نمای کلی حالا خلاصه رکوردهای مرتبط، اطلاعات تکمیلی فرم، کیفیت داده، نشانی‌ها و تاریخچه مالکیت را نشان می‌دهد.","پنل فعالیت‌ها (با فیلتر نوع، وضعیت، مسئول و بازه زمانی، و دکمه‌های ثبت نتیجه، زمان جدید، ویرایش و لغو) به زبانه «فعالیت‌ها و تعاملات» منتقل شد. خط زمانی تعاملات زیر آن به شکل بخش بازشونده ماند.","ستون کناری حالا «پیگیری» دارد: همه کارهای باقی‌مانده حساب در یک فهرست، گروه‌بندی‌شده به «معوق / امروز / پیش رو / بدون زمان مشخص». این فهرست تماس‌ها، جلسه‌ها، وظایف و بازدیدهای برنامه‌ریزی‌شده و اقدام بعدی فرصت‌ها و سرنخ‌های باز را در بر می‌گیرد.","دکمه «انجام شد» روی هر فعالیت پیگیری فرم ثبت نتیجه را باز می‌کند و «پیگیری جدید» یک وظیفه برای حساب می‌سازد. پنل بعد از هر ثبت خودش به‌روز می‌شود.","فرصت‌ها و سرنخ‌های دیگران در پیگیری کارشناس نمایش داده نمی‌شوند و حساب خارج از دسترسی پیدا نمی‌شود.","پیش‌نمایش آفلاین هم همین چیدمان را دارد."]},{"version":"1.9.1","date":"1405/07/12","title":"رنگ سازمانی","changes":["رنگ‌های سامانه بر اساس رنگ سازمانی یکپارچه شد: منوی اصلی سرمه‌ای عمیق (#14263D)، دکمه اصلی، لینک و بخش انتخاب‌شده آبی (#1D4ED8) و حالت نشانگر آبی تیره (#1E40AF).","سبزآبی (#0F766E) فقط برای نوار پیشرفت، امتیاز و کیفیت داده و تأکید مکمل استفاده می‌شود.","زمینه صفحات #F4F7FB، کارت‌ها و جدول‌ها سفید، متن اصلی #0F172A، متن توضیحی #475569 و خطوط جداکننده #D8E0EB.","کادرهای ورودی (فرم‌ها، جست‌وجو و فیلترهای فهرست) مرز قابل تشخیص #64748B دارند و حلقه تمرکز صفحه‌کلید آبی و پررنگ است.","رنگ وضعیت‌ها یکسان شد: موفق سبز (#166534 روی #DCFCE7)، هشدار کهربایی (#92400E روی #FEF3C7)، خطا و تأخیر قرمز (#B91C1C روی #FEE2E2)، اطلاع‌رسانی و وضعیت فعال آبی (#1D4ED8 روی #DBEAFE).","صفحه ورود، منوی کناری، نشان سامانه، حالت تیره و پیش‌نمایش آفلاین هم با همین رنگ‌ها هماهنگ شدند."]},{"version":"1.9.0","date":"1405/07/12","title":"طراحی جدید فهرست‌ها (سرنخ، مشتری و سایر صفحات)","changes":["فهرست سرنخ‌ها با چیدمان جدید: سربرگ با «سرنخ جدید» و «ورود اطلاعات»، زبانه‌های «همه سرنخ‌ها / سرنخ‌های من / بدون اقدام بعدی / معوق» با شمارنده.","چهار کاشی رنگی «سرنخ»، «نیازمند اقدام»، «معوق» و «مشکوک به تکرار»؛ کلیک روی هر کاشی فهرست را فیلتر می‌کند.","نوار فیلتر با برچسب (شعبه، کارشناس فروش، منبع، وضعیت، نمایش بسته‌ها)، جست‌وجوی زنده و تغییر نما بین فهرست و کارت.","ستون‌های جدید: منبع با آیکون، شعبه/کارشناس، وضعیت رنگی با آیکون، امتیاز «x از 100» با نوار، اقدام بعدی و سررسید نسبی («امروز، ۱۴:۳۰» سبز، «فردا» آبی، «۲ روز تأخیر» قرمز)؛ مرتب‌سازی بر اساس نام، امتیاز و سررسید.","انتخاب چند ردیف و نوار عملیات گروهی: «ارجاع» و «افزودن فعالیت» (اقدام بعدی) برای همه موارد انتخاب‌شده؛ هر مورد جداگانه کنترل و نتیجه گزارش می‌شود.","منوی «⋮» در هر ردیف (جزئیات، ارجاع، تغییر وضعیت، تبدیل به فرصت) و صفحه‌بندی شماره‌دار با «نمایش ۱ تا ۱۰ از … مورد» و انتخاب «مورد در صفحه».","«ورود اطلاعات»: بارگذاری فایل CSV سرنخ‌ها (فایل نمونه قابل دریافت) با همان قواعد ثبت دستی؛ ردیف‌های ناموفق با شماره ردیف گزارش می‌شوند.","فهرست مشتریان و حساب‌ها به همین سبک: زبانه‌های «همه / حساب‌های من / بدون پیگیری / غیرفعال»، کاشی‌های «حساب / پیگیری امروز / نیازمند تکمیل / مشکوک به تکرار»، فیلتر شعبه، نوع رابطه، شخصیت، بخش، مالک و وضعیت، کیفیت داده و پیگیری بعدی هر حساب، و «ثبت وظیفه پیگیری» گروهی.","نشانی صفحه همراه نما، فیلتر، مرتب‌سازی و صفحه به‌روز می‌شود تا قابل اشتراک و بازگشت باشد؛ همه فیلترها و شمارنده‌ها در پایگاه‌داده و در محدوده دسترسی کاربر اجرا می‌شوند.","سایر فهرست‌ها (پیشنهاد قیمت، سفارش، خدمات، نمایندگان، کاربران و …) با همان قلم، کاشی‌ها، جدول و صفحه‌بندی هماهنگ شدند؛ نسخه موبایل فهرست‌ها ستون‌های کم‌اهمیت را پنهان می‌کند.","پیش‌نمایش آفلاین (preview) هم فهرست جدید سرنخ‌ها و مشتریان را دارد."]},{"version":"1.8.2","date":"1405/07/12","title":"کارت اطلاعات حساب","changes":["کارت «اطلاعات حساب» با چیدمان جدید: نشان، نام، وضعیت، کد حساب، صنعت و منطقه در یک سو؛ تلفن، ایمیل، وب‌سایت و نشانی با آیکون در سوی دیگر.","این کارت بالای پرونده حساب و بالای فرم ویرایش مشتری نمایش داده می‌شود و در موبایل زیر هم قرار می‌گیرد.","تلفن، ایمیل و وب‌سایت قابل کلیک‌اند؛ مقادیر پوشانده‌شده (بدون مجوز) لینک نمی‌شوند.","همین کارت در پیش‌نمایش آفلاین هم اعمال شد.","عنوان کشوی فرم ویرایش و تعریف مشتری درست نمایش داده می‌شود و نشانی تکراری («تهران، تهران») حذف شد."]},{"version":"1.8.1","date":"1405/07/12","title":"به‌روزرسانی پیش‌نمایش آفلاین","changes":["پیش‌نمایش آفلاین (index.html و preview/crm-unified.html) با نسخه‌های ۱٫۱ تا ۱٫۸ هم‌سطح شد.","پرونده یکپارچه حساب در پیش‌نمایش: شش عملیات اصلی، پنل فعالیت با ثبت نتیجه و اقدام بعدی، رکوردهای مرتبط با اتصال و قطع ارتباط، و تاریخچه تغییرات.","فرم مشتری حقیقی/حقوقی با اعتبارسنجی کد ملی و شناسهٔ ملی، و صفحه‌های خدمات و SLA، کمیسیون و رتبه‌بندی، اعلان‌ها و «نسخه و تغییرات».","نسخه و فهرست تغییرات پیش‌نمایش از همان منبع برنامهٔ اصلی خوانده می‌شود و آزمون خودکار دارد."]},{"version":"1.8.0","date":"1405/07/12","title":"نسخه‌گذاری سامانه","changes":["شمارهٔ نسخه در نوار کناری، نوار بالا و صفحهٔ ورود نمایش داده می‌شود.","صفحهٔ «تغییرات نسخه» (/system/version) فهرست همهٔ نسخه‌ها و تغییرات هر کدام را نشان می‌دهد.","آزمون خودکار بررسی می‌کند که نسخهٔ برنامه و بالاترین نسخهٔ این فهرست یکی باشند.","رفع اسکرول افقی نوار بالا در موبایل."]},{"version":"1.7.0","date":"1405/07/12","title":"پرونده یکپارچه حساب","changes":["صفحهٔ واحد هر حساب با سربرگ، شاخص‌های دارای تعریف و شش عملیات اصلی (فرصت، تماس، جلسه، وظیفه، یادداشت، سرنخ).","پنل فعالیت با فیلتر، نمایش معوق‌ها، ثبت نتیجه جدا از برنامه‌ریزی و اقدام بعدی؛ یادآوری از طریق صف اعلان.","۲۷ بخش رکوردهای مرتبط با ایجاد، اتصال موجود و قطع ارتباط بدون حذف؛ پرداخت‌ها با تأیید دومرحله‌ای و جمع به تفکیک ارز.","جلوگیری از ثبت تکراری، مجوزهای جداگانه برای هر حوزه و تاریخچهٔ کامل تغییرات."]},{"version":"1.6.1","date":"1405/07/11","title":"اصلاحات ظاهری و مستندات","changes":["چک‌باکس‌ها در فرم‌ها در یک ردیف نمایش داده می‌شوند.","گزارش تحلیل و مستند فاز ۷ به‌روز شد."]},{"version":"1.6.0","date":"1405/07/11","title":"اعلان ایمیل و پیامک","changes":["صف اعلان با تلاش مجدد، جلوگیری از ارسال تکراری و تنظیمات اعلان برای هر کاربر."]},{"version":"1.5.0","date":"1405/07/11","title":"تکمیل فاز ۷ نمایندگان","changes":["تضمین‌ها و آموزش نمایندگان، تقسیم اعتبار فروش و ارسال کمیسیون تأییدشده به حسابداری."]},{"version":"1.4.0","date":"1405/07/11","title":"شکایت پرتال و شاخص‌های خدمات","changes":["شکایت ثبت‌شده در پرتال نماینده به پروندهٔ خدمات تبدیل می‌شود؛ شاخص‌های خدمات به گزارش‌ها اضافه شد."]},{"version":"1.3.0","date":"1405/07/11","title":"دوره‌های شمسی","changes":["دوره‌های کمیسیون و رتبه‌بندی بر اساس ماه‌های شمسی."]},{"version":"1.2.0","date":"1405/07/11","title":"فرم تعریف مشتری","changes":["فرم کامل مشتری حقیقی و حقوقی با افراد رابط، نشان (لوگو) و اعتبارسنجی شناسه‌های ایرانی."]},{"version":"1.1.0","date":"1405/07/11","title":"کمیسیون و رتبه‌بندی نمایندگان","changes":["محاسبه و تأیید کمیسیون، ارزیابی و رتبه‌بندی نمایندگان."]},{"version":"1.0.0","date":"1405/07/11","title":"نسخهٔ پایه","changes":["اولویت‌های ۱ تا ۱۰ نقشهٔ راه: هویت و دسترسی، ساختار چندشرکتی، مشتری ۳۶۰، سرنخ و فرصت، پیش‌فاکتور، سفارش، نمایندگان، گزارش‌ها، پرتال و موبایل، و خدمات و SLA."]}];
 /* Priority 10 visual simulation. Real authorization and persistence live in ASP.NET Core. */
 function createSelfServicePreview(ctx) {
   const {store, escapeHtml:e, header, table, button:b, showForm, amount, idFor, today, save, render, toast, download, closeDrawer} = ctx;
@@ -3077,12 +3416,12 @@ function createListPreview(ctx) {
   return {views: {leads: leadsView, customers: customersView}, action, submit, reset: list => { state[list].selected.clear(); }};
 }
 
-/* Offline preview of the v1.10 follow-up center (مرکز پیگیری): list with views and counters, case page with weighted
+/* Offline preview of the v1.10–1.11 follow-up center (مرکز پیگیری): list with views and counters, case page with weighted
    stages and checklist lock, plan / result / referral / wait / close drawers, template and SLA settings and the
    supervision board. Same markup and CSS classes as the MVC pages; data lives in the shared preview store. */
 function createFollowUpPreview(ctx) {
   'use strict';
-  const {store, escapeHtml: e, save, toast, closeDrawer, showForm, showPopupForm} = ctx;
+  const {store, escapeHtml: e, save, toast, closeDrawer, showForm} = ctx;
   const render = () => ctx.render();
   const fa = n => new Intl.NumberFormat('fa-IR').format(n);
   const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"></use></svg>`;
@@ -3252,6 +3591,22 @@ function createFollowUpPreview(ctx) {
 
   // ── Actions and drawers ──
   const byId = id => store.followUps.find(x => x.id === Number(String(id).split(':')[0]));
+  // v1.11: forms open as numbered sheets like the twelve form images (same classes as the MVC popups).
+  const f = (label, control, opts = {}) => `<label class="fu-f${opts.span ? ' fu-span' : ''}"><span class="fu-f__l">${label}${opts.req ? '<i>*</i>' : ''}</span><span class="fu-f__c">${opts.icon ? icon(opts.icon) : ''}${control}</span></label>`;
+  const chipOf = c => c ? `${c.code} / ${c.customer}` : '';
+  function showSheet(num, title, chip, body, kind, id, submitLabel, submitIcon = 'send') {
+    closeDrawer();
+    const modal = document.getElementById('modal');
+    modal.classList.add('modal--form', 'modal--sheet');
+    document.getElementById('modalTitle').textContent = title;
+    const footer = document.getElementById('modalFooter'); if (footer) footer.innerHTML = '';
+    document.getElementById('modalBody').innerHTML = `<form class="fu-sheet" data-u-form="${kind}" data-id="${id ?? ''}" novalidate>
+      <header class="fu-sheet__head"><span class="fu-num" aria-hidden="true">${fa(num)}</span><div class="fu-sheet__title"><h2>${e(title)}</h2></div>${chip ? `<span class="fu-chip">${icon('case')}<bdi>${e(chip)}</bdi></span>` : ''}<button type="button" class="icon-button fu-sheet__close" data-action="close-modal" aria-label="بستن">${icon('close')}</button></header>
+      <div class="fu-sheet__body">${body}<div class="u-form-error" role="alert"></div></div>
+      <footer class="fu-sheet__foot"><button class="button button--primary" type="submit">${icon(submitIcon)}${submitLabel}</button><button type="button" class="button button--ghost fu-foot__end" data-action="close-modal">انصراف</button></footer></form>`;
+    modal.classList.add('is-open'); document.getElementById('modalBackdrop').classList.add('is-open'); modal.setAttribute('aria-hidden', 'false');
+  }
+  const localAt = h => { const d = new Date(Date.now() + h * 3600000); d.setMinutes(0, 0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
   function action(name, id) {
     if (!name.startsWith('fu-')) return false;
     if (name === 'fu-view') { state.view = id; render(); return true; }
@@ -3261,17 +3616,18 @@ function createFollowUpPreview(ctx) {
     if (name === 'fu-supervision') { ctx.navigate('follow-up-supervision'); return true; }
     if (name === 'fu-tab') { state.tab = id; render(); return true; }
     const c = byId(id);
-    if (name === 'fu-new') { showPopupForm('ثبت پرونده پیگیری', `<label>موضوع پیگیری<input name="subject" required></label><label>مشتری<select name="customer">${store.customers.map(x => `<option>${e(x.name)}</option>`).join('')}</select></label><label>الگو<select name="template">${store.fuTemplates.map(t => `<option value="${t.code}">${e(t.name)} · نسخه ${fa(t.version)}</option>`).join('')}</select></label><label>اولویت<select name="priority"><option value="Normal">عادی</option><option value="High">بالا</option><option value="Critical">بحرانی (توقف تولید)</option></select></label><p class="fu-sla-note">${icon('clock')}<span>مهلت پاسخ اولیه ۲ و حل ۲۴ ساعت کاری؛ مسئول از صف «فروش قطعات صنعتی» با بیشترین ظرفیت آزاد تعیین می‌شود.</span></p>`, 'fu-new'); return true; }
+    if (name === 'fu-new') { showSheet(1, 'ثبت پرونده پیگیری', '', `<p class="fu-note fu-note--plain">${icon('info')}<span>ایجاد مسیر رسیدگی برای مشتری</span></p><div class="fu-g">${f('موضوع', '<input name="subject" required maxlength="200" placeholder="مثلاً پیش‌فاکتور قطعات یدکی خط بسته‌بندی">', {req: 1, icon: 'note', span: 1})}${f('مشتری / حساب', `<select name="customer">${store.customers.map(x => `<option>${e(x.name)}</option>`).join('')}</select>`, {req: 1, icon: 'building'})}${f('تیم مسئول', '<select name="queue"><option>فروش قطعات صنعتی</option><option>صف پشتیبان فروش</option></select>', {req: 1, icon: 'users'})}${f('اولویت', '<span class="fu-dot" data-tone="Normal"></span><select name="priority" data-dot><option value="Normal">عادی</option><option value="High">بالا</option><option value="Critical">بحرانی (توقف تولید)</option></select>')}${f('الگوی گردش کار', `<select name="template">${store.fuTemplates.map(t => `<option value="${t.code}">${e(t.name)} · نسخه ${fa(t.version)}</option>`).join('')}</select>`, {req: 1, icon: 'flow'})}</div><label class="fu-dropzone">${icon('upload')}<span>افزودن فایل یا تصویر قطعه</span><small>در نسخهٔ سرور ذخیره می‌شود</small><input type="file" multiple></label><p class="fu-note">${icon('info')}<span>مهلت پاسخ اولیه براساس نوع درخواست تعیین می‌شود (۲ و حل ۲۴ ساعت کاری).</span></p>`, 'fu-new', '', 'ذخیره و شروع پیگیری'); return true; }
     if (!c) return true;
-    if (name === 'fu-plan') { showPopupForm('برنامه‌ریزی اقدام', `<label>نوع<select name="kind"><option>تماس</option><option>جلسه</option><option>بازدید</option><option>کار داخلی</option></select></label><label>عنوان<input name="title" required value="تماس پیگیری"></label><label>زمان<input type="datetime-local" name="at" required></label><fieldset class="pick-list"><legend>چک‌لیست پیش از تماس</legend><label class="consent-row"><input type="checkbox" checked><span>بررسی آخرین سوابق تعامل</span></label><label class="consent-row"><input type="checkbox"><span>آماده بودن پیش‌فاکتور</span></label></fieldset>`, 'fu-plan', c.id); return true; }
-    if (name === 'fu-result') { showPopupForm('ثبت نتیجه', `<label>نتیجه<select name="result" required>${results.map(([k, l]) => `<option value="${l}">${l}</option>`).join('')}</select></label><label>شرح نتیجه<textarea name="outcome" required></textarea></label><label>اقدام بعدی<input name="next" required value="ارسال پیش‌فاکتور اصلاحی"></label><label>زمان اقدام بعدی<input type="datetime-local" name="at" required></label><p class="fu-sla-note">${icon('info')}<span>ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>`, 'fu-result', id); return true; }
-    if (name === 'fu-refer') { showPopupForm('ارجاع و پذیرش مسئولیت', `<label>دامنه<select name="scope"><option>اجرای مرحله</option><option>کل پرونده</option></select></label><label>گیرنده<select name="to">${Object.values(names).map(n => `<option>${e(n)}</option>`).join('')}</select></label><label>دلیل ارجاع<textarea name="reason" required></textarea></label><p class="fu-warning">${icon('alert')}<span>تا پذیرش گیرنده، مسئول فعلی پاسخ‌گو می‌ماند.</span></p>`, 'fu-refer', c.id); return true; }
+    if (name === 'fu-plan') { showSheet(2, 'برنامه‌ریزی اقدام', chipOf(c), `<div class="fu-g">${f('نوع اقدام', '<select name="kind"><option>تماس</option><option>جلسه</option><option>بازدید</option><option>کار داخلی</option></select>', {req: 1, icon: 'layers'})}${f('عنوان اقدام', '<input name="title" required value="تماس پیگیری">', {req: 1, icon: 'note'})}${f('مسئول اقدام', `<select name="owner"><option>${e(c.owner)}</option></select>`, {req: 1, icon: 'user'})}${f('زمان شروع', `<input type="datetime-local" name="at" required value="${localAt(2)}">`, {req: 1, icon: 'calendar'})}</div><section class="fu-box fu-box--blue"><p class="fu-box__h">${icon('clipboard')}چک‌لیست قبل از تماس</p><div class="fu-checks-inline fu-checks-inline--col"><label><input type="checkbox" checked><span>بررسی آخرین پیش‌فاکتور</span></label><label><input type="checkbox"><span>دریافت تأیید مدیر فروش</span></label></div></section><p class="fu-note fu-note--plain">${icon('clock')}<span>زمان‌ها به وقت شعبهٔ تهران نمایش داده می‌شوند.</span></p>`, 'fu-plan', c.id, 'ثبت برنامه', 'calendar'); return true; }
+    if (name === 'fu-result') { showSheet(3, 'ثبت نتیجه پیگیری', chipOf(c), `<div class="fu-done-card"><span class="fu-done-card__icon">${icon('phone')}</span><div><strong>${e(c.activities[Number(String(id).split(':')[1])]?.title || 'فعالیت')}</strong><small>${e(c.subject)}</small></div><span class="pill pill--success">انجام شد</span></div><div class="fu-g">${f('نتیجهٔ پیگیری', `<select name="result" required>${results.map(([k, l]) => `<option value="${l}">${l}</option>`).join('')}</select>`, {req: 1, icon: 'check', span: 1})}${f('شرح نتیجه', '<textarea name="outcome" required></textarea>', {req: 1, span: 1})}</div><section class="fu-box fu-box--blue"><p class="fu-box__h">${icon('calendar')}اقدام بعدی</p><div class="fu-g">${f('عنوان', '<input name="next" required value="ارسال پیش‌فاکتور اصلاحی">', {req: 1, icon: 'note'})}${f('موعد', `<input type="datetime-local" name="at" required value="${localAt(24)}">`, {req: 1, icon: 'calendar'})}</div></section><p class="fu-note fu-note--plain">${icon('info')}<span>ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>`, 'fu-result', id, 'ذخیرهٔ نتیجه و اقدام بعدی', 'save'); return true; }
+    if (name === 'fu-refer') { showSheet(4, 'ارجاع و پذیرش مسئولیت', chipOf(c), `<fieldset class="fu-radios"><legend>محدودهٔ ارجاع<i class="fu-req">*</i></legend><label><input type="radio" name="scope" value="اجرای مرحله" checked><span>اجرای مرحله</span></label><label><input type="radio" name="scope" value="کل پرونده"><span>کل پرونده</span></label></fieldset><section class="fu-box fu-box--blue"><div class="fu-person"><span class="fu-avatar">${e(c.owner[0])}</span><span><small>مسئول پرونده</small><strong>${e(c.owner)}</strong></span></div></section><div class="fu-g">${f('گیرنده', `<select name="to">${Object.values(names).map(n => `<option>${e(n)}</option>`).join('')}</select>`, {req: 1, icon: 'user'})}${f('مهلت پذیرش', '<select name="accept"><option>امروز ۱۶:۰۰</option><option>فردا ۱۰:۰۰</option></select>', {req: 1, icon: 'clock'})}${f('دلیل ارجاع', '<textarea name="reason" required></textarea>', {req: 1, span: 1})}</div><section class="fu-box fu-box--green"><div class="fu-capacity"><span class="fu-avatar">ا</span><div><strong>آماده دریافت</strong><small>ظرفیت: ۳ از ۸ پرونده</small><div class="fu-progressbar"><span style="width:38%"></span></div></div></div></section><p class="fu-note fu-note--amber">${icon('alert')}<span>تا پذیرش گیرنده، مسئول فعلی پاسخ‌گو می‌ماند.</span></p>`, 'fu-refer', c.id, 'ثبت و ارسال ارجاع'); return true; }
     if (name === 'fu-accept') { const r = c.referrals[Number(String(id).split(':')[1])]; if (r && r.to === me()) { r.status = 'پذیرفته شد'; if (r.scope === 'کل پرونده') c.owner = me(); log(c, `ارجاع توسط ${me()} پذیرفته شد`); save(); render(); toast('ارجاع پذیرفته شد.'); } return true; }
-    if (name === 'fu-wait') { showPopupForm('ثبت انتظار', `<label>وضعیت<select name="status"><option value="WaitingCustomer">در انتظار مشتری (مهلت متوقف)</option><option value="WaitingInternal">در انتظار واحد داخلی (مهلت ادامه)</option><option value="OnHold">متوقف</option></select></label><label>علت انتظار<textarea name="reason" required maxlength="500"></textarea></label><label>موعد بازبینی<input type="datetime-local" name="at" required></label>`, 'fu-wait', c.id); return true; }
+    if (name === 'fu-wait') { showSheet(6, 'انتظار و ازسرگیری', `${c.code} / ${c.subject}`, `<div class="fu-g">${f('وضعیت جدید', '<select name="status"><option value="WaitingCustomer">در انتظار مشتری</option><option value="WaitingInternal">در انتظار واحد داخلی</option><option value="OnHold">متوقف</option></select>', {req: 1, icon: 'hourglass'})}${f('موعد بازبینی', `<input type="datetime-local" name="at" required value="${localAt(48)}">`, {req: 1, icon: 'calendar'})}${f('علت انتظار', '<textarea name="reason" required maxlength="500"></textarea>', {req: 1, span: 1})}</div><section class="fu-box fu-box--orange"><p class="fu-box__h">${icon('clock')}اثر بر مهلت مرحله</p><p>در انتظار مشتری: مهلت متوقف می‌شود؛ مهلت جدید پس از ازسرگیری محاسبه می‌شود.</p></section><div class="fu-note">${icon('info')}<ul><li>مسئول پرونده حفظ می‌شود.</li><li>بازبینی در موعد تعیین‌شده الزامی است.</li></ul></div>`, 'fu-wait', c.id, 'ثبت وضعیت انتظار', 'pause'); return true; }
     if (name === 'fu-resume') { showForm('ازسرگیری', `<label>اقدام بعدی<input name="next" required></label><label>زمان<input type="datetime-local" name="at" required></label>`, 'fu-resume', c.id); return true; }
     if (name === 'fu-close') {
       const checks = [['تمام مراحل الزامی تکمیل شده', c.stages.every(s => ['Done', 'Skipped'].includes(s.status))], ['فعالیت باز وجود ندارد', c.activities.every(a => a.done)], ['ارجاع در انتظار پذیرش وجود ندارد', c.referrals.every(r => r.status !== 'در انتظار پذیرش')]];
-      showPopupForm('بستن پرونده', `<ul class="fu-checks">${checks.map(([l, ok]) => `<li class="${ok ? 'is-ok' : 'is-fail'}">${icon(ok ? 'check' : 'close')}<span>${l}</span></li>`).join('')}</ul><label>نتیجهٔ نهایی<input name="outcome" required value="موفق — نتیجهٔ مورد انتظار حاصل شد"></label><input type="hidden" name="ready" value="${checks.every(x => x[1]) ? 1 : 0}">`, 'fu-close', c.id); return true;
+      const ready = checks.every(x => x[1]), pct = Math.round(100 * checks.filter(x => x[1]).length / checks.length);
+      showSheet(8, 'بستن و بازگشایی پرونده', chipOf(c), `<section class="fu-box ${ready ? 'fu-box--green' : 'fu-box--amber'} fu-ready"><div class="fu-ready__top">${icon(ready ? 'check' : 'alert')}<strong>${ready ? 'آماده بستن' : 'هنوز آماده بستن نیست'}</strong><b>${fa(pct)}٪</b></div><div class="fu-progressbar"><span style="width:${pct}%"></span></div></section><h3 class="fu-sec__h">${icon('clipboard')}کنترل‌های پیش از بستن</h3><ul class="fu-ticks">${checks.map(([l, ok]) => `<li class="${ok ? 'is-ok' : 'is-fail'}">${icon(ok ? 'check' : 'close')}<span>${l}</span></li>`).join('')}</ul>${f('نتیجهٔ نهایی', '<input name="outcome" required value="موفق — نتیجهٔ مورد انتظار حاصل شد">', {req: 1, icon: 'flag'})}<input type="hidden" name="ready" value="${checks.every(x => x[1]) ? 1 : 0}">`, 'fu-close', c.id, 'تأیید و بستن پرونده', 'lock'); return true;
     }
     if (name === 'fu-complete') { const s = active(c); if (s && s.items.every(x => x.done)) { s.status = 'Done'; log(c, `مرحلهٔ «${s.name}» تکمیل شد`); advance(c); save(); render(); toast(`مرحلهٔ «${s.name}» تکمیل شد.`); } return true; }
     return false;
@@ -3408,11 +3764,11 @@ function createFollowUpPreview(ctx) {
   }
   // Large forms open in a centered popup (same as the MVC follow-up center); short forms keep the drawer.
   function showPopupForm(title,fields,kind,id=''){
-    closeDrawer();$('#modal').classList.add('modal--form');$('#modalTitle').textContent=title;$('#modalFooter').innerHTML='';
+    closeDrawer();$('#modal').classList.remove('modal--sheet');$('#modal').classList.add('modal--form');$('#modalTitle').textContent=title;$('#modalFooter').innerHTML='';
     $('#modalBody').innerHTML=`<form class="u-form" data-u-form="${kind}" data-id="${id}">${fields}<div class="u-actions"><button class="button button--primary" type="submit">ثبت</button><button type="button" class="button button--ghost" data-action="close-modal">انصراف</button></div><div class="u-form-error" role="alert"></div></form>`;
     $('#modal').classList.add('is-open');$('#modalBackdrop').classList.add('is-open');$('#modal').setAttribute('aria-hidden','false');
   }
-  const legacyOpenModal=openModal;openModal=function(...args){$('#modal').classList.remove('modal--form');legacyOpenModal(...args);};
+  const legacyOpenModal=openModal;openModal=function(...args){$('#modal').classList.remove('modal--form','modal--sheet');legacyOpenModal(...args);};
   function closeForms(){closeDrawer();closeModal();}
   function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
   function csvCell(v){let s=String(v??'');if(/^[\s]*[=+\-@]/.test(s)||/[\r\n\t]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}

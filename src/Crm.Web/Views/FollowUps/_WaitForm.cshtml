@@ -5,71 +5,92 @@
     var r = Model.Resume;
     var waitAction = $"/follow-ups/{c.Id}/wait";
     var resumeAction = $"/follow-ups/{c.Id}/resume";
+    var stage = c.ActiveStage;
+    var people = c.Contacts.Select(x => x.Label).ToList();
+    var colleagues = c.Users.Select(x => x.Label).Concat(c.Teams.Select(x => x.Label)).Distinct().ToList();
+    var waitingOn = w.WaitingOn ?? c.Contact;
 }
-<div class="drawer-form" data-fu-tabs>
-    <span data-drawer-title hidden>انتظار و ازسرگیری</span>
-    <partial name="_CaseContext" model="c" />
-    <div class="tabbar" role="tablist">
-        <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "wait" ? " is-active" : "")" data-fu-tab="wait" disabled="@c.IsWaiting">ثبت انتظار</button>
-        <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "resume" ? " is-active" : "")" data-fu-tab="resume" disabled="@(!c.IsWaiting)">ازسرگیری</button>
+<div class="fu-sheet" data-fu-tabs>
+    <partial name="_SheetHead" model="@(new FollowUpSheetHead(6, "انتظار و ازسرگیری", null, $"{c.Code} / {c.Subject}"))" />
+    <div class="fu-sheet__body fu-sheet__body--tabs">
+        <div class="fu-utabs" role="tablist">
+            <button type="button" role="tab" class="@(Model.Tab == "wait" ? "is-active" : "")" data-fu-tab="wait" disabled="@c.IsWaiting"><svg><use href="#i-pause"/></svg>ثبت انتظار</button>
+            <button type="button" role="tab" class="@(Model.Tab == "resume" ? "is-active" : "")" data-fu-tab="resume" disabled="@(!c.IsWaiting)"><svg><use href="#i-play"/></svg>ازسرگیری</button>
+        </div>
     </div>
-    <form data-fu-panel="wait" hidden="@(Model.Tab != "wait")" class="drawer-form" method="post" action="@waitAction" hx-post="@waitAction" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-        <section class="form-section">
-            <h3>وضعیت انتظار</h3>
-            <div class="form-grid">
-                <label><span>وضعیت جدید *</span><select name="Status">
+    <form data-fu-panel="wait" hidden="@(Model.Tab != "wait")" method="post" action="@waitAction" enctype="multipart/form-data" hx-post="@waitAction" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        <div class="fu-sheet__body">
+            @Html.AntiForgeryToken()
+            @if (Model.Tab == "wait") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+            <div class="fu-g">
+                <label class="fu-f"><span class="fu-f__l">وضعیت جدید<i>*</i></span><span class="fu-f__c"><svg><use href="#i-hourglass"/></svg><select name="Status" required data-switch="wait">
                     <option value="WaitingCustomer" selected="@(w.Status == FollowUpStatus.WaitingCustomer)">در انتظار مشتری</option>
                     <option value="WaitingInternal" selected="@(w.Status == FollowUpStatus.WaitingInternal)">در انتظار واحد داخلی / تأمین‌کننده</option>
                     <option value="OnHold" selected="@(w.Status == FollowUpStatus.OnHold)">متوقف (با علت و موعد بازبینی)</option>
-                </select></label>
-                <label><span>مرحلهٔ مرتبط</span><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is FollowUpStageStatus.Active or FollowUpStageStatus.Returned)) { <option value="@s.Id" selected="@(w.StageId == s.Id)">@s.Name</option> }</select></label>
-                <label class="field--full"><span>علت انتظار *</span><textarea name="Reason" rows="3" required maxlength="500" placeholder="مثلاً مشتری باید نقشهٔ فنی را ارسال کند">@w.Reason</textarea></label>
-                <label class="field--full"><span>منتظر پاسخ از</span><input name="WaitingOn" value="@w.WaitingOn" maxlength="120" placeholder="شخص یا واحد" /></label>
-                <label><span>تاریخ درخواست</span><input name="RequestedDate" value="@w.RequestedDate" inputmode="numeric" data-jalali /></label>
-                <label><span>پاسخ مورد انتظار تا</span><input name="ExpectedDate" value="@w.ExpectedDate" inputmode="numeric" data-jalali /></label>
-                <label><span>ساعت</span><input name="ExpectedTime" value="@w.ExpectedTime" dir="ltr" inputmode="numeric" /></label>
-                <label><span>موعد بازبینی *</span><input name="ReviewDate" value="@w.ReviewDate" required inputmode="numeric" data-jalali /></label>
-                <label><span>ساعت بازبینی</span><input name="ReviewTime" value="@w.ReviewTime" dir="ltr" inputmode="numeric" /></label>
-                <label><span>مسئول بازبینی *</span><select name="ReviewOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(w.ReviewOwnerUserId.ToString() == u.Value)">@u.Label</option> }</select></label>
+                </select></span></label>
+                <label class="fu-f"><span class="fu-f__l">مرحلهٔ مرتبط</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is FollowUpStageStatus.Active or FollowUpStageStatus.Returned)) { <option value="@s.Id" selected="@(w.StageId == s.Id)">@s.Name</option> }</select></span></label>
+                <label class="fu-f fu-span"><span class="fu-f__l">مسئول پرونده</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><input value="@(c.Owner ?? "بدون مسئول")" readonly aria-readonly="true" /></span></label>
+                <label class="fu-f fu-span"><span class="fu-f__l">علت انتظار<i>*</i><em data-counter-out>@FollowUpLabels.Fa((w.Reason ?? "").Length)/@FollowUpLabels.Fa(500)</em></span><span class="fu-f__c"><textarea name="Reason" rows="3" required maxlength="500" data-counter placeholder="مثلاً مشتری باید نقشهٔ فنی را ارسال کند">@w.Reason</textarea></span></label>
+                <label class="fu-f"><span class="fu-f__l">منتظر پاسخ از</span><span class="fu-f__c"><svg><use href="#i-users"/></svg><select name="WaitingOn">
+                    <option value="">—</option>
+                    @if (people.Count > 0) { <optgroup label="مخاطبان @c.CustomerName">@foreach (var p in people) { <option value="@p" selected="@(waitingOn == p)">@p</option> }</optgroup> }
+                    <optgroup label="همکاران و واحدها">@foreach (var p in colleagues) { <option value="@p" selected="@(waitingOn == p)">@p</option> }</optgroup>
+                    @if (waitingOn is not null && !people.Contains(waitingOn) && !colleagues.Contains(waitingOn)) { <option value="@waitingOn" selected>@waitingOn</option> }
+                </select></span></label>
+                <label class="fu-f"><span class="fu-f__l">تاریخ درخواست اطلاعات</span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="RequestedDate" value="@w.RequestedDate" inputmode="numeric" data-jalali /></span></label>
+                <div class="fu-f"><span class="fu-f__l">زمان مورد انتظار پاسخ</span><span class="fu-f__c--pair fu-f__c">
+                    <span><svg><use href="#i-calendar"/></svg><input name="ExpectedDate" value="@w.ExpectedDate" inputmode="numeric" data-jalali aria-label="تاریخ پاسخ مورد انتظار" /></span>
+                    <span><svg><use href="#i-clock"/></svg><input name="ExpectedTime" value="@w.ExpectedTime" dir="ltr" inputmode="numeric" aria-label="ساعت پاسخ مورد انتظار" /></span>
+                </span></div>
+                <div class="fu-f"><span class="fu-f__l">موعد بازبینی<i>*</i></span><span class="fu-f__c--pair fu-f__c">
+                    <span><svg><use href="#i-calendar"/></svg><input name="ReviewDate" value="@w.ReviewDate" required inputmode="numeric" data-jalali aria-label="تاریخ بازبینی" /></span>
+                    <span><svg><use href="#i-clock"/></svg><input name="ReviewTime" value="@w.ReviewTime" dir="ltr" inputmode="numeric" aria-label="ساعت بازبینی" /></span>
+                </span></div>
+                <label class="fu-f fu-span"><span class="fu-f__l">مسئول بازبینی<i>*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="ReviewOwnerUserId" required>@foreach (var u in c.Users) { <option value="@u.Value" selected="@(w.ReviewOwnerUserId.ToString() == u.Value)">@u.Label</option> }</select></span></label>
             </div>
-        </section>
-        <section class="form-section fu-effect">
-            <h3>اثر بر مهلت</h3>
-            <ul>
-                <li><span class="pill pill--sm pill--@(c.PausesOnCustomer ? "success" : "neutral")">@(c.PausesOnCustomer ? "توقف" : "ادامه")</span> در انتظار مشتری</li>
-                <li><span class="pill pill--sm pill--@(c.PausesOnInternal ? "success" : "neutral")">@(c.PausesOnInternal ? "توقف" : "ادامه")</span> در انتظار واحد داخلی / تأمین‌کننده</li>
-                <li><span class="pill pill--sm pill--neutral">ادامه</span> متوقف</li>
-            </ul>
-            <small class="field-help">طبق سیاست «@c.SlaPolicy». موعد بازبینی، اقدام بعدی پرونده می‌شود. پس از ازسرگیری، زمان توقف به مهلت‌ها افزوده می‌شود.</small>
-        </section>
-        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-pause"/></svg>ثبت وضعیت انتظار</button></div>
-    </form>
-    <form data-fu-panel="resume" hidden="@(Model.Tab != "resume")" class="drawer-form" method="post" action="@resumeAction" hx-post="@resumeAction" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-        @if (c.IsWaiting)
-        {
-            <section class="form-section">
-                <h3>انتظار فعلی</h3>
-                <dl class="fu-facts">
-                    <div><dt>وضعیت</dt><dd>@FollowUpLabels.Status(c.Status)</dd></div>
-                    <div><dt>علت</dt><dd>@c.WaitReason</dd></div>
-                    <div><dt>منتظر</dt><dd>@(c.WaitingOn ?? "—")</dd></div>
-                    <div><dt>مهلت</dt><dd>@(c.IsPaused ? "متوقف" : "در جریان")</dd></div>
-                </dl>
+            <section class="fu-box fu-box--orange">
+                <p class="fu-box__h"><svg><use href="#i-clock"/></svg>اثر بر مهلت مرحله@(stage is null ? "" : $" «{stage.Name}»")</p>
+                <p data-switch-for="wait" data-when="WaitingCustomer" hidden="@(w.Status != FollowUpStatus.WaitingCustomer)">@(c.PausesOnCustomer ? "پس از ثبت، مهلت این مرحله متوقف می‌شود." : "مهلت این مرحله ادامه می‌یابد؛ سیاست، انتظار مشتری را متوقف نمی‌کند.")</p>
+                <p data-switch-for="wait" data-when="WaitingInternal" hidden="@(w.Status != FollowUpStatus.WaitingInternal)">@(c.PausesOnInternal ? "پس از ثبت، مهلت این مرحله متوقف می‌شود." : "مهلت ادامه می‌یابد؛ انتظار واحد داخلی مهلت را متوقف نمی‌کند.")</p>
+                <p data-switch-for="wait" data-when="OnHold" hidden="@(w.Status != FollowUpStatus.OnHold)">مهلت ادامه می‌یابد؛ توقف پرونده فقط با علت و موعد بازبینی ثبت می‌شود.</p>
+                <p>مطابق سیاست «@c.SlaPolicy». مهلت جدید پس از ازسرگیری محاسبه می‌شود.</p>
             </section>
-        }
-        <section class="form-section">
-            <h3>ادامهٔ کار</h3>
-            <div class="form-grid">
-                <label class="field--full"><span>توضیح</span><input name="Note" value="@r.Note" maxlength="300" placeholder="مثلاً نقشه دریافت شد" /></label>
-                <label class="field--full"><span>اقدام بعدی *</span><input name="NextTitle" value="@r.NextTitle" required maxlength="200" /></label>
-                <label><span>تاریخ *</span><input name="NextDate" value="@r.NextDate" required inputmode="numeric" data-jalali /></label>
-                <label><span>ساعت</span><input name="NextTime" value="@r.NextTime" dir="ltr" inputmode="numeric" /></label>
+            <div class="fu-f">
+                <span class="fu-f__l">درخواست اطلاعات ارسال‌شده</span>
+                <div class="fu-file-row">
+                    <label class="fu-add fu-file-pick"><svg><use href="#i-clip"/></svg>پیوست فایل<input type="file" name="requestFile" data-file-names aria-label="پیوست درخواست اطلاعات ارسال‌شده" /></label>
+                    <small class="fu-f__hint" data-file-out data-empty="مثلاً ایمیل یا نامهٔ درخواست مدارک (اختیاری)">مثلاً ایمیل یا نامهٔ درخواست مدارک (اختیاری)</small>
+                </div>
             </div>
-        </section>
-        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-play"/></svg>ازسرگیری پرونده</button></div>
+            <div class="fu-note"><svg><use href="#i-info"/></svg><ul><li>مسئول پرونده حفظ می‌شود.</li><li>بازبینی در موعد تعیین‌شده الزامی است؛ موعد بازبینی اقدام بعدی پرونده می‌شود.</li></ul></div>
+        </div>
+        <footer class="fu-sheet__foot">
+            <button class="button button--primary" type="submit"><svg><use href="#i-pause"/></svg>ثبت وضعیت انتظار</button>
+            <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+        </footer>
+    </form>
+    <form data-fu-panel="resume" hidden="@(Model.Tab != "resume")" method="post" action="@resumeAction" hx-post="@resumeAction" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        <div class="fu-sheet__body">
+            @Html.AntiForgeryToken()
+            @if (Model.Tab == "resume") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+            @if (c.IsWaiting)
+            {
+                <section class="fu-box fu-box--orange">
+                    <p class="fu-box__h"><svg><use href="#i-hourglass"/></svg>@FollowUpLabels.Status(c.Status)</p>
+                    <p>علت: @c.WaitReason · منتظر: @(c.WaitingOn ?? "—") · بازبینی: @FollowUpLabels.When(c.ReviewAtUtc, DateTimeOffset.UtcNow) · مهلت: @(c.IsPaused ? "متوقف" : "در جریان")</p>
+                </section>
+            }
+            <div class="fu-g">
+                <label class="fu-f fu-span"><span class="fu-f__l">توضیح</span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="Note" value="@r.Note" maxlength="300" placeholder="مثلاً نقشه دریافت شد" /></span></label>
+                <label class="fu-f fu-span"><span class="fu-f__l">اقدام بعدی<i>*</i></span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="NextTitle" value="@r.NextTitle" required maxlength="200" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">تاریخ<i>*</i></span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="NextDate" value="@r.NextDate" required inputmode="numeric" data-jalali /></span></label>
+                <label class="fu-f"><span class="fu-f__l">ساعت</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="NextTime" value="@r.NextTime" dir="ltr" inputmode="numeric" /></span></label>
+            </div>
+            <p class="fu-note"><svg><use href="#i-info"/></svg><span>زمان توقف به مهلت‌ها افزوده می‌شود و مهلت جدید از لحظهٔ ازسرگیری محاسبه می‌شود.</span></p>
+        </div>
+        <footer class="fu-sheet__foot">
+            <button class="button button--primary" type="submit"><svg><use href="#i-play"/></svg>ازسرگیری پرونده</button>
+            <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+        </footer>
     </form>
 </div>

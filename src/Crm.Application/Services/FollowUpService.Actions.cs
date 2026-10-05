@@ -37,6 +37,13 @@ public sealed partial class FollowUpService
             var c = Case(data, snapshot, organization, userId, caseId, P.Update);
             if (!c.IsOpen) throw new InvalidOperationException("پرونده بسته است؛ ابتدا آن را بازگشایی کنید.");
             var stage = command.StageId is { } sid ? Stage(data, c, sid) : null;
+            // «مخاطب»: a call, meeting or visit is with someone at the customer — required when the customer has active contacts.
+            if (command.Kind != "Task" && command.ContactId is null &&
+                data.Find<Crm.Domain.Customers.CustomerContact>(x => x.CustomerId == c.CustomerId && x.IsActive).Count > 0)
+                throw new InvalidOperationException("مخاطب اقدام را انتخاب کنید.");
+            if (command.ContactId is { } contactId &&
+                data.Find<Crm.Domain.Customers.CustomerContact>(x => x.Id == contactId && x.CustomerId == c.CustomerId).Count == 0)
+                throw new InvalidOperationException("مخاطب انتخاب‌شده متعلق به این مشتری نیست.");
             return (c.CustomerId, stage?.Name);
         });
         if (string.IsNullOrWhiteSpace(command.Title)) throw new InvalidOperationException("عنوان اقدام الزامی است.");

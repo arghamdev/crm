@@ -1,14 +1,14 @@
 @model IReadOnlyList<AssignmentCandidateDto>
-<div id="fuReceivers" class="fu-receivers" role="radiogroup" aria-label="گیرنده">
-    @if (Model.Count == 0) { <p class="empty-mini">در این شعبه کاربر فعالی نیست.</p> }
+@{
+    // The first eligible person with free capacity is preselected; the green card shows the chosen receiver's capacity.
+    var pick = Model.FirstOrDefault(x => x.Eligible && x.Available && (x.Capacity == 0 || x.Load < x.Capacity)) ?? Model.FirstOrDefault(x => x.Available);
+}
+<span class="fu-f__c" id="fuReceivers"><svg><use href="#i-user"/></svg><select name="ToUserId" required data-receivers aria-label="گیرنده">
+    <option value="">@(Model.Count == 0 ? "در این شعبه کاربر فعالی نیست" : "— انتخاب گیرنده —")</option>
     @foreach (var r in Model)
     {
-        var tone = !r.Available ? "neutral" : r.Capacity > 0 && r.Load >= r.Capacity ? "danger" : r.Capacity > 0 && r.Load * 10 >= r.Capacity * 8 ? "warning" : "success";
-        <label class="fu-receiver@(r.Eligible ? "" : " is-muted")">
-            <input type="radio" name="ToUserId" value="@r.UserId" />
-            <span class="entity-avatar entity-avatar--blue">@ListFormat.Initial(r.Name)</span>
-            <span><strong>@r.Name</strong><small>@(r.Available ? r.Capacity > 0 ? $"ظرفیت: {r.Load} از {r.Capacity}" : $"{r.Load} پروندهٔ باز" : r.Note ?? "در دسترس نیست")</small></span>
-            <span class="pill pill--sm pill--@tone">@(!r.Available ? "خارج از دسترس" : tone == "danger" ? "ظرفیت تکمیل" : tone == "warning" ? "نزدیک ظرفیت" : "آماده")</span>
-        </label>
+        var full = r.Capacity > 0 && r.Load >= r.Capacity;
+        <option value="@r.UserId" selected="@(pick?.UserId == r.UserId)" data-name="@r.Name" data-initial="@ListFormat.Initial(r.Name)" data-load="@r.Load" data-capacity="@r.Capacity"
+                data-available="@(r.Available ? "true" : "false")" data-note="@r.Note">@r.Name — @(!r.Available ? "خارج از دسترس" : full ? "ظرفیت تکمیل" : r.Capacity > 0 ? $"{FollowUpLabels.Fa(r.Load)} از {FollowUpLabels.Fa(r.Capacity)}" : "آماده")</option>
     }
-</div>
+</select></span>

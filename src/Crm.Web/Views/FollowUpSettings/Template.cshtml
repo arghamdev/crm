@@ -11,107 +11,115 @@
     var action = isNew ? "/follow-ups/settings/templates" : $"/follow-ups/settings/templates/{t.Id}";
     var roles = new[] { "کارشناس فروش", "کارشناس فنی", "کارشناس انبار", "کارشناس تأمین", "کارشناس مالی", "کارشناس خدمات", "سرپرست فروش", "سرپرست خدمات", "مدیر فروش" };
     var rules = (posted?.Rules ?? t.Rules ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Split("=>", 2)).Where(x => x.Length == 2).ToList();
+    var total = stages.Sum(x => x.Weight);
+    var chip = isNew ? "پیش‌نویس نسخهٔ ۱" : draft ? $"پیش‌نویس نسخهٔ {FollowUpLabels.Fa(t.Version)}" : $"نسخهٔ {FollowUpLabels.Fa(t.Version)} · {FollowUpLabels.Template(t.Status)}";
+    var conditions = new[] { "موجودی ناکافی بود", "مشتری پاسخ نداد", "مبلغ بیش از سقف اختیار بود", "تأیید فنی رد شد", "قطعهٔ جایگزین لازم شد" };
+    var actions = new[] { "ایجاد وظیفه تأمین موجودی", "افزایش اولویت", "شروع مرحله تأیید مدیر", "کنار گذاشتن مرحله ارسال", "ایجاد وظیفه تماس مجدد" };
 }
 <nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><a href="/follow-ups/settings">تنظیمات</a><svg><use href="#i-chevron"/></svg><span>طراحی الگوی گردش کار</span></nav>
-<header class="list-head">
-    <div class="list-head__title">
-        <span class="list-head__icon"><svg><use href="#i-flow"/></svg></span>
-        <div><h1>طراحی الگوی گردش کار</h1><p>@(isNew ? "پیش‌نویس نسخهٔ ۱" : draft ? $"پیش‌نویس نسخهٔ {t.Version} · نسخهٔ منتشرشدهٔ فعلی: {(t.CurrentPublishedVersion == 0 ? "ندارد" : t.CurrentPublishedVersion)}" : $"نسخهٔ {t.Version} · {FollowUpLabels.Template(t.Status)} — فقط‌خواندنی")</p></div>
-    </div>
-    @if (!draft && !isNew)
-    {
-        <form method="post" action="/follow-ups/settings/templates/@t.Id/version">@Html.AntiForgeryToken()<button class="button button--primary" type="submit"><svg><use href="#i-copy"/></svg>ساخت نسخهٔ @(t.Version + 1)</button></form>
-    }
-</header>
+<div class="fu-page">
 @if (Context.Request.Query.ContainsKey("published")) { <p class="account-banner"><svg><use href="#i-check"/></svg>نسخهٔ @t.Version منتشر شد؛ پرونده‌های جدید از این نسخه استفاده می‌کنند و پرونده‌های باز روی نسخهٔ خود می‌مانند.</p> }
 @if (Context.Request.Query.ContainsKey("saved")) { <p class="account-banner"><svg><use href="#i-check"/></svg>پیش‌نویس ذخیره شد.</p> }
-<form class="fu-form" method="post" action="@action" data-weights>
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="ExpectedVersion" value="@t.EntityVersion" />
-    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <fieldset class="fu-form__grid" disabled="@(!draft)">
-        <section class="form-section">
-            <h3>مشخصات الگو</h3>
-            <div class="form-grid">
-                <label class="field--full"><span>نام الگو *</span><input name="Name" value="@name" required maxlength="160" /></label>
-                <label><span>نوع پیگیری *</span><select name="CaseType">@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(caseType == x.Key)">@x.Label</option> }</select></label>
-                <label><span>دامنه</span><select name="Scope"><option value="Company">کل شرکت</option>@foreach (var b in t.Branches) { <option value="@b.Value" selected="@((posted?.Scope ?? t.Scope) == b.Value)">@b.Label</option> }</select></label>
-                <label><span>واحد مالک *</span><input name="OwnerUnit" value="@(posted?.OwnerUnit ?? t.OwnerUnit)" required maxlength="120" /></label>
-                <label><span>نسخهٔ فعلی</span><input value="@(t.CurrentPublishedVersion == 0 ? "—" : $"نسخه {t.CurrentPublishedVersion}")" disabled /></label>
-                <label><span>سیاست مهلت</span><select name="SlaPolicyId"><option value="">— براساس اولویت —</option>@foreach (var p in t.Policies) { <option value="@p.Value" selected="@((posted?.SlaPolicyId ?? t.SlaPolicyId)?.ToString() == p.Value)">@p.Label</option> }</select></label>
-                <label><span>اولویت پیش‌فرض</span><select name="DefaultPriority">@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@((posted?.DefaultPriority ?? t.DefaultPriority) == p)">@FollowUpLabels.Priority(p)</option> }</select></label>
-                <label class="field--full"><span>شرح</span><textarea name="Description" rows="2" maxlength="1000">@(posted?.Description ?? t.Description)</textarea></label>
+@if (!draft && !isNew) { <form id="newVersionForm" method="post" action="/follow-ups/settings/templates/@t.Id/version" hidden>@Html.AntiForgeryToken()</form> }
+<form class="fu-sheet fu-sheet--card" method="post" action="@action" data-weights>
+    <partial name="/Views/FollowUps/_SheetHead.cshtml" model="@(new FollowUpSheetHead(9, "طراحی الگوی گردش کار", "مراحل، وزن‌ها، قواعد و شرایط بستن یک نوع پیگیری", chip, draft || isNew ? "orange" : "muted", "/follow-ups/settings"))" />
+    <div class="fu-sheet__body">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ExpectedVersion" value="@t.EntityVersion" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        @if (!draft) { <p class="fu-note fu-note--amber"><svg><use href="#i-lock"/></svg><span>این نسخه منتشر شده و فقط‌خواندنی است؛ برای تغییر، نسخهٔ @FollowUpLabels.Fa(t.Version + 1) را بسازید.</span></p> }
+        <fieldset class="fu-sheet__fields" disabled="@(!draft)">
+            <div class="fu-g">
+                <label class="fu-f fu-span"><span class="fu-f__l">نام الگو<i>*</i></span><span class="fu-f__c"><svg><use href="#i-flow"/></svg><input name="Name" value="@name" required maxlength="160" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">نوع پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="CaseType">@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(caseType == x.Key)">@x.Label</option> }</select></span></label>
+                <label class="fu-f"><span class="fu-f__l">حوزهٔ اعمال</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="Scope"><option value="Company">کل شرکت (همهٔ شعب)</option>@foreach (var b in t.Branches) { <option value="@b.Value" selected="@((posted?.Scope ?? t.Scope) == b.Value)">@b.Label</option> }</select></span></label>
+                <label class="fu-f"><span class="fu-f__l">واحد مالک<i>*</i></span><span class="fu-f__c"><svg><use href="#i-org"/></svg><input name="OwnerUnit" value="@(posted?.OwnerUnit ?? t.OwnerUnit)" required maxlength="120" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">نسخهٔ فعلی</span><span class="fu-f__c"><svg><use href="#i-tag"/></svg><input value="@(t.CurrentPublishedVersion == 0 ? "هنوز منتشر نشده" : $"نسخهٔ {FollowUpLabels.Fa(t.CurrentPublishedVersion)}")" disabled /></span></label>
             </div>
-        </section>
-        <section class="form-section">
-            <h3>قواعد (اگر … آنگاه …)</h3>
-            <div class="fu-rule-editor" data-rows>
+            <details class="fu-more-fields">
+                <summary><svg><use href="#i-chevron"/></svg>سیاست مهلت، اولویت پیش‌فرض و شرح</summary>
+                <div class="fu-g">
+                    <label class="fu-f"><span class="fu-f__l">سیاست مهلت</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><select name="SlaPolicyId"><option value="">— براساس اولویت —</option>@foreach (var p in t.Policies) { <option value="@p.Value" selected="@((posted?.SlaPolicyId ?? t.SlaPolicyId)?.ToString() == p.Value)">@p.Label</option> }</select></span></label>
+                    <label class="fu-f"><span class="fu-f__l">اولویت پیش‌فرض</span><span class="fu-f__c"><span class="fu-dot" data-tone="@(posted?.DefaultPriority ?? t.DefaultPriority)"></span><select name="DefaultPriority" data-dot>@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@((posted?.DefaultPriority ?? t.DefaultPriority) == p)">@FollowUpLabels.Priority(p)</option> }</select></span></label>
+                    <label class="fu-f fu-span"><span class="fu-f__l">شرح</span><span class="fu-f__c"><textarea name="Description" rows="2" maxlength="1000">@(posted?.Description ?? t.Description)</textarea></span></label>
+                </div>
+            </details>
+
+            <section class="fu-sec fu-box fu-box--plain" data-rows>
+                <h3 class="fu-sec__h"><svg><use href="#i-list"/></svg>مراحل الگو<button type="button" class="fu-add" data-add-row><svg><use href="#i-plus"/></svg>افزودن مرحله</button></h3>
+                <div class="fu-steps" data-sortable>
+                    <div class="fu-steps__head" aria-hidden="true"><span></span><span>مرحله</span><span>وزن</span><span>نقش مسئول</span><span></span></div>
+                    @for (var i = 0; i < stages.Count; i++)
+                    {
+                        var s = stages[i];
+                        <div class="fu-step" data-row>
+                            <button type="button" class="fu-grip" data-grip title="برای جابه‌جایی بکشید" aria-label="جابه‌جایی مرحله"><svg><use href="#i-drag"/></svg></button>
+                            <span class="fu-step__name"><span class="fu-stage-ico"><svg><use href="#@FollowUpLabels.StageIcon(s.Name ?? "")"/></svg></span><input name="Stages[@i].Name" value="@s.Name" maxlength="120" aria-label="نام مرحله" /></span>
+                            <span class="fu-f__c fu-f__c--suffix" data-suffix="٪"><input name="Stages[@i].Weight" value="@s.Weight" type="number" min="0" max="100" dir="ltr" aria-label="وزن" data-weight /></span>
+                            <select name="Stages[@i].ResponsibleRole" aria-label="نقش مسئول">@foreach (var r in roles.Append(s.ResponsibleRole ?? "").Where(x => x.Length > 0).Distinct()) { <option value="@r" selected="@(s.ResponsibleRole == r)">@r</option> }</select>
+                            <span class="fu-step__ops"><button type="button" class="fu-trash" data-move="up" aria-label="بالا"><svg><use href="#i-chevron"/></svg></button><button type="button" class="fu-trash" data-remove-row aria-label="حذف مرحله"><svg><use href="#i-trash"/></svg></button></span>
+                            <details class="fu-step-more">
+                                <summary>چک‌لیست، شرط، الزامی بودن و مهلت مرحله</summary>
+                                <div class="fu-g">
+                                    <label class="fu-f fu-span"><span class="fu-f__l">چک‌لیست (هر مورد در یک خط)</span><span class="fu-f__c"><textarea name="Stages[@i].Checklist" rows="2" maxlength="2000" aria-label="چک‌لیست">@s.Checklist</textarea></span></label>
+                                    <label class="fu-f"><span class="fu-f__l">شرط اجرای مرحله</span><span class="fu-f__c"><input name="Stages[@i].Condition" value="@s.Condition" maxlength="200" placeholder="اختیاری" aria-label="شرط" /></span></label>
+                                    <label class="fu-f"><span class="fu-f__l">مهلت مرحله</span><span class="fu-f__c fu-f__c--suffix" data-suffix="ساعت"><input name="Stages[@i].DurationHours" value="@s.DurationHours" type="number" min="1" max="2000" dir="ltr" placeholder="سیاست" aria-label="مهلت مرحله" /></span></label>
+                                    <span class="fu-checks-inline fu-span"><label><input type="checkbox" name="Stages[@i].Required" value="true" checked="@s.Required" /><span>الزامی</span></label><label><input type="checkbox" name="Stages[@i].ParallelWithPrevious" value="true" checked="@s.ParallelWithPrevious" /><span>هم‌زمان با مرحلهٔ قبل</span></label></span>
+                                </div>
+                            </details>
+                        </div>
+                    }
+                    <template data-row-template>
+                        <div class="fu-step" data-row>
+                            <button type="button" class="fu-grip" data-grip title="برای جابه‌جایی بکشید" aria-label="جابه‌جایی مرحله"><svg><use href="#i-drag"/></svg></button>
+                            <span class="fu-step__name"><span class="fu-stage-ico"><svg><use href="#i-task"/></svg></span><input name="Stages[__i__].Name" maxlength="120" aria-label="نام مرحله" placeholder="نام مرحله" /></span>
+                            <span class="fu-f__c fu-f__c--suffix" data-suffix="٪"><input name="Stages[__i__].Weight" value="0" type="number" min="0" max="100" dir="ltr" aria-label="وزن" data-weight /></span>
+                            <select name="Stages[__i__].ResponsibleRole" aria-label="نقش مسئول">@foreach (var r in roles) { <option value="@r">@r</option> }</select>
+                            <span class="fu-step__ops"><button type="button" class="fu-trash" data-move="up" aria-label="بالا"><svg><use href="#i-chevron"/></svg></button><button type="button" class="fu-trash" data-remove-row aria-label="حذف مرحله"><svg><use href="#i-trash"/></svg></button></span>
+                            <details class="fu-step-more" open>
+                                <summary>چک‌لیست، شرط، الزامی بودن و مهلت مرحله</summary>
+                                <div class="fu-g">
+                                    <label class="fu-f fu-span"><span class="fu-f__l">چک‌لیست (هر مورد در یک خط)</span><span class="fu-f__c"><textarea name="Stages[__i__].Checklist" rows="2" maxlength="2000" aria-label="چک‌لیست"></textarea></span></label>
+                                    <label class="fu-f"><span class="fu-f__l">شرط اجرای مرحله</span><span class="fu-f__c"><input name="Stages[__i__].Condition" maxlength="200" placeholder="اختیاری" aria-label="شرط" /></span></label>
+                                    <label class="fu-f"><span class="fu-f__l">مهلت مرحله</span><span class="fu-f__c fu-f__c--suffix" data-suffix="ساعت"><input name="Stages[__i__].DurationHours" type="number" min="1" max="2000" dir="ltr" placeholder="سیاست" aria-label="مهلت مرحله" /></span></label>
+                                    <span class="fu-checks-inline fu-span"><label><input type="checkbox" name="Stages[__i__].Required" value="true" checked /><span>الزامی</span></label><label><input type="checkbox" name="Stages[__i__].ParallelWithPrevious" value="true" /><span>هم‌زمان با مرحلهٔ قبل</span></label></span>
+                                </div>
+                            </details>
+                        </div>
+                    </template>
+                </div>
+                <div class="fu-sum @(total == 100 ? "is-ok" : "is-bad")" data-weight-sum data-digits="fa"><svg><use href="#i-pie"/></svg><span>مجموع وزن‌ها: <b>@FollowUpLabels.Fa(total)</b>٪</span><small>باید ۱۰۰٪ باشد تا انتشار ممکن شود</small></div>
+            </section>
+
+            <section class="fu-sec fu-box fu-box--blue" data-rows>
+                <h3 class="fu-sec__h"><svg><use href="#i-swap"/></svg>شرط و اقدام<button type="button" class="fu-add" data-add-row><svg><use href="#i-plus"/></svg>افزودن قاعده</button></h3>
                 @for (var i = 0; i < Math.Max(1, rules.Count); i++)
                 {
                     var rule = i < rules.Count ? rules[i] : ["", ""];
-                    <div class="fu-rule-editor__row" data-row><span>اگر</span><input name="RuleCondition" value="@rule[0].Trim()" maxlength="200" placeholder="موجودی ناکافی بود" aria-label="شرط" /><span>آنگاه</span><input name="RuleAction" value="@rule[1].Trim()" maxlength="200" placeholder="ایجاد وظیفه تأمین موجودی" aria-label="اقدام" /><button type="button" class="icon-button" data-remove-row aria-label="حذف قاعده"><svg><use href="#i-close"/></svg></button></div>
+                    <div class="fu-if" data-row><span>اگر</span><input name="RuleCondition" value="@rule[0].Trim()" maxlength="200" list="fuConditions" placeholder="موجودی ناکافی بود" aria-label="شرط" /><span>اقدام</span><input name="RuleAction" value="@rule[1].Trim()" maxlength="200" list="fuActions" placeholder="ایجاد وظیفه تأمین موجودی" aria-label="اقدام" /><button type="button" class="fu-trash" data-remove-row aria-label="حذف قاعده"><svg><use href="#i-trash"/></svg></button></div>
                 }
-                <template data-row-template><div class="fu-rule-editor__row" data-row><span>اگر</span><input name="RuleCondition" maxlength="200" aria-label="شرط" /><span>آنگاه</span><input name="RuleAction" maxlength="200" aria-label="اقدام" /><button type="button" class="icon-button" data-remove-row aria-label="حذف قاعده"><svg><use href="#i-close"/></svg></button></div></template>
-                <button type="button" class="link-button" data-add-row><svg><use href="#i-plus"/></svg>افزودن قاعده</button>
-                <small class="field-help">اقدام‌های قابل اجرا: «ایجاد وظیفه …»، «کنار گذاشتن مرحله …»، «شروع مرحله …»، «افزایش اولویت».</small>
-            </div>
-        </section>
-        <section class="form-section fu-form__wide">
-            <h3>مراحل و وزن‌ها</h3>
-            <div class="fu-stage-editor" data-rows>
-                <div class="fu-stage-editor__head"><span></span><span>مرحله</span><span>وزن ٪</span><span>نقش مسئول</span><span>الزامی</span><span>هم‌زمان با قبلی</span><span>مهلت (ساعت)</span><span></span></div>
-                @for (var i = 0; i < stages.Count; i++)
-                {
-                    var s = stages[i];
-                    <div class="fu-stage-editor__row" data-row>
-                        <span class="fu-drag" title="جابه‌جایی"><button type="button" class="icon-button" data-move="up" aria-label="بالا">▲</button><button type="button" class="icon-button" data-move="down" aria-label="پایین">▼</button></span>
-                        <input name="Stages[@i].Name" value="@s.Name" maxlength="120" aria-label="نام مرحله" />
-                        <input name="Stages[@i].Weight" value="@s.Weight" type="number" min="0" max="100" dir="ltr" aria-label="وزن" data-weight />
-                        <select name="Stages[@i].ResponsibleRole" aria-label="نقش مسئول">@foreach (var r in roles.Append(s.ResponsibleRole ?? "").Where(x => x.Length > 0).Distinct()) { <option value="@r" selected="@(s.ResponsibleRole == r)">@r</option> }</select>
-                        <label class="fu-toggle"><input type="checkbox" name="Stages[@i].Required" value="true" checked="@s.Required" /><span class="sr-only">الزامی</span></label>
-                        <label class="fu-toggle"><input type="checkbox" name="Stages[@i].ParallelWithPrevious" value="true" checked="@s.ParallelWithPrevious" /><span class="sr-only">هم‌زمان</span></label>
-                        <input name="Stages[@i].DurationHours" value="@s.DurationHours" type="number" min="1" max="2000" dir="ltr" aria-label="مهلت مرحله" placeholder="سیاست" />
-                        <button type="button" class="icon-button" data-remove-row aria-label="حذف مرحله"><svg><use href="#i-close"/></svg></button>
-                        <textarea name="Stages[@i].Checklist" rows="2" maxlength="2000" class="fu-stage-editor__checklist" placeholder="چک‌لیست مرحله؛ هر مورد در یک خط" aria-label="چک‌لیست">@s.Checklist</textarea>
-                        <input name="Stages[@i].Condition" value="@s.Condition" maxlength="200" class="fu-stage-editor__condition" placeholder="شرط اجرای مرحله (اختیاری)" aria-label="شرط" />
-                    </div>
-                }
-                <template data-row-template>
-                    <div class="fu-stage-editor__row" data-row>
-                        <span class="fu-drag"><button type="button" class="icon-button" data-move="up" aria-label="بالا">▲</button><button type="button" class="icon-button" data-move="down" aria-label="پایین">▼</button></span>
-                        <input name="Stages[__i__].Name" maxlength="120" aria-label="نام مرحله" />
-                        <input name="Stages[__i__].Weight" value="0" type="number" min="0" max="100" dir="ltr" aria-label="وزن" data-weight />
-                        <select name="Stages[__i__].ResponsibleRole" aria-label="نقش مسئول">@foreach (var r in roles) { <option value="@r">@r</option> }</select>
-                        <label class="fu-toggle"><input type="checkbox" name="Stages[__i__].Required" value="true" checked /><span class="sr-only">الزامی</span></label>
-                        <label class="fu-toggle"><input type="checkbox" name="Stages[__i__].ParallelWithPrevious" value="true" /><span class="sr-only">هم‌زمان</span></label>
-                        <input name="Stages[__i__].DurationHours" type="number" min="1" max="2000" dir="ltr" aria-label="مهلت مرحله" placeholder="سیاست" />
-                        <button type="button" class="icon-button" data-remove-row aria-label="حذف مرحله"><svg><use href="#i-close"/></svg></button>
-                        <textarea name="Stages[__i__].Checklist" rows="2" maxlength="2000" class="fu-stage-editor__checklist" placeholder="چک‌لیست مرحله؛ هر مورد در یک خط" aria-label="چک‌لیست"></textarea>
-                        <input name="Stages[__i__].Condition" maxlength="200" class="fu-stage-editor__condition" placeholder="شرط اجرای مرحله (اختیاری)" aria-label="شرط" />
-                    </div>
-                </template>
-                <div class="fu-stage-editor__foot">
-                    <button type="button" class="link-button" data-add-row><svg><use href="#i-plus"/></svg>افزودن مرحله</button>
-                    <span class="fu-weight-sum" data-weight-sum>مجموع وزن‌ها: <b>@stages.Sum(x => x.Weight)</b>٪ <em>باید ۱۰۰٪ باشد</em></span>
+                <template data-row-template><div class="fu-if" data-row><span>اگر</span><input name="RuleCondition" maxlength="200" list="fuConditions" aria-label="شرط" /><span>اقدام</span><input name="RuleAction" maxlength="200" list="fuActions" aria-label="اقدام" /><button type="button" class="fu-trash" data-remove-row aria-label="حذف قاعده"><svg><use href="#i-trash"/></svg></button></div></template>
+                <datalist id="fuConditions">@foreach (var x in conditions) { <option value="@x"></option> }</datalist>
+                <datalist id="fuActions">@foreach (var x in actions) { <option value="@x"></option> }</datalist>
+                <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>اقدام‌های قابل اجرا: «ایجاد وظیفه …»، «کنار گذاشتن مرحله …»، «شروع مرحله …»، «افزایش اولویت».</span></p>
+            </section>
+
+            <section class="fu-sec">
+                <h3 class="fu-sec__h"><svg><use href="#i-lock"/></svg>شرایط بستن</h3>
+                <div class="fu-checks-inline">
+                    <label><input type="checkbox" name="RequireAllRequiredStages" value="true" checked="@(posted?.RequireAllRequiredStages ?? t.RequireAllRequiredStages)" /><span>تکمیل همهٔ مراحل الزامی</span></label>
+                    <label><input type="checkbox" name="RequireCustomerApproval" value="true" checked="@(posted?.RequireCustomerApproval ?? t.RequireCustomerApproval)" /><span>دریافت تأیید مشتری</span></label>
                 </div>
-            </div>
-        </section>
-        <section class="form-section fu-form__wide">
-            <h3>شرایط بستن</h3>
-            <div class="form-grid">
-                <label class="consent-row"><input type="checkbox" name="RequireAllRequiredStages" value="true" checked="@(posted?.RequireAllRequiredStages ?? t.RequireAllRequiredStages)" /><span>تکمیل همهٔ مراحل الزامی</span></label>
-                <label class="consent-row"><input type="checkbox" name="RequireCustomerApproval" value="true" checked="@(posted?.RequireCustomerApproval ?? t.RequireCustomerApproval)" /><span>دریافت تأیید مشتری</span></label>
-                <label class="field--full"><span>معیار پایان</span><input name="ClosingCriteria" value="@(posted?.ClosingCriteria ?? t.ClosingCriteria)" maxlength="500" /></label>
-            </div>
-        </section>
-    </fieldset>
-    <p class="fu-sla-note"><svg><use href="#i-info"/></svg><span>نسخهٔ جدید فقط برای پرونده‌های جدید اعمال می‌شود؛ پرونده‌های باز با نسخهٔ شروع خود ادامه می‌دهند.</span></p>
-    @if (draft)
-    {
-        <div class="fu-form__actions">
-            <a class="button button--ghost" href="/follow-ups/settings">انصراف</a>
-            <button class="button button--ghost" type="submit"><svg><use href="#i-edit"/></svg>ذخیرهٔ پیش‌نویس</button>
-            @if (!isNew) { <button class="button button--primary" type="submit" name="publish" value="true" data-publish><svg><use href="#i-check"/></svg>انتشار نسخهٔ @t.Version</button> }
-        </div>
-    }
+                <label class="fu-f"><span class="fu-f__l">معیار پایان</span><span class="fu-f__c"><svg><use href="#i-target"/></svg><input name="ClosingCriteria" value="@(posted?.ClosingCriteria ?? t.ClosingCriteria)" maxlength="500" /></span></label>
+            </section>
+        </fieldset>
+        <p class="fu-note"><svg><use href="#i-info"/></svg><span>نسخهٔ جدید فقط برای پرونده‌های جدید اعمال می‌شود؛ پرونده‌های باز با نسخهٔ شروع خود ادامه می‌دهند.</span></p>
+    </div>
+    <footer class="fu-sheet__foot">
+        @if (draft && !isNew) { <button class="button button--primary" type="submit" name="publish" value="true" data-publish disabled="@(total != 100)"><svg><use href="#i-send"/></svg>انتشار نسخهٔ @FollowUpLabels.Fa(t.Version)</button> }
+        @if (draft) { <button class="button @(isNew ? "button--primary" : "button--secondary")" type="submit"><svg><use href="#i-save"/></svg>ذخیرهٔ پیش‌نویس</button> }
+        @if (!draft && !isNew) { <button class="button button--primary" type="submit" form="newVersionForm"><svg><use href="#i-copy"/></svg>ساخت نسخهٔ @FollowUpLabels.Fa(t.Version + 1)</button> }
+        <a class="button button--ghost fu-foot__end" href="/follow-ups/settings">انصراف</a>
+    </footer>
 </form>
+</div>

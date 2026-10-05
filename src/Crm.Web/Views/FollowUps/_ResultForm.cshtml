@@ -4,48 +4,60 @@
     var a = Model.Activity;
     var cmd = Model.Command;
     var action = $"/follow-ups/{c.Id}/activities/{a.Id}/result";
+    var kindLabel = FollowUpLabels.Activity(a.Type);
+    var stageDocs = c.Documents.Where(x => a.Stage is not null && x.StageName == a.Stage).OrderByDescending(x => x.UploadedAtUtc).Take(2).ToList();
 }
-<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="ExpectedVersion" value="@cmd.ExpectedVersion" />
-    <span data-drawer-title hidden>ثبت نتیجه</span>
-    <partial name="_CaseContext" model="c" />
-    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <section class="form-section">
-        <h3>فعالیت انجام‌شده</h3>
-        <dl class="fu-facts">
-            <div><dt>فعالیت</dt><dd>@a.Subject</dd></div>
-            <div><dt>نوع</dt><dd>@FollowUpLabels.Activity(a.Type) · @FollowUpLabels.Channel(a.Channel)</dd></div>
-            <div><dt>انجام‌دهنده</dt><dd>@a.Owner</dd></div>
-            <div><dt>زمان</dt><dd>@Crm.Domain.Common.TehranTime.Format(a.AtUtc)</dd></div>
-            @if (a.Stage is not null) { <div><dt>مرحله</dt><dd>@a.Stage</dd></div> }
-        </dl>
-    </section>
-    <section class="form-section">
-        <h3>نتیجه</h3>
-        <div class="form-grid">
-            <label><span>نتیجه *</span><select name="ResultCode" required><option value="">— انتخاب —</option>@foreach (var (key, label) in FollowUpResults.All) { <option value="@key" selected="@(cmd.ResultCode == key)">@label</option> }</select></label>
-            @if (a.Type == ActivityType.Call)
-            {
-                <label><span>نتیجهٔ تماس</span><select name="CallResult"><option value="">—</option>@foreach (var r in Enum.GetValues<CallResult>()) { <option value="@r" selected="@(cmd.CallResult == r)">@AccountActivityService.CallResultLabel(r)</option> }</select></label>
-            }
-            <label class="field--full"><span>شرح نتیجه *</span><textarea name="Outcome" rows="3" required maxlength="4000" placeholder="چه شد و چه توافقی انجام شد؟">@cmd.Outcome</textarea></label>
+<form class="fu-sheet" method="post" action="@action" enctype="multipart/form-data" hx-post="@action" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <partial name="_SheetHead" model="@(new FollowUpSheetHead(3, "ثبت نتیجه پیگیری", null, FollowUpSheetHead.CaseChip(c)))" />
+    <div class="fu-sheet__body">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ExpectedVersion" value="@cmd.ExpectedVersion" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="fu-done-card">
+            <span class="fu-done-card__icon"><svg><use href="#@FollowUpLabels.ActivityIcon(a.Type)"/></svg></span>
+            <div>
+                <strong>@kindLabel@(a.Contact is not null ? $" با {a.Contact}" : "")</strong>
+                <small>@a.Subject · @FollowUpLabels.Channel(a.Channel) · برنامه: @FollowUpLabels.When(a.AtUtc, DateTimeOffset.UtcNow)@(a.Stage is not null ? $" · مرحله: {a.Stage}" : "")</small>
+            </div>
+            <span class="pill pill--success">انجام شد</span>
         </div>
-    </section>
-    <section class="form-section form-section--wide">
-        <h3>اقدام بعدی</h3>
-        <div class="form-grid">
-            <label class="field--full"><span>عنوان اقدام بعدی</span><input name="NextTitle" value="@cmd.NextTitle" maxlength="200" placeholder="مثلاً ارسال پیش‌فاکتور اصلاحی" /></label>
-            <label><span>نوع</span><select name="NextKind"><option value="Call" selected="@(cmd.NextKind == "Call")">تماس</option><option value="Meeting" selected="@(cmd.NextKind == "Meeting")">جلسه</option><option value="Task" selected="@(cmd.NextKind == "Task")">کار داخلی</option></select></label>
-            <label><span>مسئول</span><select name="NextOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.NextOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
-            <label><span>تاریخ</span><input name="NextDate" value="@cmd.NextDate" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></label>
-            <label><span>ساعت</span><input name="NextTime" value="@cmd.NextTime" placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></label>
+        <div class="fu-g">
+            <label class="fu-f"><span class="fu-f__l">نوع فعالیت</span><span class="fu-f__c"><svg><use href="#@FollowUpLabels.ActivityIcon(a.Type)"/></svg><input value="@kindLabel · @FollowUpLabels.Channel(a.Channel)" readonly aria-readonly="true" /></span></label>
+            <label class="fu-f"><span class="fu-f__l">انجام‌دهنده</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="DoneByUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.DoneByUserId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">تاریخ انجام</span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="DoneDate" value="@cmd.DoneDate" inputmode="numeric" data-jalali /></span></label>
+            <label class="fu-f"><span class="fu-f__l">ساعت</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="DoneTime" value="@cmd.DoneTime" dir="ltr" inputmode="numeric" /></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">نتیجهٔ پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-check"/></svg><select name="ResultCode" required><option value="">— انتخاب —</option>@foreach (var (key, label) in FollowUpResults.All) { <option value="@key" selected="@(cmd.ResultCode == key)">@label</option> }</select></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">شرح نتیجه<i>*</i></span><span class="fu-f__c"><textarea name="Outcome" rows="3" required maxlength="4000" placeholder="چه شد و چه توافقی انجام شد؟">@cmd.Outcome</textarea></span></label>
+            <div class="fu-f fu-span">
+                <span class="fu-f__l">مدرک مرتبط</span>
+                <div class="fu-file-row">
+                    @foreach (var d in stageDocs) { <a class="fu-file" href="/follow-ups/@c.Id/documents/@d.Id" target="_blank"><svg><use href="#i-file"/></svg><span>@d.FileName</span><small>نسخهٔ @FollowUpLabels.Fa(d.Version)</small></a> }
+                    <label class="fu-add fu-file-pick"><svg><use href="#i-plus"/></svg>افزودن<input type="file" name="document" data-file-names aria-label="افزودن مدرک مرتبط" /></label>
+                    <small class="fu-f__hint" data-file-out data-empty="@(stageDocs.Count == 0 ? "فایلی پیوست نشده است." : "")">@(stageDocs.Count == 0 ? "فایلی پیوست نشده است." : "")</small>
+                </div>
+            </div>
+        </div>
+        <section class="fu-box fu-box--blue">
+            <p class="fu-box__h"><svg><use href="#i-calendar"/></svg>اقدام بعدی</p>
+            <div class="fu-g">
+                <label class="fu-f"><span class="fu-f__l">عنوان<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="NextTitle" value="@cmd.NextTitle" maxlength="200" placeholder="مثلاً ارسال پیش‌فاکتور اصلاحی" /></span></label>
+                <label class="fu-f"><span class="fu-f__l">مسئول<i>*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="NextOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.NextOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+            </div>
+            <div class="fu-g fu-g--3">
+                <label class="fu-f"><span class="fu-f__l">نوع اقدام</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="NextKind"><option value="Call" selected="@(cmd.NextKind == "Call")">تماس</option><option value="Meeting" selected="@(cmd.NextKind == "Meeting")">جلسه</option><option value="Task" selected="@(cmd.NextKind == "Task")">کار داخلی</option></select></span></label>
+                <label class="fu-f"><span class="fu-f__l">موعد<i>*</i></span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="NextDate" value="@cmd.NextDate" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></span></label>
+                <label class="fu-f"><span class="fu-f__l">ساعت</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="NextTime" value="@cmd.NextTime" placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></span></label>
+            </div>
             @if (a.Stage is not null)
             {
-                <label class="consent-row field--full"><input type="checkbox" name="RequestStageCompletion" value="true" checked="@cmd.RequestStageCompletion" /><span>درخواست تکمیل مرحلهٔ «@a.Stage» (فقط اگر چک‌لیست آن کامل باشد انجام می‌شود)</span></label>
+                <label class="fu-checks-inline"><input type="checkbox" name="RequestStageCompletion" value="true" checked="@cmd.RequestStageCompletion" /><span>درخواست تکمیل مرحلهٔ «@a.Stage»</span></label>
+                <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>تکمیل مرحله پس از احراز شروط انجام می‌شود (تکمیل چک‌لیست و تأییدهای لازم).</span></p>
             }
-        </div>
-        <p class="fu-sla-note"><svg><use href="#i-info"/></svg><span>هر پروندهٔ باز باید اقدام بعدی داشته باشد؛ ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>
-    </section>
-    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیرهٔ نتیجه و اقدام بعدی</button></div>
+        </section>
+        <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>هر پروندهٔ باز باید اقدام بعدی داشته باشد؛ ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>
+    </div>
+    <footer class="fu-sheet__foot">
+        <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ذخیرهٔ نتیجه و اقدام بعدی</button>
+        <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+    </footer>
 </form>

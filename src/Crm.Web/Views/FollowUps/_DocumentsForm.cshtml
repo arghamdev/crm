@@ -6,88 +6,133 @@
     var dec = Model.Decide;
     var approval = Model.Approval;
     var basePath = $"/follow-ups/{c.Id}";
-    var tab = Model.Tab is "request" or "decide" ? Model.Tab : "documents";
+    var tab = Model.Tab is "request" or "decide" ? "request" : "documents";
     var passed = (dec.PassedItems ?? []).ToHashSet();
+    var now = DateTimeOffset.UtcNow;
+    var stageStatus = stage is null ? FollowUpLabels.Status(c.Status) : approval is { Decision: null } ? "در انتظار تأیید" : FollowUpLabels.Stage(stage.Status);
+    var latest = c.Documents.GroupBy(x => x.Title).Select(g => g.OrderByDescending(x => x.Version).First()).OrderByDescending(x => x.UploadedAtUtc).ToList();
+    var canDecide = approval is { CanDecide: true };
 }
-<div class="drawer-form" data-fu-tabs>
-    <span data-drawer-title hidden>مدارک و تأییدها</span>
-    <partial name="_CaseContext" model="c" />
-    <p class="fu-facts-line"><b>مرحله:</b> @(stage?.Name ?? "—") · <b>وضعیت:</b> @(stage is null ? FollowUpLabels.Status(c.Status) : FollowUpLabels.Stage(stage.Status))</p>
-    <div class="tabbar" role="tablist">
-        <button type="button" role="tab" class="tabbar__tab@(tab == "documents" ? " is-active" : "")" data-fu-tab="documents">مدارک</button>
-        <button type="button" role="tab" class="tabbar__tab@(tab == "request" ? " is-active" : "")" data-fu-tab="request">درخواست تأیید</button>
-        @if (approval is not null) { <button type="button" role="tab" class="tabbar__tab@(tab == "decide" ? " is-active" : "")" data-fu-tab="decide">ثبت تصمیم</button> }
+<div class="fu-sheet" data-fu-tabs>
+    <partial name="_SheetHead" model="@(new FollowUpSheetHead(7, "مدارک و تأییدها", null, FollowUpSheetHead.CaseChip(c)))" />
+    <div class="fu-sheet__body fu-sheet__body--tabs">
+        <div class="fu-g">
+            <label class="fu-f"><span class="fu-f__l">مرحله</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><input value="@(stage?.Name ?? "کل پرونده")" readonly aria-readonly="true" /></span></label>
+            <div class="fu-f"><span class="fu-f__l">وضعیت</span><span class="fu-f__c"><span class="pill pill--@(approval is { Decision: null } ? "warning" : stage is null ? FollowUpLabels.StatusTone(c.Status) : FollowUpLabels.StageTone(stage.Status)) fu-pill-lg">@stageStatus</span></span></div>
+        </div>
+        <div class="fu-tabs-fill" role="tablist">
+            <button type="button" role="tab" class="@(tab == "documents" ? "is-active" : "")" data-fu-tab="documents"><svg><use href="#i-folder"/></svg>مدارک <b>@FollowUpLabels.Fa(latest.Count)</b></button>
+            <button type="button" role="tab" class="@(tab == "request" ? "is-active" : "")" data-fu-tab="request"><svg><use href="#i-shield"/></svg>@(canDecide ? "بررسی و تصمیم" : "درخواست تأیید")</button>
+        </div>
     </div>
 
     <section data-fu-panel="documents" hidden="@(tab != "documents")">
-        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-        <partial name="_DocumentList" model="c" />
-        @if (c.IsOpen && c.CanUpdate)
-        {
-            <form class="form-section" method="post" action="@basePath/documents" enctype="multipart/form-data" hx-post="@basePath/documents" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-                @Html.AntiForgeryToken()
-                <h3>افزودن مدرک یا نسخهٔ جدید</h3>
-                <div class="form-grid">
-                    <label><span>نوع مدرک</span><select name="kind">@foreach (var k in Enum.GetValues<FollowUpDocumentKind>()) { <option value="@k">@FollowUpLabels.Document(k)</option> }</select></label>
-                    <label><span>مرحله</span><select name="stageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages) { <option value="@s.Id" selected="@(stage?.Id == s.Id)">@s.Name</option> }</select></label>
-                    <label class="field--full"><span>عنوان</span><input name="title" maxlength="200" placeholder="همان عنوان قبلی = نسخهٔ جدید" list="fuDocTitles" /><datalist id="fuDocTitles">@foreach (var t in c.Documents.Select(x => x.Title).Distinct()) { <option value="@t"></option> }</datalist></label>
-                    <label class="field--full"><span>فایل * (حداکثر ۱۰ مگابایت)</span><input type="file" name="file" required /></label>
-                    <label class="consent-row field--full"><input type="checkbox" name="needsApproval" value="true" /><span>نیازمند تأیید است</span></label>
-                </div>
-                <div class="fu-inline-actions"><button class="button button--primary" type="submit"><svg><use href="#i-upload"/></svg>بارگذاری</button></div>
-            </form>
-        }
+        <div class="fu-sheet__body">
+            @if (tab == "documents") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+            <h3 class="fu-sec__h"><svg><use href="#i-folder"/></svg>فهرست مدارک</h3>
+            @if (latest.Count == 0) { <p class="empty-mini">مدرکی ثبت نشده است.</p> }
+            else
+            {
+                <table class="fu-t">
+                    <thead><tr><th>مدرک</th><th>نسخه</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in latest)
+                        {
+                            <tr>
+                                <td><span class="fu-stage-name"><span class="fu-stage-ico"><svg><use href="#i-file"/></svg></span><span>@d.Title<small>@FollowUpLabels.Document(d.Kind)@(d.StageName is not null ? $" · {d.StageName}" : "") · @d.UploadedBy</small></span></span></td>
+                                <td>@FollowUpLabels.Fa(d.Version)</td>
+                                <td><span class="pill pill--sm pill--@FollowUpLabels.DocumentTone(d.Status)">@FollowUpLabels.DocumentStatus(d.Status)</span>@if (d.ReviewNote is not null) { <small class="cell-sub">@d.ReviewedBy: @d.ReviewNote</small> }</td>
+                                <td><span class="fu-inline-actions"><a class="fu-add" href="@basePath/documents/@d.Id" target="_blank"><svg><use href="#i-eye"/></svg>مشاهده</a>@if (c.IsOpen && c.CanUpdate) { <button type="button" class="fu-add" data-new-version="@d.Title" data-new-version-kind="@d.Kind"><svg><use href="#i-plus"/></svg>افزودن نسخه</button> }</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            @if (c.IsOpen && c.CanUpdate)
+            {
+                <details class="fu-more-fields" data-upload open="@(latest.Count == 0)">
+                    <summary><svg><use href="#i-chevron"/></svg>افزودن مدرک یا نسخهٔ جدید</summary>
+                    <form method="post" action="@basePath/documents" enctype="multipart/form-data" hx-post="@basePath/documents" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+                        @Html.AntiForgeryToken()
+                        <div class="fu-g">
+                            <label class="fu-f"><span class="fu-f__l">نوع مدرک</span><span class="fu-f__c"><svg><use href="#i-tag"/></svg><select name="kind">@foreach (var k in Enum.GetValues<FollowUpDocumentKind>()) { <option value="@k">@FollowUpLabels.Document(k)</option> }</select></span></label>
+                            <label class="fu-f"><span class="fu-f__l">مرحله</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="stageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages) { <option value="@s.Id" selected="@(stage?.Id == s.Id)">@s.Name</option> }</select></span></label>
+                            <label class="fu-f fu-span"><span class="fu-f__l">عنوان</span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="title" maxlength="200" placeholder="همان عنوان قبلی = نسخهٔ جدید" list="fuDocTitles" /></span><datalist id="fuDocTitles">@foreach (var t in latest.Select(x => x.Title)) { <option value="@t"></option> }</datalist></label>
+                            <label class="fu-dropzone fu-span"><svg><use href="#i-upload"/></svg><span>انتخاب فایل *</span><small data-file-out data-empty="حداکثر ۱۰ مگابایت">حداکثر ۱۰ مگابایت</small><input type="file" name="file" required data-file-names aria-label="فایل مدرک" /></label>
+                            <label class="fu-checks-inline fu-span"><input type="checkbox" name="needsApproval" value="true" /><span>نیازمند تأیید است</span></label>
+                        </div>
+                        <div class="fu-inline-actions"><button class="button button--secondary" type="submit"><svg><use href="#i-upload"/></svg>بارگذاری</button></div>
+                    </form>
+                </details>
+            }
+        </div>
+        <footer class="fu-sheet__foot"><button class="button button--ghost fu-foot__end" type="button" data-drawer-close>بستن</button></footer>
     </section>
 
-    <form data-fu-panel="request" hidden="@(tab != "request")" class="drawer-form" method="post" action="@basePath/approvals" hx-post="@basePath/approvals" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-        @Html.AntiForgeryToken()
-        @if (tab == "request") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
-        <section class="form-section">
-            <h3>درخواست تأیید</h3>
-            <div class="form-grid">
-                <label><span>مرحله</span><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is FollowUpStageStatus.Active or FollowUpStageStatus.Returned)) { <option value="@s.Id" selected="@(req.StageId == s.Id)">@s.Name</option> }</select></label>
-                <label><span>تأییدکننده *</span><select name="ApproverUserId" required><option value="">— انتخاب —</option>@foreach (var u in c.Approvers) { <option value="@u.Value" selected="@(req.ApproverUserId.ToString() == u.Value)">@u.Label</option> }</select></label>
-                <label class="field--full"><span>نقش تأییدکننده</span><input name="ApproverRole" value="@req.ApproverRole" maxlength="60" /></label>
-            </div>
-            <fieldset class="pick-list"><legend>موارد بررسی</legend>
-                @foreach (var item in req.ReviewItems ?? []) { <label class="consent-row"><input type="checkbox" name="ReviewItems" value="@item" checked /><span>@item</span></label> }
-                @if ((req.ReviewItems ?? []).Count == 0) { <small class="field-help">موارد بررسی از چک‌لیست مرحله برداشته می‌شود.</small> }
-            </fieldset>
-            <small class="field-help">درخواست‌کننده نمی‌تواند درخواست خود را تأیید کند؛ مدارک ثبت‌شدهٔ مرحله «در انتظار تأیید» می‌شوند.</small>
-        </section>
-        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-shield"/></svg>ارسال درخواست تأیید</button></div>
-    </form>
-
-    @if (approval is not null)
+    @if (canDecide && approval is not null)
     {
-        <form data-fu-panel="decide" hidden="@(tab != "decide")" class="drawer-form" method="post" action="@basePath/approvals/@approval.Id" hx-post="@basePath/approvals/@approval.Id" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-            @Html.AntiForgeryToken()
-            @if (tab == "decide") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
-            <section class="form-section">
-                <h3>تصمیم تأیید</h3>
-                <dl class="fu-facts">
-                    <div><dt>تأییدکننده</dt><dd>@approval.Approver</dd></div>
-                    <div><dt>نقش</dt><dd>@approval.ApproverRole</dd></div>
-                    <div><dt>درخواست‌کننده</dt><dd>@approval.RequestedBy</dd></div>
-                    <div><dt>مرحله</dt><dd>@(approval.StageName ?? "کل پرونده")</dd></div>
-                </dl>
-                <fieldset class="pick-list"><legend>موارد بررسی (تیک = پذیرفته)</legend>
-                    @foreach (var item in approval.ReviewItems) { <label class="consent-row"><input type="checkbox" name="PassedItems" value="@item" checked="@passed.Contains(item)" /><span>@item</span></label> }
+        <form data-fu-panel="request" hidden="@(tab != "request")" method="post" action="@basePath/approvals/@approval.Id" hx-post="@basePath/approvals/@approval.Id" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+            <div class="fu-sheet__body">
+                @Html.AntiForgeryToken()
+                @if (tab == "request") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+                <h3 class="fu-sec__h"><svg><use href="#i-shield"/></svg>بررسی و تصمیم</h3>
+                <div class="fu-g">
+                    <label class="fu-f"><span class="fu-f__l">تأییدکننده</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><input value="@approval.Approver" readonly aria-readonly="true" /></span></label>
+                    <label class="fu-f"><span class="fu-f__l">سمت</span><span class="fu-f__c"><svg><use href="#i-org"/></svg><input value="@approval.ApproverRole" readonly aria-readonly="true" /></span></label>
+                </div>
+                <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>درخواست @approval.RequestedBy · @FollowUpLabels.When(approval.RequestedAtUtc, now) · @(approval.StageName ?? "کل پرونده")</span></p>
+                <fieldset class="fu-checks-inline">
+                    <legend>موارد بررسی (تیک = پذیرفته)</legend>
+                    @foreach (var item in approval.ReviewItems) { <label><input type="checkbox" name="PassedItems" value="@item" checked="@passed.Contains(item)" /><span>@item</span></label> }
                 </fieldset>
-                <div class="fu-segment fu-segment--radio" role="radiogroup" aria-label="تصمیم">
-                    <label class="fu-segment__item"><input type="radio" name="Decision" value="Approved" checked="@(dec.Decision == ApprovalDecision.Approved)" /><svg><use href="#i-check"/></svg>تأیید</label>
-                    <label class="fu-segment__item"><input type="radio" name="Decision" value="NeedsCorrection" checked="@(dec.Decision == ApprovalDecision.NeedsCorrection)" /><svg><use href="#i-edit"/></svg>نیازمند اصلاح</label>
-                    <label class="fu-segment__item"><input type="radio" name="Decision" value="Rejected" checked="@(dec.Decision == ApprovalDecision.Rejected)" /><svg><use href="#i-close"/></svg>رد</label>
+                <div class="fu-f">
+                    <span class="fu-f__l">تصمیم<i>*</i></span>
+                    <div class="fu-decide" role="radiogroup" aria-label="تصمیم">
+                        <label><input type="radio" name="Decision" value="Approved" checked="@(dec.Decision == ApprovalDecision.Approved)" /><svg><use href="#i-check"/></svg>تأیید</label>
+                        <label><input type="radio" name="Decision" value="NeedsCorrection" checked="@(dec.Decision == ApprovalDecision.NeedsCorrection)" /><svg><use href="#i-edit"/></svg>نیازمند اصلاح</label>
+                        <label><input type="radio" name="Decision" value="Rejected" checked="@(dec.Decision == ApprovalDecision.Rejected)" /><svg><use href="#i-close"/></svg>رد</label>
+                    </div>
                 </div>
-                <div class="form-grid">
-                    <label class="field--full"><span>توضیح تصمیم *</span><textarea name="Note" rows="3" required maxlength="1000">@dec.Note</textarea></label>
-                    <label><span>مسئول اصلاح</span><select name="CorrectionOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(dec.CorrectionOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
-                    <label><span>مهلت اصلاح</span><input name="CorrectionDate" value="@dec.CorrectionDate" inputmode="numeric" data-jalali /></label>
-                    <label><span>ساعت</span><input name="CorrectionTime" value="@dec.CorrectionTime" dir="ltr" inputmode="numeric" /></label>
+                <label class="fu-f"><span class="fu-f__l">توضیح تصمیم<i>*</i></span><span class="fu-f__c"><textarea name="Note" rows="3" required maxlength="1000">@dec.Note</textarea></span></label>
+                <div class="fu-g">
+                    <label class="fu-f"><span class="fu-f__l">مسئول اصلاح</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="CorrectionOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(dec.CorrectionOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+                    <div class="fu-f"><span class="fu-f__l">مهلت اصلاح</span><span class="fu-f__c--pair fu-f__c">
+                        <span><svg><use href="#i-calendar"/></svg><input name="CorrectionDate" value="@dec.CorrectionDate" inputmode="numeric" data-jalali aria-label="تاریخ مهلت اصلاح" /></span>
+                        <span><svg><use href="#i-clock"/></svg><input name="CorrectionTime" value="@dec.CorrectionTime" dir="ltr" inputmode="numeric" aria-label="ساعت مهلت اصلاح" /></span>
+                    </span></div>
                 </div>
-                <small class="field-help">«نیازمند اصلاح» یا «رد» مرحله را برمی‌گرداند، موارد ردشده را باز می‌کند و پیشرفت را با دلیل کاهش می‌دهد.</small>
-            </section>
-            <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت تصمیم</button></div>
+                <p class="fu-note"><svg><use href="#i-info"/></svg><span>تصمیم همراه با نام تأییدکننده و زمان ثبت می‌شود. «نیازمند اصلاح» یا «رد» مرحله را برمی‌گرداند و پیشرفت را با دلیل کاهش می‌دهد.</span></p>
+            </div>
+            <footer class="fu-sheet__foot">
+                <button class="button button--primary" type="submit"><svg><use href="#i-check"/></svg>ثبت تصمیم</button>
+                <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+            </footer>
+        </form>
+    }
+    else
+    {
+        <form data-fu-panel="request" hidden="@(tab != "request")" method="post" action="@basePath/approvals" hx-post="@basePath/approvals" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+            <div class="fu-sheet__body">
+                @Html.AntiForgeryToken()
+                @if (tab == "request") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+                @if (approval is { Decision: null }) { <p class="fu-note fu-note--amber"><svg><use href="#i-hourglass"/></svg><span>درخواست تأیید در انتظار تصمیم @approval.Approver است (از @FollowUpLabels.When(approval.RequestedAtUtc, now)).</span></p> }
+                <h3 class="fu-sec__h"><svg><use href="#i-shield"/></svg>درخواست تأیید</h3>
+                <div class="fu-g">
+                    <label class="fu-f"><span class="fu-f__l">مرحله</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is FollowUpStageStatus.Active or FollowUpStageStatus.Returned)) { <option value="@s.Id" selected="@(req.StageId == s.Id)">@s.Name</option> }</select></span></label>
+                    <label class="fu-f"><span class="fu-f__l">تأییدکننده<i>*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="ApproverUserId" required><option value="">— انتخاب —</option>@foreach (var u in c.Approvers) { <option value="@u.Value" selected="@(req.ApproverUserId.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+                    <label class="fu-f fu-span"><span class="fu-f__l">سمت تأییدکننده</span><span class="fu-f__c"><svg><use href="#i-org"/></svg><input name="ApproverRole" value="@req.ApproverRole" maxlength="60" /></span></label>
+                </div>
+                <fieldset class="fu-checks-inline">
+                    <legend>موارد بررسی</legend>
+                    @foreach (var item in req.ReviewItems ?? []) { <label><input type="checkbox" name="ReviewItems" value="@item" checked /><span>@item</span></label> }
+                    @if ((req.ReviewItems ?? []).Count == 0) { <small class="fu-f__hint">موارد بررسی از چک‌لیست مرحله برداشته می‌شود.</small> }
+                </fieldset>
+                <p class="fu-note"><svg><use href="#i-info"/></svg><span>درخواست‌کننده نمی‌تواند درخواست خود را تأیید کند؛ مدارک ثبت‌شدهٔ مرحله «در انتظار تأیید» می‌شوند.</span></p>
+            </div>
+            <footer class="fu-sheet__foot">
+                <button class="button button--primary" type="submit"><svg><use href="#i-shield"/></svg>ارسال درخواست تأیید</button>
+                <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+            </footer>
         </form>
     }
 </div>
