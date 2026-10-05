@@ -8,7 +8,7 @@
     <div class="list-head__actions">
         @if (Model.List.CanSupervise) { <a class="button button--ghost button--outline" href="/follow-ups/supervision"><svg><use href="#i-grid"/></svg>نظارت مدیر</a> }
         @if (Model.List.CanConfigure) { <a class="button button--ghost button--outline" href="/follow-ups/settings"><svg><use href="#i-settings"/></svg>تنظیمات پیگیری</a> }
-        @if (Model.List.CanCreate) { <a class="button button--primary" href="/follow-ups/new"><svg><use href="#i-plus"/></svg>پرونده پیگیری جدید</a> }
+        @if (Model.List.CanCreate) { <a class="button button--primary" href="/follow-ups/new" hx-get="/follow-ups/new/form" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-plus"/></svg>پرونده پیگیری جدید</a> }
     </div>
 </header>
 @if (Model.Inbox.Count > 0)

@@ -80,9 +80,9 @@
             @if (editable)
             {
                 <div class="fu-stage-actions">
-                    <button class="link-button" type="button" hx-get="@basePath/plan?stageId=@active.Id" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>اقدام برای این مرحله</button>
-                    <button class="link-button" type="button" hx-get="@basePath/refer?scope=Stage" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع مرحله</button>
-                    <button class="link-button" type="button" hx-get="@basePath/documents?tab=request" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-shield"/></svg>درخواست تأیید</button>
+                    <button class="link-button" type="button" hx-get="@basePath/plan?stageId=@active.Id" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>اقدام برای این مرحله</button>
+                    <button class="link-button" type="button" hx-get="@basePath/refer?scope=Stage" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع مرحله</button>
+                    <button class="link-button" type="button" hx-get="@basePath/documents?tab=request" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-shield"/></svg>درخواست تأیید</button>
                     @if (c.CanAssign && !active.Required)
                     {
                         <form method="post" action="@basePath/stages/@active.Id/skip" hx-post="@basePath/stages/@active.Id/skip" hx-swap="none" data-prompt="دلیل کنار گذاشتن مرحله (شرط برقرار نیست)">@Html.AntiForgeryToken()<button class="link-button" type="submit"><svg><use href="#i-close"/></svg>کنار گذاشتن مرحله</button></form>

@@ -219,7 +219,7 @@ fc.click({uAction:'fu-open',id:'24085'});fcp=fc.node('#viewHost').innerHTML;
 assert(fcp.includes('مرحلهٔ فعال: تأمین موجودی')&&/class="fu-total">۴۲٪/.test(fcp),'The case page shows the active stage and the 42٪ weighted progress.');
 assert(/data-u-action="fu-complete"[^>]*disabled/.test(fcp),'«تکمیل مرحله» is locked while checklist items remain.');
 const fFuture=fc.eval('(()=>{const d=new Date(Date.now()+86400000);const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T10:00`;})()');
-fc.click({uAction:'fu-plan',id:'24085'});fc.dispatch('submit',fc.form('fu-plan',{kind:'تماس',title:'تماس آزمون پیش‌نمایش',at:fFuture},'24085'));
+fc.click({uAction:'fu-plan',id:'24085'});assert(fc.node('#modal').classList.contains('modal--form')&&fc.node('#modalBody').innerHTML.includes('data-u-form="fu-plan"'),'The plan form opens in the popup.');fc.dispatch('submit',fc.form('fu-plan',{kind:'تماس',title:'تماس آزمون پیش‌نمایش',at:fFuture},'24085'));
 assert.equal(fc.eval('store.followUps.find(x=>x.id===24085).next'),'تماس آزمون پیش‌نمایش','A planned action becomes the next action.');
 fc.click({uAction:'fu-result',id:'24085:0'});fc.dispatch('submit',fc.form('fu-result',{result:'نیازمند اقدام بعدی',outcome:'اقلام تأیید شد',next:'ارسال لیست',at:fFuture},'24085:0'));
 assert.equal(fc.eval('store.followUps.find(x=>x.id===24085).stages[2].status'),'Active','Recording a call result does not complete the stage.');
@@ -229,7 +229,7 @@ assert.equal(fc.eval('store.followUps.find(x=>x.id===24085).stages[2].status'),'
 assert.equal(fc.eval('store.followUps.find(x=>x.id===24085).stages[3].status'),'Active','The next stage starts.');
 fc.click({uAction:'fu-wait',id:'24085'});fc.dispatch('submit',fc.form('fu-wait',{status:'WaitingCustomer',reason:'منتظر تأیید',at:fFuture},'24085'));
 assert.equal(fc.eval('store.followUps.find(x=>x.id===24085).paused'),true,'Waiting for the customer pauses the SLA.');
-fc.click({uAction:'fu-close',id:'24085'});fc.dispatch('submit',fc.form('fu-close',{outcome:'موفق',ready:'0'},'24085'));
+fc.click({uAction:'fu-resume',id:'24085'});assert(fc.node('#drawerBody').innerHTML.includes('data-u-form="fu-resume"'),'The short resume form stays in the side drawer.');fc.click({uAction:'fu-close',id:'24085'});fc.dispatch('submit',fc.form('fu-close',{outcome:'موفق',ready:'0'},'24085'));
 assert.match(fc.node('form .u-form-error').textContent,/آمادهٔ بستن نیست/,'An incomplete case cannot be closed.');
 fc.click({uAction:'fu-new'});fc.dispatch('submit',fc.form('fu-new',{subject:'پرونده آزمون پیش‌نمایش',customer:fc.eval('store.customers[0].name'),template:'WF-101',priority:'Normal'}));
 assert.equal(fc.eval('store.followUps.at(-1).stages.length'),5,'A new case gets the five template stages.');
@@ -238,4 +238,4 @@ fc.click({uAction:'fu-supervision'});assert(fc.node('#viewHost').innerHTML.inclu
 fc.click({uAction:'logout'});fc.dispatch('submit',fc.form('login',{username:'sales.expert',password:'Demo@1405'}));fc.click({route:'follow-up-settings'});
 assert.match(fc.node('#viewHost').innerHTML,/برای نقش فعلی فعال نیست/,'Settings are not available to a sales expert.');
 assert.deepEqual(fc.errors,[]);
-console.log('v1.10 preview checks passed: follow-up list views, weighted progress, checklist lock, plan/result, wait pause, close controls, new case, settings and supervision.');
+console.log('v1.10 preview checks passed: popup for large forms and drawer for short ones, follow-up list views, weighted progress, checklist lock, plan/result, wait pause, close controls, new case, settings and supervision.');

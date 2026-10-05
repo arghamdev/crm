@@ -15,7 +15,7 @@
         <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "close" ? " is-active" : "")" data-fu-tab="close" disabled="@(!c.IsOpen)">بستن پرونده</button>
         <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "reopen" ? " is-active" : "")" data-fu-tab="reopen" disabled="@(!c.CanReopen)">بازگشایی</button>
     </div>
-    <form data-fu-panel="close" hidden="@(Model.Tab != "close")" class="drawer-form" method="post" action="@basePath/close" enctype="multipart/form-data" hx-post="@basePath/close" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <form data-fu-panel="close" hidden="@(Model.Tab != "close")" class="drawer-form" method="post" action="@basePath/close" enctype="multipart/form-data" hx-post="@basePath/close" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         @Html.AntiForgeryToken()
         @if (Model.Tab == "close") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
         <section class="form-section">
@@ -37,7 +37,7 @@
             </div>
             <dl class="fu-facts"><div><dt>ثبت‌کننده</dt><dd>شما</dd></div><div><dt>تاریخ</dt><dd>@Crm.Domain.Common.TehranTime.Format(DateTimeOffset.UtcNow)</dd></div></dl>
         </section>
-        <section class="form-section">
+        <section class="form-section form-section--wide">
             <h3>ادامهٔ ارتباط با مشتری</h3>
             <label class="consent-row"><input type="checkbox" name="StartNextCase" value="true" checked="@close.StartNextCase" /><span>پس از بستن، پیگیری بعدی را با الگوی زیر شروع کن</span></label>
             <div class="form-grid">
@@ -47,7 +47,7 @@
         </section>
         <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit" disabled="@(passed < c.CloseChecks.Count - (c.CloseChecks.Any(x => !x.Passed && x.Label.Contains("تأیید مشتری")) ? 1 : 0))"><svg><use href="#i-check"/></svg>تأیید و بستن پرونده</button></div>
     </form>
-    <form data-fu-panel="reopen" hidden="@(Model.Tab != "reopen")" class="drawer-form" method="post" action="@basePath/reopen" hx-post="@basePath/reopen" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <form data-fu-panel="reopen" hidden="@(Model.Tab != "reopen")" class="drawer-form" method="post" action="@basePath/reopen" hx-post="@basePath/reopen" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         @Html.AntiForgeryToken()
         @if (Model.Tab == "reopen") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
         <section class="form-section">

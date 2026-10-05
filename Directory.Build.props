@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <!-- Product version shown in the app (sidebar, top bar, login, /system/version). Bump with every change and add a CHANGELOG.md entry. -->
-    <Version>1.10.0</Version>
+    <Version>1.10.1</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 </Project>

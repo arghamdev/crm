@@ -71,7 +71,12 @@ public sealed class FollowUpsController(
     /// <summary>Re-renders the registration form when the customer, type or branch changes (contacts, related records, extra fields and SLA follow).</summary>
     [Authorize(Policy = "perm:FollowUp.Create")]
     [HttpGet("/follow-ups/new/form")]
-    public IActionResult NewForm(CreateFollowUpCommand command) => Guarded(() => PartialView("_CreateForm", CreateModel(Normalize(command), null)));
+    public IActionResult NewForm(CreateFollowUpCommand command) => Guarded(() =>
+    {
+        // Opened from a button (popup) with at most a customer: start from the same defaults as the full page.
+        if (!Request.Query.ContainsKey("CaseType")) command = Blank(command.CustomerId == Guid.Empty ? null : command.CustomerId, null);
+        return PartialView("_CreateForm", CreateModel(Normalize(command), null));
+    });
 
     [Authorize(Policy = "perm:FollowUp.Create")]
     [HttpPost("/follow-ups")]

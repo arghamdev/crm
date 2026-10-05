@@ -13,7 +13,7 @@
         <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "wait" ? " is-active" : "")" data-fu-tab="wait" disabled="@c.IsWaiting">ثبت انتظار</button>
         <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "resume" ? " is-active" : "")" data-fu-tab="resume" disabled="@(!c.IsWaiting)">ازسرگیری</button>
     </div>
-    <form data-fu-panel="wait" hidden="@(Model.Tab != "wait")" class="drawer-form" method="post" action="@waitAction" hx-post="@waitAction" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <form data-fu-panel="wait" hidden="@(Model.Tab != "wait")" class="drawer-form" method="post" action="@waitAction" hx-post="@waitAction" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
         <section class="form-section">
@@ -46,7 +46,7 @@
         </section>
         <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-pause"/></svg>ثبت وضعیت انتظار</button></div>
     </form>
-    <form data-fu-panel="resume" hidden="@(Model.Tab != "resume")" class="drawer-form" method="post" action="@resumeAction" hx-post="@resumeAction" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <form data-fu-panel="resume" hidden="@(Model.Tab != "resume")" class="drawer-form" method="post" action="@resumeAction" hx-post="@resumeAction" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
         @if (c.IsWaiting)

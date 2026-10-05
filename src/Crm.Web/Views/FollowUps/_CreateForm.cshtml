@@ -9,6 +9,7 @@
 }
 <form id="createForm" class="fu-form" method="post" action="/follow-ups" hx-post="/follow-ups" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]">
     @Html.AntiForgeryToken()
+    <span data-drawer-title hidden>ثبت پرونده پیگیری</span>
     <input type="hidden" name="OperationId" value="@c.OperationId" />
     <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
     @if (Model.Duplicates.Count > 0)

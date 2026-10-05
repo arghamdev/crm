@@ -5,7 +5,7 @@
     var cmd = Model.Command;
     var action = $"/follow-ups/{c.Id}/activities/{a.Id}/result";
 }
-<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
     @Html.AntiForgeryToken()
     <input type="hidden" name="ExpectedVersion" value="@cmd.ExpectedVersion" />
     <span data-drawer-title hidden>ثبت نتیجه</span>
@@ -32,7 +32,7 @@
             <label class="field--full"><span>شرح نتیجه *</span><textarea name="Outcome" rows="3" required maxlength="4000" placeholder="چه شد و چه توافقی انجام شد؟">@cmd.Outcome</textarea></label>
         </div>
     </section>
-    <section class="form-section">
+    <section class="form-section form-section--wide">
         <h3>اقدام بعدی</h3>
         <div class="form-grid">
             <label class="field--full"><span>عنوان اقدام بعدی</span><input name="NextTitle" value="@cmd.NextTitle" maxlength="200" placeholder="مثلاً ارسال پیش‌فاکتور اصلاحی" /></label>

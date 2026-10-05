@@ -1,7 +1,7 @@
 @model FollowUpListDto
 @{ var customerId = (Guid)ViewBag.CustomerId; }
 <div class="fu-mini">
-    <div class="fu-mini__head"><strong>پرونده‌های پیگیری باز</strong>@if (Model.CanCreate) { <a class="link-button" href="/follow-ups/new?customerId=@customerId"><svg><use href="#i-plus"/></svg>پرونده جدید</a> }</div>
+    <div class="fu-mini__head"><strong>پرونده‌های پیگیری باز</strong>@if (Model.CanCreate) { <a class="link-button" href="/follow-ups/new?customerId=@customerId" hx-get="/follow-ups/new/form?CustomerId=@customerId" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-plus"/></svg>پرونده جدید</a> }</div>
     @if (Model.Items.Count == 0) { <p class="empty-mini">پروندهٔ باز پیگیری برای این حساب نیست.</p> }
     <ul>
         @foreach (var c in Model.Items)

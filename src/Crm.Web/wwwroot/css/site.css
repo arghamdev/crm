@@ -1799,3 +1799,26 @@ td code { font-size: 12px; }
 }
 [data-theme="dark"] .fu-banner--wait, [data-theme="dark"] .fu-banner--closed, [data-theme="dark"] .fu-banner--alert,
 [data-theme="dark"] .fu-warning, [data-theme="dark"] .fu-checks .is-ok, [data-theme="dark"] .fu-checks .is-fail { background: var(--surface-2); }
+
+/* Large forms in a centered popup (فرم‌های بزرگ در پنجرهٔ بازشو) — v1.10.1; short forms stay in the side drawer. */
+.modal--form { display: flex; flex-direction: column; width: min(1100px, 96vw); max-height: min(92vh, 980px); overflow: hidden; }
+.modal--form .modal__header { flex: 0 0 auto; padding: 16px 24px; }
+.modal--form .modal__header h2 { margin-top: 3px; font-size: 18px; }
+.modal--form .modal__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px 24px 0; overscroll-behavior: contain; }
+.modal--form form.drawer-form { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; align-items: start; gap: 16px; }
+.modal--form form.drawer-form > :not(.form-section), .modal--form form.drawer-form > .form-section--wide,
+.modal--form form.drawer-form > .form-section:only-of-type { grid-column: 1 / -1; }
+.modal--form div.drawer-form { gap: 14px; }
+.modal--form .form-section h3 { font-size: 14px; }
+.modal--form .form-grid label > span { font-size: 12.5px; }
+.modal--form .drawer-actions, .modal--form .fu-form__actions { position: sticky; z-index: 3; bottom: 0; left: auto; right: auto; margin: 4px -24px 0; padding: 14px 24px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: var(--surface); box-shadow: 0 -10px 30px rgba(15,23,42,.05); }
+.modal--form .fu-form { padding-bottom: 0; }
+.modal--form .fu-form .fu-form__grid { gap: 14px; }
+body.has-modal { overflow: hidden; }
+@media (max-width: 760px) {
+  .modal--form { width: 100vw; max-height: 100dvh; height: 100dvh; border-radius: 0; }
+  .modal--form form.drawer-form { grid-template-columns: minmax(0, 1fr); }
+}
+.modal--form .u-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-bottom: 20px; }
+.modal--form .u-form > :is(fieldset, p, ul, .u-actions, .u-form-error, input[type="hidden"]) { grid-column: 1 / -1; }
+@media (max-width: 760px) { .modal--form .u-form { grid-template-columns: minmax(0, 1fr); } }

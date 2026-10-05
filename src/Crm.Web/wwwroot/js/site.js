@@ -28,6 +28,26 @@
     if (drawerBody) drawerBody.innerHTML = "";
   }
 
+  // Large forms open in a centered popup; short forms keep the side drawer.
+  const modal = document.getElementById("modal");
+  const modalBody = document.getElementById("modalBody");
+  const modalBackdrop = document.getElementById("modalBackdrop");
+  function openModal() {
+    modal?.classList.add("is-open");
+    modalBackdrop?.classList.add("is-open");
+    modal?.setAttribute("aria-hidden", "false");
+    document.body.classList.add("has-modal");
+    modal?.querySelector("input:not([type=hidden]):not([disabled]), select, textarea")?.focus();
+  }
+  function closeModal() {
+    if (!modal?.classList.contains("is-open")) return;
+    modal.classList.remove("is-open");
+    modalBackdrop?.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("has-modal");
+    if (modalBody) modalBody.innerHTML = "";
+  }
+
   function closeSidebar() {
     sidebar?.classList.remove("is-open");
     mobileOverlay?.classList.remove("is-open");
@@ -63,9 +83,11 @@
   document.getElementById("sidebarClose")?.addEventListener("click", closeSidebar);
   mobileOverlay?.addEventListener("click", closeSidebar);
   document.getElementById("drawerClose")?.addEventListener("click", closeDrawer);
+  document.getElementById("modalClose")?.addEventListener("click", closeModal);
+  modalBackdrop?.addEventListener("click", closeModal);
   drawerBackdrop?.addEventListener("click", closeDrawer);
   document.addEventListener("click", event => {
-    if (event.target.closest("[data-drawer-close]")) closeDrawer();
+    if (event.target.closest("[data-drawer-close]")) { closeDrawer(); closeModal(); }
     // Repeating form rows (e.g. customer contact persons) are removed client-side; the server binds what remains.
     const remove = event.target.closest("[data-remove-row]");
     if (remove) remove.closest("[data-row]")?.remove();
@@ -114,6 +136,7 @@
   });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
+      if (modal?.classList.contains("is-open")) { closeModal(); return; }
       closeDrawer();
       closeSidebar();
     }
@@ -140,6 +163,13 @@
       if (heading && title) title.textContent = heading.textContent.trim();
       openDrawer();
     }
+    if (event.detail.target?.id === "modalBody") {
+      const heading = modalBody?.querySelector("[data-drawer-title], .form-section h3");
+      const title = document.getElementById("modalTitle");
+      if (heading && title) title.textContent = heading.textContent.trim();
+      closeDrawer();
+      openModal();
+    }
   });
 
   document.body.addEventListener("htmx:afterRequest", event => {
@@ -158,6 +188,7 @@
   changeEvents.forEach(name => {
     document.body.addEventListener(name, event => {
       closeDrawer();
+      closeModal();
       showToast(event.detail?.message || "تغییر با موفقیت ثبت شد.");
     });
   });

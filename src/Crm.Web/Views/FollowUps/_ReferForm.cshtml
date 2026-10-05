@@ -13,7 +13,7 @@
         <button type="button" role="tab" class="tabbar__tab@(Model.Tab != "received" ? " is-active" : "")" data-fu-tab="new">ارجاع جدید</button>
         <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "received" ? " is-active" : "")" data-fu-tab="received">ارجاع‌های دریافتی @if (received.Any(x => x.Status == ReferralStatus.Pending)) { <b class="tabbar__count">@received.Count(x => x.Status == ReferralStatus.Pending)</b> }</button>
     </div>
-    <form data-fu-panel="new" hidden="@(Model.Tab == "received")" class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <form data-fu-panel="new" hidden="@(Model.Tab == "received")" class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
         <section class="form-section">
@@ -28,7 +28,7 @@
                 <div><dt>مسئول فعلی مرحله</dt><dd>@(stage?.Responsible ?? "—")</dd></div>
             </dl>
         </section>
-        <section class="form-section">
+        <section class="form-section form-section--wide">
             <h3>گیرنده</h3>
             <div class="form-grid">
                 <label><span>شعبهٔ مقصد</span><select name="ToBranchId" hx-disabled-elt="this" hx-get="/follow-ups/@c.Id/refer/receivers" hx-target="#fuReceivers" hx-swap="outerHTML" hx-trigger="change">@foreach (var b in c.Branches) { <option value="@b.Value" selected="@(string.Equals(cmd.ToBranchId, b.Value, StringComparison.OrdinalIgnoreCase))">@b.Label</option> }</select></label>

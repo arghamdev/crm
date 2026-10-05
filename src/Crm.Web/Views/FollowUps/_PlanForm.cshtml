@@ -8,18 +8,18 @@
     var done = (cmd.PreChecklistDone ?? []).ToHashSet();
     var reminders = new[] { (0, "بدون یادآوری"), (15, "۱۵ دقیقه قبل"), (30, "۳۰ دقیقه قبل"), (60, "۱ ساعت قبل"), (1440, "۱ روز قبل") };
 }
-<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
     @Html.AntiForgeryToken()
     <input type="hidden" name="OperationId" value="@cmd.OperationId" />
     <span data-drawer-title hidden>برنامه‌ریزی اقدام</span>
     <partial name="_CaseContext" model="c" />
     <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-    <section class="form-section">
+    <section class="form-section form-section--wide">
         <h3>نوع اقدام</h3>
         <div class="fu-segment" role="radiogroup" aria-label="نوع اقدام">
             @foreach (var (value, label, icon) in kinds)
             {
-                <a class="fu-segment__item@(cmd.Kind == value ? " is-active" : "")" href="/follow-ups/@c.Id/plan?kind=@value" hx-disabled-elt="this" hx-get="/follow-ups/@c.Id/plan?kind=@value@(cmd.StageId is { } sid ? $"&stageId={sid}" : "")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#@icon"/></svg>@label</a>
+                <a class="fu-segment__item@(cmd.Kind == value ? " is-active" : "")" href="/follow-ups/@c.Id/plan?kind=@value" hx-disabled-elt="this" hx-get="/follow-ups/@c.Id/plan?kind=@value@(cmd.StageId is { } sid ? $"&stageId={sid}" : "")" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#@icon"/></svg>@label</a>
             }
         </div>
         <input type="hidden" name="Kind" value="@cmd.Kind" />

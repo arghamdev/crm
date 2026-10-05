@@ -91,6 +91,14 @@
     $('#drawerTitle').textContent=title;$('#drawerBody').innerHTML=`<form class="u-form" data-u-form="${kind}" data-id="${id}">${fields}<div class="u-actions"><button class="button button--primary" type="submit">ثبت</button>${button('close-drawer','انصراف')}</div><div class="u-form-error" role="alert"></div></form>`;
     $('#drawer').classList.add('is-open');$('#drawerBackdrop').classList.add('is-open');$('#drawer').setAttribute('aria-hidden','false');
   }
+  // Large forms open in a centered popup (same as the MVC follow-up center); short forms keep the drawer.
+  function showPopupForm(title,fields,kind,id=''){
+    closeDrawer();$('#modal').classList.add('modal--form');$('#modalTitle').textContent=title;$('#modalFooter').innerHTML='';
+    $('#modalBody').innerHTML=`<form class="u-form" data-u-form="${kind}" data-id="${id}">${fields}<div class="u-actions"><button class="button button--primary" type="submit">ثبت</button><button type="button" class="button button--ghost" data-action="close-modal">انصراف</button></div><div class="u-form-error" role="alert"></div></form>`;
+    $('#modal').classList.add('is-open');$('#modalBackdrop').classList.add('is-open');$('#modal').setAttribute('aria-hidden','false');
+  }
+  const legacyOpenModal=openModal;openModal=function(...args){$('#modal').classList.remove('modal--form');legacyOpenModal(...args);};
+  function closeForms(){closeDrawer();closeModal();}
   function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
   function csvCell(v){let s=String(v??'');if(/^[\s]*[=+\-@]/.test(s)||/[\r\n\t]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';}
   function exportReport(format){if(!canExport())return;const all=report().facts, f=format==='csv'?all.filter(x=>x.metric===drillMetric):all;if(f.length>5000){toast('بیش از ۵۰۰۰ ردیف؛ دامنه را محدود کنید.','warning');return;}
@@ -105,7 +113,7 @@
   const af=createAccountFilePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,save,render:()=>render(),toast,closeDrawer,link,statusBadge,account:()=>account,visible,
     navigate:(route,id)=>navigate(route,id),selected:()=>state.selectedCustomerId,releases:window.CRM_RELEASES||[],version:window.CRM_VERSION||''});
   const lists=createListPreview({store,escapeHtml,save,toast,closeDrawer,showForm,rows,render:()=>render(),account:()=>account});
-  const fu=createFollowUpPreview({store,escapeHtml,save,toast,closeDrawer,showForm,render:()=>render(),account:()=>account,navigate:(route,id)=>navigate(route,id)});
+  const fu=createFollowUpPreview({store,escapeHtml,save,toast,closeDrawer:()=>closeForms(),showForm,showPopupForm:(...a)=>showPopupForm(...a),render:()=>render(),account:()=>account,navigate:(route,id)=>navigate(route,id)});
   const allowedRoute=route=>af.allowed(route)&&fu.allowed(route)&&(route==='version'||route.startsWith('follow-up')||selfService.allowed(route));
   const knownRoutes=[...af.routes,...fu.routes,'dashboard','customers','customer','customer-quality','customer-duplicates','leads','opportunities','quotes','orders','dealers','workqueue','reports','report-detail','identity','organization','portal','partner-requests','mobile'];
   render = function(){if(!signedIn)return;

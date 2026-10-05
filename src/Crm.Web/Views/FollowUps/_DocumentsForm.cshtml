@@ -24,7 +24,7 @@
         <partial name="_DocumentList" model="c" />
         @if (c.IsOpen && c.CanUpdate)
         {
-            <form class="form-section" method="post" action="@basePath/documents" enctype="multipart/form-data" hx-post="@basePath/documents" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+            <form class="form-section" method="post" action="@basePath/documents" enctype="multipart/form-data" hx-post="@basePath/documents" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
                 @Html.AntiForgeryToken()
                 <h3>افزودن مدرک یا نسخهٔ جدید</h3>
                 <div class="form-grid">
@@ -39,7 +39,7 @@
         }
     </section>
 
-    <form data-fu-panel="request" hidden="@(tab != "request")" class="drawer-form" method="post" action="@basePath/approvals" hx-post="@basePath/approvals" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    <form data-fu-panel="request" hidden="@(tab != "request")" class="drawer-form" method="post" action="@basePath/approvals" hx-post="@basePath/approvals" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         @Html.AntiForgeryToken()
         @if (tab == "request") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
         <section class="form-section">
@@ -60,7 +60,7 @@
 
     @if (approval is not null)
     {
-        <form data-fu-panel="decide" hidden="@(tab != "decide")" class="drawer-form" method="post" action="@basePath/approvals/@approval.Id" hx-post="@basePath/approvals/@approval.Id" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        <form data-fu-panel="decide" hidden="@(tab != "decide")" class="drawer-form" method="post" action="@basePath/approvals/@approval.Id" hx-post="@basePath/approvals/@approval.Id" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
             @Html.AntiForgeryToken()
             @if (tab == "decide") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
             <section class="form-section">

@@ -67,8 +67,8 @@
                                         <a href="/follow-ups/@item.Id"><svg><use href="#i-file"/></svg>مشاهدهٔ پرونده</a>
                                         @if (item.Status is not (FollowUpStatus.Closed or FollowUpStatus.Cancelled))
                                         {
-                                            <a href="/follow-ups/@item.Id/plan" hx-get="/follow-ups/@item.Id/plan" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>برنامه‌ریزی اقدام</a>
-                                            <a href="/follow-ups/@item.Id/refer" hx-get="/follow-ups/@item.Id/refer" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع</a>
+                                            <a href="/follow-ups/@item.Id/plan" hx-get="/follow-ups/@item.Id/plan" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>برنامه‌ریزی اقدام</a>
+                                            <a href="/follow-ups/@item.Id/refer" hx-get="/follow-ups/@item.Id/refer" hx-target="#modalBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع</a>
                                         }
                                     </div>
                                 </details>
