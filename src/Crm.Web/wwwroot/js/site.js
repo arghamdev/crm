@@ -117,11 +117,12 @@
         if (answer !== null) showToast(question + " الزامی است.", true);
         return;
       }
-      let input = form.querySelector('input[name="reason"]');
+      const field = form.dataset.promptField || "reason";
+      let input = form.querySelector(`input[name="${field}"]`);
       if (!input) {
         input = document.createElement("input");
         input.type = "hidden";
-        input.name = "reason";
+        input.name = field;
         form.appendChild(input);
       }
       input.value = answer.trim();
@@ -345,7 +346,7 @@
     const button = form.querySelector("[data-complete]");
     if (button && !form.dataset.blocked) button.disabled = remaining > 0;
     const counter = form.querySelector("[data-checklist-remaining]");
-    if (counter) counter.textContent = faDigits(remaining);
+    if (counter) counter.textContent = counter.hasAttribute("data-words") ? (["صفر", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه", "ده"][remaining] ?? faDigits(remaining)) : faDigits(remaining);
     const warning = form.querySelector("[data-checklist-warning]");
     if (warning) warning.hidden = remaining === 0;
   }
@@ -374,7 +375,7 @@
     });
     scope.querySelectorAll?.("[data-counter]").forEach(field => {
       const out = field.closest(".fu-f")?.querySelector("[data-counter-out]");
-      if (out) out.textContent = faDigits(field.value.length) + "/" + faDigits(field.maxLength > 0 ? field.maxLength : 500);
+      if (out) out.textContent = faDigits(field.maxLength > 0 ? field.maxLength : 500) + " /" + faDigits(field.value.length);
     });
     scope.querySelectorAll?.("select[data-switch]").forEach(select => {
       const form = select.closest("form") || document;
@@ -400,7 +401,7 @@
     card.querySelector("[data-capacity-initial]").textContent = option.dataset.initial || "";
     card.querySelector("[data-capacity-name]").textContent = option.dataset.name || option.textContent;
     card.querySelector("[data-capacity-state]").textContent = !available ? (option.dataset.note || "خارج از دسترس") : full ? "ظرفیت تکمیل" : "آماده دریافت";
-    card.querySelector("[data-capacity-load]").textContent = capacity > 0 ? "ظرفیت: " + faDigits(load) + " از " + faDigits(capacity) + " پرونده" : faDigits(load) + " پروندهٔ باز";
+    card.querySelector("[data-capacity-load]").textContent = capacity > 0 ? "ظرفیت: " + faDigits(load) + " از " + faDigits(capacity) + " پرونده" : "ظرفیت: " + faDigits(load) + " پروندهٔ باز";
     const bar = card.querySelector("[data-capacity-bar]");
     if (bar) bar.style.width = (capacity > 0 ? Math.min(100, Math.round(load * 100 / capacity)) : 0) + "%";
   }
@@ -420,6 +421,16 @@
     }
   });
   document.addEventListener("input", event => { if (event.target.matches?.("[data-counter]")) fuSync(event.target.closest("form") || document); });
+  // «صف مقصد» (۱۱) switches to the chosen queue; renaming copies into the posted Name.
+  document.addEventListener("change", event => {
+    const select = event.target.closest?.("select[data-navigate]");
+    if (select?.value) window.location.assign(select.value);
+  });
+  document.addEventListener("input", event => {
+    const rename = event.target.closest?.("input[data-rename]");
+    const name = rename?.closest("form")?.querySelector("input[type=hidden][name='Name']");
+    if (name) name.value = rename.value;
+  });
   // Supervision filters (۱۲) apply on change.
   document.addEventListener("change", event => {
     const form = event.target.closest?.("form[data-autosubmit]");
@@ -439,10 +450,11 @@
     const start = form.querySelector("input[name='WorkStart']"); if (start) start.value = option.dataset.start;
     const end = form.querySelector("input[name='WorkEnd']"); if (end) end.value = option.dataset.end;
     const zone = form.querySelector("select[name='TimeZoneId']"); if (zone && option.dataset.zone) zone.value = option.dataset.zone;
-    const summary = form.querySelector("[data-workhours] span:nth-child(2) b");
+    const summary = form.querySelector("[data-workhours] span:nth-child(3) b");
     if (summary) summary.textContent = faDigits(option.dataset.start) + " تا " + faDigits(option.dataset.end);
     const dayNames = form.querySelector("[data-workhours] span:first-child b");
-    if (dayNames) dayNames.textContent = [...form.querySelectorAll("input[name='WorkDays']:checked")].map(x => x.nextElementSibling?.textContent).join("، ");
+    const picked = [...form.querySelectorAll("input[name='WorkDays']:checked")].map(x => x.nextElementSibling?.textContent);
+    if (dayNames) dayNames.textContent = picked.length > 2 ? picked[0] + " تا " + picked[picked.length - 1] : picked.join("، ");
   });
   fuSync(document);
   document.body.addEventListener("htmx:afterSettle", () => fuSync(document));
@@ -465,6 +477,19 @@
 
   // Template stages (۹): drag a row by its handle to reorder; indexes are renumbered like the arrow buttons do.
   let fuDragged = null;
+  // Keyboard alternative to dragging: arrow keys on the handle move the row.
+  document.addEventListener("keydown", event => {
+    const grip = event.target.closest?.("[data-grip]");
+    if (!grip || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+    const row = grip.closest("[data-row]");
+    const sibling = event.key === "ArrowUp" ? row?.previousElementSibling : row?.nextElementSibling;
+    if (!row || !sibling?.matches("[data-row]")) return;
+    event.preventDefault();
+    if (event.key === "ArrowUp") sibling.before(row); else sibling.after(row);
+    const container = row.closest("[data-rows]");
+    if (container) fuReindex(container);
+    grip.focus();
+  });
   document.addEventListener("mousedown", event => {
     const grip = event.target.closest?.("[data-grip]");
     const row = grip?.closest("[data-row]");

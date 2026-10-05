@@ -8,12 +8,12 @@
     var done = (cmd.PreChecklistDone ?? []).ToHashSet();
     var reminders = new[] { (0, "بدون یادآوری"), (15, "۱۵ دقیقه قبل"), (30, "۳۰ دقیقه قبل"), (60, "۱ ساعت قبل"), (1440, "۱ روز قبل") };
     var durations = new[] { 15, 30, 45, 60, 90, 120 };
-    var zones = new[] { ("Asia/Tehran", "تهران (GMT+۳:۳۰)"), ("Asia/Dubai", "دبی (GMT+۴)"), ("Europe/Istanbul", "استانبول (GMT+۳)") };
+    var zones = new[] { ("Asia/Tehran", "تهران"), ("Asia/Dubai", "دبی"), ("Europe/Istanbul", "استانبول") };
     var noun = cmd.Kind switch { "Call" => "تماس", "Meeting" => "جلسه", "Visit" => "بازدید", _ => "اقدام" };
     var needsContact = cmd.Kind != "Task" && c.Contacts.Count > 0;
 }
 <form class="fu-sheet" method="post" action="@action" hx-post="@action" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-    <partial name="_SheetHead" model="@(new FollowUpSheetHead(2, "برنامه‌ریزی اقدام", null, FollowUpSheetHead.CaseChip(c)))" />
+    <partial name="_SheetHead" model="@(FollowUpSheetHead.ForCase(2, "برنامه‌ریزی اقدام", c) with { Numbered = true })" />
     <div class="fu-sheet__body">
         @Html.AntiForgeryToken()
         <input type="hidden" name="OperationId" value="@cmd.OperationId" />
@@ -30,7 +30,7 @@
         </div>
         <div class="fu-g">
             <label class="fu-f fu-span"><span class="fu-f__l">عنوان اقدام<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="Title" value="@cmd.Title" required maxlength="200" placeholder="مثلاً @noun برای تأیید اقلام پیش‌فاکتور" /></span></label>
-            <label class="fu-f"><span class="fu-f__l">مرحلهٔ مرتبط</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is not (FollowUpStageStatus.Done or FollowUpStageStatus.Skipped))) { <option value="@s.Id" selected="@(cmd.StageId == s.Id)">@s.Name</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">مرحله مرتبط</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is not (FollowUpStageStatus.Done or FollowUpStageStatus.Skipped))) { <option value="@s.Id" selected="@(cmd.StageId == s.Id)">@s.Name</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">مسئول اقدام<i>*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="OwnerUserId" required>@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.OwnerUserId.ToString() == u.Value)">@u.Label</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">مخاطب<i hidden="@(!needsContact)">*</i></span><span class="fu-f__c"><svg><use href="#i-users"/></svg><select name="ContactId" required="@needsContact" data-phone-target="Phone"><option value="">—</option>@foreach (var x in c.Contacts) { <option value="@x.Value" data-phone="@c.ContactPhones.GetValueOrDefault(x.Value)" selected="@(cmd.ContactId?.ToString() == x.Value)">@x.Label</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">کانال ارتباط</span><span class="fu-f__c"><svg><use href="#@FollowUpLabels.ChannelIcon(cmd.Channel)"/></svg><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(cmd.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></span></label>
@@ -56,7 +56,7 @@
             {
                 <label class="fu-f"><span class="fu-f__l">مدت</span><span class="fu-f__c"><svg><use href="#i-hourglass"/></svg><select name="DurationMinutes">@foreach (var d in durations) { <option value="@d" selected="@(cmd.DurationMinutes == d)">@FollowUpLabels.Fa(d) دقیقه</option> }</select></span></label>
             }
-            <label class="fu-f"><span class="fu-f__l">منطقهٔ زمانی</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="TimeZone">@foreach (var (id, label) in zones) { <option value="@id" selected="@((cmd.TimeZone ?? "Asia/Tehran") == id)">@label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">منطقه زمانی</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="TimeZone">@foreach (var (id, label) in zones) { <option value="@id" selected="@((cmd.TimeZone ?? "Asia/Tehran") == id)">@label</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">یادآوری</span><span class="fu-f__c"><svg><use href="#i-bell"/></svg><select name="ReminderMinutes">@foreach (var (value, label) in reminders) { <option value="@(value == 0 ? "" : value.ToString())" selected="@((cmd.ReminderMinutes ?? 0) == value)">@label</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">اولویت</span><span class="fu-f__c"><span class="fu-dot" data-tone="@cmd.Priority"></span><select name="Priority" data-dot>@foreach (var p in Enum.GetValues<ActivityPriority>()) { <option value="@p" selected="@(cmd.Priority == p)">@AccountActivityService.PriorityLabel(p)</option> }</select></span></label>
             <label class="fu-f fu-span"><span class="fu-f__l">دستور کار</span><span class="fu-f__c"><textarea name="Instructions" rows="3" maxlength="4000" placeholder="هدف @noun و نکاتی که باید مطرح شود">@cmd.Instructions</textarea></span></label>
@@ -70,10 +70,10 @@
                 }
             </div>
         </section>
-        <p class="fu-note fu-note--plain"><svg><use href="#i-clock"/></svg><span>زمان‌ها به وقت شعبهٔ تهران نمایش داده می‌شوند؛ یادآوری در سرور ارسال می‌شود و به باز بودن مرورگر وابسته نیست.</span></p>
+        <p class="fu-note" title="یادآوری در سرور ارسال می‌شود و به باز بودن مرورگر وابسته نیست."><svg><use href="#i-info"/></svg><span>زمان‌ها به وقت شعبه تهران نمایش داده می‌شوند.</span></p>
     </div>
     <footer class="fu-sheet__foot">
         <button class="button button--primary" type="submit"><svg><use href="#i-calendar"/></svg>ثبت برنامه</button>
-        <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+        <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
     </footer>
 </form>

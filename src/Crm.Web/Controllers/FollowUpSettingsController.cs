@@ -191,6 +191,16 @@ public sealed class FollowUpSettingsController(
             if (Guid.TryParse(users[i], out var user) && user != Guid.Empty)
                 members.Add((user, int.TryParse(i < capacities.Count ? capacities[i] : null, out var cap) ? cap : 10, available.Contains(users[i] ?? ""),
                     i < notes.Count ? notes[i] : null));
+        // «در نبود ظرفیت»: one choice = backup queue and/or supervisor notice ("q:{id}:notify", "q:{id}", "notify", "none").
+        if (Request.Form.TryGetValue("Overflow", out var overflowValue))
+        {
+            var overflow = overflowValue.ToString().Split(':');
+            command = command with
+            {
+                OverflowQueueId = overflow.Length >= 2 && overflow[0] == "q" && Guid.TryParse(overflow[1], out var backup) ? backup : null,
+                NotifySupervisorOnOverflow = overflow[^1] == "notify"
+            };
+        }
         var saved = settings.SaveQueue(UserId, Org, id, command with { Members = members }, Now);
         return Redirect($"/follow-ups/settings/queues/{saved}?saved=1");
     }, message =>

@@ -9,11 +9,13 @@
     // «تیم مسئول» and «مسئول پرونده» start from what the assignment rules suggest for this customer and type.
     var queueId = c.QueueId ?? o.SuggestedQueueId;
     var ownerId = c.OwnerUserId ?? o.SuggestedOwnerId;
+    // «الگوی گردش کار»: the latest published template of the chosen type is preselected (the list is ordered by type).
+    var templateId = c.TemplateId?.ToString() ?? o.Templates.FirstOrDefault()?.Value;
     var hasMore = !string.IsNullOrWhiteSpace(c.RelatedCode) || !string.IsNullOrWhiteSpace(c.PriorityReason) || !string.IsNullOrWhiteSpace(c.PartFamily) ||
         (c.Language is { Length: > 0 } lang && lang != "fa") || extras.Values.Any(x => !string.IsNullOrWhiteSpace(x));
 }
 <form id="createForm" class="fu-sheet" method="post" action="/follow-ups" enctype="multipart/form-data" hx-post="/follow-ups" hx-encoding="multipart/form-data" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]">
-    <partial name="_SheetHead" model="@(new FollowUpSheetHead(1, "ثبت پرونده پیگیری", "ایجاد مسیر رسیدگی برای مشتری", o.CustomerName))" />
+    <partial name="_SheetHead" model="@(new FollowUpSheetHead(1, "ثبت پرونده پیگیری") { Side = "ایجاد مسیر رسیدگی برای مشتری", Numbered = true })" />
     <div class="fu-sheet__body">
         @Html.AntiForgeryToken()
         <input type="hidden" name="OperationId" value="@c.OperationId" />
@@ -44,33 +46,33 @@
             </section>
         }
         <div class="fu-g">
-            <label class="fu-f fu-span"><span class="fu-f__l">موضوع<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="Subject" value="@c.Subject" required maxlength="200" placeholder="مثلاً پیش‌فاکتور قطعات یدکی خط بسته‌بندی" /></span></label>
-            <label class="fu-f"><span class="fu-f__l">مشتری / حساب<i>*</i></span><span class="fu-f__c"><svg><use href="#i-building"/></svg><select name="CustomerId" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
+            <label class="fu-f fu-span"><span class="fu-f__l">موضوع پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="Subject" value="@c.Subject" required maxlength="200" placeholder="مثلاً پیش‌فاکتور قطعات یدکی خط بسته‌بندی" /></span></label>
+            <label class="fu-f"><span class="fu-f__l">مشتری / حساب<i>*</i></span><span class="fu-f__c fu-f__c--end"><svg><use href="#i-building"/></svg><select name="CustomerId" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
                 <option value="">— انتخاب مشتری —</option>
                 @foreach (var x in o.Customers) { <option value="@x.Value" selected="@(o.CustomerId?.ToString() == x.Value)">@x.Label</option> }
             </select></span></label>
             <label class="fu-f"><span class="fu-f__l">شخص تماس</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="ContactId"><option value="">—</option>@foreach (var x in o.Contacts) { <option value="@x.Value" selected="@(c.ContactId?.ToString() == x.Value)">@x.Label</option> }</select></span></label>
-            <label class="fu-f"><span class="fu-f__l">نوع پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="CaseType" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
+            <label class="fu-f"><span class="fu-f__l">نوع پیگیری<i>*</i></span><span class="fu-f__c fu-f__c--end"><svg><use href="#i-file"/></svg><select name="CaseType" required hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
                 @foreach (var t in FollowUpCaseTypes.All) { <option value="@t.Key" selected="@(o.CaseType == t.Key)">@t.Label</option> }
             </select></span></label>
-            <label class="fu-f"><span class="fu-f__l">رکورد مرتبط</span><span class="fu-f__c"><svg><use href="#i-link"/></svg><select name="Related">
+            <label class="fu-f"><span class="fu-f__l">رکورد مرتبط</span><span class="fu-f__c"><svg><use href="#i-file"/></svg><select name="Related">
                 <option value="">— بدون رکورد مرتبط —</option>
                 @foreach (var r in o.RelatedRecords) { <option value="@r.Kind:@r.Id" selected="@(related == $"{r.Kind}:{r.Id}")">@r.Label</option> }
             </select></span></label>
-            <label class="fu-f"><span class="fu-f__l">شعبه<i>*</i></span><span class="fu-f__c"><svg><use href="#i-pin"/></svg><select name="BranchId" hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
+            <label class="fu-f"><span class="fu-f__l">شعبه<i>*</i></span><span class="fu-f__c fu-f__c--end"><svg><use href="#i-building"/></svg><select name="BranchId" hx-disabled-elt="this" hx-get="/follow-ups/new/form" hx-include="closest form" hx-target="#createForm" hx-swap="outerHTML" hx-trigger="change">
                 <option value="">— شعبهٔ مشتری —</option>
                 @foreach (var b in o.Branches) { <option value="@b.Value" selected="@(string.Equals(c.BranchId, b.Value, StringComparison.OrdinalIgnoreCase))">@b.Label</option> }
             </select></span></label>
-            <label class="fu-f"><span class="fu-f__l">نمایندگی</span><span class="fu-f__c"><svg><use href="#i-store"/></svg><select name="DealerId"><option value="">— فروش مستقیم —</option>@foreach (var d in o.Dealers) { <option value="@d.Value" selected="@(c.DealerId?.ToString() == d.Value)">@d.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">نمایندگی</span><span class="fu-f__c"><svg><use href="#i-org"/></svg><select name="DealerId"><option value="">— فروش مستقیم —</option>@foreach (var d in o.Dealers) { <option value="@d.Value" selected="@(c.DealerId?.ToString() == d.Value)">@d.Label</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">تیم مسئول<i hidden="@(queueId is null)">*</i></span><span class="fu-f__c"><svg><use href="#i-users"/></svg><select name="QueueId" required="@(queueId is not null)"><option value="">— براساس قواعد تخصیص —</option>@foreach (var q in o.Queues) { <option value="@q.Value" selected="@(queueId?.ToString() == q.Value)">@q.Label</option> }</select></span></label>
-            <label class="fu-f"><span class="fu-f__l">مسئول پرونده<i hidden="@(ownerId is null)">*</i>@if (o.SuggestedOwner is not null) { <em>پیشنهاد: @o.SuggestedOwner</em> }</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="OwnerUserId" required="@(ownerId is not null)"><option value="">— تخصیص خودکار —</option>@foreach (var u in o.Owners) { <option value="@u.Value" selected="@(ownerId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
-            <label class="fu-f"><span class="fu-f__l">کانال ورود</span><span class="fu-f__c"><svg><use href="#@FollowUpLabels.ChannelIcon(c.Channel)"/></svg><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(c.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></span></label>
-            <label class="fu-f"><span class="fu-f__l">اولویت</span><span class="fu-f__c"><span class="fu-dot" data-tone="@c.Priority"></span><select name="Priority" data-dot>@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@(c.Priority == p)">@FollowUpLabels.Priority(p) — @FollowUpLabels.PriorityHint(p)</option> }</select></span></label>
-            <label class="fu-f fu-span"><span class="fu-f__l">الگوی گردش کار<i>*</i></span><span class="fu-f__c"><svg><use href="#i-flow"/></svg><select name="TemplateId"><option value="">آخرین نسخهٔ منتشرشدهٔ «@FollowUpLabels.Type(o.CaseType)»</option>@foreach (var t in o.Templates) { <option value="@t.Value" selected="@(c.TemplateId?.ToString() == t.Value)">@t.Label</option> }</select></span><small class="fu-f__hint">پرونده تا پایان با همین نسخه اجرا می‌شود؛ نسخه‌های جدید فقط برای پرونده‌های جدید اعمال می‌شوند.</small></label>
+            <label class="fu-f"><span class="fu-f__l">مسئول پرونده<i hidden="@(ownerId is null)">*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="OwnerUserId" required="@(ownerId is not null)"><option value="">— تخصیص خودکار —</option>@foreach (var u in o.Owners) { <option value="@u.Value" selected="@(ownerId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">کانال ورود</span><span class="fu-f__c"><select name="Channel">@foreach (var ch in Enum.GetValues<FollowUpChannel>()) { <option value="@ch" selected="@(c.Channel == ch)">@FollowUpLabels.Channel(ch)</option> }</select></span></label>
+            <label class="fu-f"><span class="fu-f__l">اولویت</span><span class="fu-f__c"><span class="fu-dot" data-tone="@c.Priority"></span><select name="Priority" data-dot>@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@(c.Priority == p)">@FollowUpLabels.Priority(p)</option> }</select></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">الگوی گردش کار<i>*</i></span><span class="fu-f__c"><svg><use href="#i-org"/></svg><select name="TemplateId" required>@foreach (var t in o.Templates) { <option value="@t.Value" selected="@(templateId == t.Value)">@t.Label</option> }</select></span></label>
         </div>
 
         <section class="fu-sec" data-rows>
-            <h3 class="fu-sec__h"><svg><use href="#i-box"/></svg>قطعات مرتبط<button type="button" class="fu-add" data-add-row><svg><use href="#i-plus"/></svg>افزودن قطعه</button></h3>
+            <h3 class="fu-sec__h">قطعات مرتبط<button type="button" class="fu-add fu-add--line" data-add-row><svg><use href="#i-plus"/></svg>افزودن قطعه</button></h3>
             <table class="fu-t fu-parts-table">
                 <thead><tr><th>کد قطعه</th><th>شرح</th><th class="fu-t__num">تعداد</th><th class="fu-t__ops">عملیات</th></tr></thead>
                 <tbody>
@@ -96,15 +98,15 @@
         </section>
 
         <label class="fu-f"><span class="fu-f__l">شرح درخواست</span><span class="fu-f__c"><textarea name="Description" rows="3" maxlength="4000" placeholder="جزئیات درخواست مشتری">@c.Description</textarea></span></label>
-        <label class="fu-dropzone">
-            <svg><use href="#i-upload"/></svg>
-            <span>افزودن فایل یا تصویر قطعه</span>
-            <small data-file-out data-empty="حداکثر ۵ فایل، هر فایل تا ۱۰ مگابایت">حداکثر ۵ فایل، هر فایل تا ۱۰ مگابایت</small>
+        <label class="fu-attach">
+            <svg><use href="#i-clip"/></svg>
+            <span data-file-out data-empty="افزودن فایل یا تصویر قطعه">افزودن فایل یا تصویر قطعه</span>
+            <small>حداکثر ۵ فایل، هر کدام تا ۱۰ مگابایت</small>
             <input type="file" name="Files" multiple data-file-names accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.dwg,.zip" aria-label="افزودن فایل یا تصویر قطعه" />
         </label>
 
         <details class="fu-more-fields" open="@hasMore">
-            <summary><svg><use href="#i-chevron"/></svg>اطلاعات تکمیلی (سند در سامانهٔ دیگر، دلیل اولویت، معیار پایان و فیلدهای نوع پیگیری)</summary>
+            <summary><svg><use href="#i-chevron"/></svg>اطلاعات تکمیلی (اختیاری)</summary>
             <div class="fu-g">
                 <label class="fu-f"><span class="fu-f__l">شمارهٔ سند در سامانهٔ دیگر</span><span class="fu-f__c"><svg><use href="#i-hash"/></svg><input name="RelatedCode" value="@c.RelatedCode" maxlength="40" dir="ltr" placeholder="INV-1405-0731" /></span><small class="fu-f__hint">فاکتور/ارسال در حسابداری؛ برای جلوگیری از پرونده تکراری بررسی می‌شود.</small></label>
                 <label class="fu-f"><span class="fu-f__l">دلیل اولویت</span><span class="fu-f__c"><svg><use href="#i-flag"/></svg><input name="PriorityReason" value="@c.PriorityReason" maxlength="300" placeholder="مثلاً توقف خط تولید مشتری" /></span></label>
@@ -119,12 +121,12 @@
             </div>
         </details>
 
-        <p class="fu-note"><svg><use href="#i-info"/></svg><span>مهلت پاسخ اولیه براساس نوع درخواست تعیین می‌شود. <b>@o.SlaPreview</b> (ساعات کاری و تعطیلات شعبهٔ مسئول، به وقت تهران).</span></p>
+        <p class="fu-note" title="@o.SlaPreview"><svg><use href="#i-info"/></svg><span>مهلت پاسخ اولیه براساس نوع درخواست تعیین می‌شود.</span></p>
     </div>
     <footer class="fu-sheet__foot">
         <button class="button button--primary" type="submit"><svg><use href="#i-send"/></svg>ذخیره و شروع پیگیری</button>
-        <button class="button button--secondary" type="button" hx-post="/follow-ups/drafts/create" hx-include="closest form" hx-encoding="application/x-www-form-urlencoded" hx-swap="none" hx-disabled-elt="this"><svg><use href="#i-save"/></svg>پیش‌نویس</button>
-        @if (ViewData["FullPage"] is true) { <a class="button button--ghost fu-foot__end" href="/follow-ups">انصراف</a> }
-        else { <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button> }
+        <button class="button button--plain fu-foot__end" type="button" hx-post="/follow-ups/drafts/create" hx-include="closest form" hx-encoding="application/x-www-form-urlencoded" hx-swap="none" hx-disabled-elt="this">پیش‌نویس</button>
+        @if (ViewData["FullPage"] is true) { <a class="button button--plain" href="/follow-ups">انصراف</a> }
+        else { <button class="button button--plain" type="button" data-drawer-close>انصراف</button> }
     </footer>
 </form>

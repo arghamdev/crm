@@ -405,8 +405,8 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     // The large forms open in a centered popup; the registration form opens from the list button.
     await page.Locator(".list-head__actions a", new PageLocatorOptions { HasText = "پرونده پیگیری جدید" }).ClickAsync();
     await page.Locator("#modal.is-open #createForm").WaitForAsync();
-    Assert(await page.Locator("#modal.modal--sheet .fu-sheet__title h2").InnerTextAsync() == "ثبت پرونده پیگیری" &&
-        (await page.Locator("#modal .fu-num").InnerTextAsync()).Trim() == "۱", "The registration sheet (۱) has no numbered header.");
+    Assert(await page.Locator("#modal.modal--sheet .fu-sheet__title h2").InnerTextAsync() == "۱. ثبت پرونده پیگیری" &&
+        (await page.Locator("#modal .fu-num").InnerTextAsync()).Trim() == "1", "The registration sheet (۱) has no numbered header.");
     await page.Locator("#createForm select[name='CustomerId']").SelectOptionAsync("20000000-0000-4000-8000-000000000001");
     await page.Locator("#createForm select[name='ContactId'] option", new PageLocatorOptions { HasText = "علی رستگار" }).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     await page.Locator("#createForm input[name='Subject']").FillAsync(subject);
@@ -461,7 +461,7 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     await refer.Locator("[data-capacity-card]:not([hidden])").WaitForAsync();
     Assert((await refer.Locator("[data-capacity-load]").InnerTextAsync()).Length > 0 && await refer.Locator("select[name='acceptPreset'] option").CountAsync() >= 3,
         "The referral sheet has no capacity card or deadline presets.");
-    await page.Locator("#modalBody .fu-sheet__close").ClickAsync();
+    await page.Locator("#modalBody .fu-sheet__foot:visible [data-drawer-close]").First.ClickAsync();
     await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
 
     // ۶. Waiting for the customer pauses the SLA; resuming needs a next action.
@@ -486,7 +486,7 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     await close.WaitForAsync();
     Assert(await close.Locator(".fu-close-checks .is-fail").CountAsync() > 0 && await close.Locator("button[type='submit']").IsDisabledAsync(),
         "An incomplete case can be closed from the form.");
-    await page.Locator("#modalBody .fu-sheet__close").ClickAsync();
+    await page.Locator("#modalBody .fu-sheet__foot:visible [data-drawer-close]").First.ClickAsync();
     await page.Locator("#modal[aria-hidden='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
     // Short forms (change owner / merge) keep the side drawer.
     await page.Locator(".fu-more summary").ClickAsync();
@@ -503,7 +503,6 @@ static async Task VerifyFollowUpCenter(IPage page, string baseUrl)
     await page.Locator("[data-weight-sum].is-ok").WaitForAsync();
     await page.GotoAsync(baseUrl + "/follow-ups/settings?tab=policies", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     await page.Locator("[data-fu-panel='policies'] a.cell-title").First.ClickAsync();
-    await page.Locator("input[name='previewDate']").FillAsync("1405/07/15");
     await page.Locator("button", new PageLocatorOptions { HasText = "پیش‌نمایش محاسبه" }).ClickAsync();
     await page.Locator("#slaPreview .fu-facts").WaitForAsync();
     await page.GotoAsync(baseUrl + "/follow-ups/supervision", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });

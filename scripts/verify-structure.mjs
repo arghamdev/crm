@@ -190,6 +190,8 @@ const required = [
   ,"src/Crm.Web/Controllers/FollowUpSettingsController.cs"
   ,"src/Crm.Web/Background/FollowUpSlaWorker.cs"
   ,"preview/follow-ups.js"
+  ,"preview/follow-up-snapshots.js"
+  ,"scripts/capture-follow-up-preview.mjs"
   ,"docs/follow-up-center-fa.md"
   ,"src/Crm.Domain/Accounts/CrmActivity.cs"
   ,"src/Crm.Domain/Accounts/AccountRecords.cs"

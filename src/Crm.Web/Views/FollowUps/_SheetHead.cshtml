@@ -1,9 +1,15 @@
 @model FollowUpSheetHead
 <header class="fu-sheet__head">
-    <span class="fu-num" aria-hidden="true">@FollowUpLabels.Fa(Model.Number)</span>
-    <div class="fu-sheet__title"><h2>@Model.Title</h2>@if (Model.Subtitle is not null) { <p>@Model.Subtitle</p> }</div>
-    @if (Model.Chip is not null) { <span class="fu-chip@(Model.ChipTone is { Length: > 0 } tone ? $" fu-chip--{tone}" : "")"><svg><use href="#i-case"/></svg><bdi>@Model.Chip</bdi></span> }
-    @if (Model.CloseHref is not null || ViewData["FullPage"] is true) { <a class="icon-button fu-sheet__close" href="@(Model.CloseHref ?? "/follow-ups")" aria-label="بستن"><svg><use href="#i-close"/></svg></a> }
-    else { <button type="button" class="icon-button fu-sheet__close" data-drawer-close aria-label="بستن"><svg><use href="#i-close"/></svg></button> }
+    @if (Model.Chip is not null)
+    {
+        <span class="fu-chip@(Model.ChipSub is not null ? " fu-chip--two" : "")@(Model.ChipTone is { Length: > 0 } tone ? $" fu-chip--{tone}" : "")"><svg><use href="#@Model.ChipIcon"/></svg>@if (Model.ChipSub is not null) { <span><bdi>@Model.Chip</bdi><small>@Model.ChipSub</small></span> } else { <bdi>@Model.Chip</bdi> }</span>
+    }
+    else if (Model.Side is not null)
+    {
+        <span class="fu-head-side">@if (Model.SideIcon is not null) { <svg><use href="#@Model.SideIcon"/></svg> }@Model.Side</span>
+    }
+    <div class="fu-sheet__title"><h2>@Model.DisplayTitle</h2>@if (Model.Under is not null) { <p>@Model.Under</p> }</div>
+    @if (Model.Icon is not null) { <span class="fu-tile-icon" aria-hidden="true"><svg><use href="#@Model.Icon"/></svg></span> }
+    else { <span class="fu-num@(Model.Number <= 2 ? " fu-num--solid" : "")" aria-hidden="true">@Model.Badge</span> }
     <span data-drawer-title hidden>@Model.Title</span>
 </header>

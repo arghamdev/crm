@@ -17,24 +17,24 @@
     var now = DateTimeOffset.UtcNow;
 }
 <div class="fu-sheet" data-fu-tabs>
-    <partial name="_SheetHead" model="@(new FollowUpSheetHead(8, "بستن و بازگشایی پرونده", null, FollowUpSheetHead.CaseChip(c)))" />
+    <partial name="_SheetHead" model="@(FollowUpSheetHead.ForCase(8, "بستن و بازگشایی پرونده", c, twoLine: true, icon: "i-building") with { Icon = "i-folder" })" />
     <div class="fu-sheet__body fu-sheet__body--tabs">
         <div class="fu-tabs-fill" role="tablist">
-            <button type="button" role="tab" class="@(Model.Tab == "close" ? "is-active" : "")" data-fu-tab="close" disabled="@(!c.IsOpen)"><svg><use href="#i-lock"/></svg>بستن پرونده</button>
-            <button type="button" role="tab" class="@(Model.Tab == "reopen" ? "is-active" : "")" data-fu-tab="reopen" disabled="@(!c.CanReopen)"><svg><use href="#i-refresh"/></svg>بازگشایی</button>
+            <button type="button" role="tab" class="@(Model.Tab == "close" ? "is-active" : "")" data-fu-tab="close" disabled="@(!c.IsOpen)">بستن پرونده</button>
+            <button type="button" role="tab" class="@(Model.Tab == "reopen" ? "is-active" : "")" data-fu-tab="reopen" disabled="@(!c.CanReopen)">بازگشایی</button>
         </div>
     </div>
     <form data-fu-panel="close" hidden="@(Model.Tab != "close")" method="post" action="@basePath/close" enctype="multipart/form-data" hx-post="@basePath/close" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
         <div class="fu-sheet__body">
             @Html.AntiForgeryToken()
             @if (Model.Tab == "close") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
-            <section class="fu-box @(ready ? "fu-box--green" : "fu-box--amber") fu-ready">
-                <div class="fu-ready__top"><svg><use href="#@(ready ? "i-check" : "i-alert")"/></svg><strong>@(ready ? "آماده بستن" : "هنوز آماده بستن نیست")</strong><b>@FollowUpLabels.Fa(readiness)٪</b></div>
-                <div class="fu-progressbar"><span style="width:@readiness%"></span></div>
-                <p>@FollowUpLabels.Fa(passed) از @FollowUpLabels.Fa(c.CloseChecks.Count) کنترل برقرار است · پیشرفت پرونده @FollowUpLabels.Fa(c.Progress)٪</p>
+            <section class="fu-box @(ready ? "fu-box--green" : "fu-box--amber") fu-ready fu-ready--row">
+                <span class="fu-ready__mark"><svg><use href="#@(ready ? "i-check" : "i-alert")"/></svg></span>
+                <div><strong>@(ready ? "آماده بستن" : "هنوز آماده بستن نیست")</strong><small>@(ready ? "تمام مراحل تکمیل شده است." : $"{FollowUpLabels.Fa(passed)} از {FollowUpLabels.Fa(c.CloseChecks.Count)} کنترل برقرار است.")</small></div>
+                <div class="fu-ready__bar"><span>پیشرفت: @FollowUpLabels.Fa(c.Progress)٪</span><div class="fu-progressbar"><span style="width:@c.Progress%"></span></div></div>
             </section>
-            <section class="fu-sec">
-                <h3 class="fu-sec__h"><svg><use href="#i-clipboard"/></svg>کنترل‌های پیش از بستن</h3>
+            <section class="fu-sec fu-checks-card">
+                <h3 class="fu-sec__h"><svg><use href="#i-task"/></svg>کنترل‌های پیش از بستن</h3>
                 <ul class="fu-ticks fu-close-checks">
                     @foreach (var check in c.CloseChecks)
                     {
@@ -43,7 +43,7 @@
                 </ul>
             </section>
             <div class="fu-sec">
-                <label class="fu-f fu-f--row"><span class="fu-f__l">نتیجهٔ نهایی<i>*</i></span><span class="fu-f__c"><svg><use href="#i-flag"/></svg><select name="Outcome" required><option value="">— انتخاب —</option>@foreach (var o in outcomes) { <option value="@o" selected="@(close.Outcome == o)">@o</option> }</select></span></label>
+                <label class="fu-f fu-f--row"><span class="fu-f__l">نتیجه نهایی<i>*</i></span><span class="fu-f__c"><select name="Outcome" required><option value="">— انتخاب —</option>@foreach (var o in outcomes) { <option value="@o" selected="@(close.Outcome == o)">@o</option> }</select></span></label>
                 <label class="fu-f fu-f--row"><span class="fu-f__l">شرح نتیجه</span><span class="fu-f__c"><textarea name="Note" rows="3" maxlength="2000">@close.Note</textarea></span></label>
                 <div class="fu-f fu-f--row">
                     <span class="fu-f__l">مدرک تأیید مشتری<i hidden="@(approvalCheck is null)">*</i></span>
@@ -63,18 +63,18 @@
                 </div>
             </div>
             <section class="fu-box fu-box--blue">
-                <p class="fu-box__h"><svg><use href="#i-refresh"/></svg>ادامهٔ ارتباط با مشتری</p>
-                <label class="fu-checks-inline"><input type="checkbox" name="StartNextCase" value="true" checked="@close.StartNextCase" /><span>شروع پیگیری بعدی (مثلاً پیگیری سفارش) پس از بستن</span></label>
+                <p class="fu-box__h"><svg><use href="#i-link"/></svg>ادامه ارتباط با مشتری</p>
+                <label class="fu-checks-inline"><input type="checkbox" name="StartNextCase" value="true" checked="@close.StartNextCase" /><span>شروع پیگیری سفارش</span></label>
                 <div class="fu-g">
                     <label class="fu-f"><span class="fu-f__l">الگوی پرونده بعدی</span><span class="fu-f__c"><svg><use href="#i-flow"/></svg><select name="NextTemplateId"><option value="">—</option>@foreach (var t in c.NextTemplates) { <option value="@t.Value" selected="@(close.NextTemplateId?.ToString() == t.Value)">@t.Label</option> }</select></span></label>
                     <label class="fu-f"><span class="fu-f__l">مسئول پرونده بعدی</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="NextOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(close.NextOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
                 </div>
-                <p>پروندهٔ بعدی با همین مشتری و سوابق ایجاد می‌شود؛ این پرونده با نتیجهٔ ثبت‌شده بسته می‌ماند.</p>
+                <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>پس از بستن، پیگیری سفارش با مسئول مشخص آغاز می‌شود.</span></p>
             </section>
         </div>
         <footer class="fu-sheet__foot">
             <button class="button button--primary" type="submit" disabled="@(!ready)"><svg><use href="#i-lock"/></svg>تأیید و بستن پرونده</button>
-            <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+            <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
         </footer>
     </form>
     <form data-fu-panel="reopen" hidden="@(Model.Tab != "reopen")" method="post" action="@basePath/reopen" hx-post="@basePath/reopen" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
@@ -93,7 +93,7 @@
         </div>
         <footer class="fu-sheet__foot">
             <button class="button button--primary" type="submit"><svg><use href="#i-refresh"/></svg>بازگشایی پرونده</button>
-            <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+            <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
         </footer>
     </form>
 </div>

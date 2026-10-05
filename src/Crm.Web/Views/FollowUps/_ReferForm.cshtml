@@ -10,7 +10,7 @@
     var preset = presets.FirstOrDefault(x => x.Date == cmd.AcceptDate && x.Time == cmd.AcceptTime).Key ?? "custom";
 }
 <div class="fu-sheet" data-fu-tabs>
-    <partial name="_SheetHead" model="@(new FollowUpSheetHead(4, "ارجاع و پذیرش مسئولیت", null, FollowUpSheetHead.CaseChip(c)))" />
+    <partial name="_SheetHead" model="@(FollowUpSheetHead.ForCase(4, "ارجاع و پذیرش مسئولیت", c, twoLine: true, icon: "i-case"))" />
     <div class="fu-sheet__body fu-sheet__body--tabs">
         <div class="fu-utabs" role="tablist">
             <button type="button" role="tab" class="@(Model.Tab != "received" ? "is-active" : "")" data-fu-tab="new">ارجاع جدید</button>
@@ -52,28 +52,28 @@
             </div>
             <section class="fu-box fu-box--green" data-capacity-card hidden>
                 <div class="fu-capacity">
-                    <span class="fu-avatar" data-capacity-initial></span>
+                    <span class="fu-avatar" data-capacity-initial hidden></span>
                     <div>
-                        <strong data-capacity-name></strong>
-                        <small><span data-capacity-state>آماده دریافت</span> · <span data-capacity-load></span></small>
-                        <div class="fu-progressbar"><span data-capacity-bar></span></div>
+                        <strong><span data-capacity-name></span> <span class="fu-cap-pill" data-capacity-state>آماده دریافت</span></strong>
+                        <small data-capacity-load></small>
+                        <div class="fu-progressbar" hidden><span data-capacity-bar></span></div>
                     </div>
-                    <svg><use href="#i-check"/></svg>
+                    <span class="fu-cap-dot" aria-hidden="true"></span>
                 </div>
             </section>
-            <label class="fu-f"><span class="fu-f__l">دلیل ارجاع<i>*</i></span><span class="fu-f__c"><textarea name="Reason" rows="3" required maxlength="500" placeholder="چرا این کار باید به گیرنده سپرده شود؟">@cmd.Reason</textarea></span></label>
-            <fieldset class="fu-checks-inline">
+            <label class="fu-f"><span class="fu-f__l">دلیل ارجاع<i>*</i></span><span class="fu-f__c"><svg class="fu-f__ta-icon"><use href="#i-note"/></svg><textarea name="Reason" rows="3" required maxlength="500" placeholder="چرا این کار باید به گیرنده سپرده شود؟">@cmd.Reason</textarea></span></label>
+            <fieldset class="fu-checks-inline fu-checks-box">
                 <legend>اطلاعات همراه ارجاع</legend>
                 <label><input type="checkbox" name="IncludeHistory" value="true" checked="@cmd.IncludeHistory" /><span>سوابق تعاملات</span></label>
                 <label><input type="checkbox" name="IncludeQuote" value="true" checked="@cmd.IncludeQuote" /><span>پیش‌فاکتور</span></label>
                 <label><input type="checkbox" name="IncludeTechnical" value="true" checked="@cmd.IncludeTechnical" /><span>مدارک فنی</span></label>
             </fieldset>
             <p class="fu-note fu-note--amber"><svg><use href="#i-alert"/></svg><span>تا پذیرش گیرنده، مسئول فعلی پاسخ‌گو می‌ماند. اگر ارجاع در مهلت پذیرفته نشود، سرپرست مطلع می‌شود.</span></p>
-            <p class="fu-note"><svg><use href="#i-info"/></svg><span>پذیرش یا رد با دلیل در تاریخچه ثبت می‌شود.</span></p>
+            <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>پذیرش یا رد با دلیل در تاریخچه ثبت می‌شود.</span></p>
         </div>
         <footer class="fu-sheet__foot">
             <button class="button button--primary" type="submit"><svg><use href="#i-send"/></svg>ثبت و ارسال ارجاع</button>
-            <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+            <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
         </footer>
     </form>
     <section data-fu-panel="received" hidden="@(Model.Tab != "received")">

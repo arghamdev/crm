@@ -90,7 +90,7 @@ internal static partial class TestRunner
         }
         var owner = Regex.Match(html, "name=\"OwnerUserId\"[^>]*>\\s*<option value=\"([0-9a-f-]{36})\"").Groups[1].Value;
         var contact = Regex.Match(html, "<option value=\"([0-9a-f-]{36})\" data-phone=\"[^\"]*\" selected").Groups[1].Value;
-        Check(contact.Length == 36 && html.Contains("class=\"fu-num\"") && html.Contains("name=\"TimeZone\""),
+        Check(contact.Length == 36 && html.Contains("class=\"fu-num") && html.Contains("name=\"TimeZone\""),
             "FUW: the plan sheet (۲) preselects the case contact and offers the time zone.");
         var tomorrow = Crm.Domain.Common.TehranTime.Date(DateTimeOffset.UtcNow.AddDays(1));
         using (var response = await manager.SendAsync(Htmx(HttpMethod.Post, $"/follow-ups/{caseId}/plan", Form(token, ("Kind", "Call"), ("Title", "تماس وب"),

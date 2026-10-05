@@ -70,7 +70,7 @@ function createFollowUpPreview(ctx) {
     ];
     save();
   }
-  const state = {view: 'all', q: '', selected: null, tab: 'stages'};
+  const state = {view: 'all', q: '', selected: null, tab: 'stages', settings: 'template', planKind: null};
   const visibleCases = () => store.followUps.filter(c => role() !== 'sales.expert' || c.owner === me() || c.branch === 'مرکزی');
   const progress = c => { const counted = c.stages.filter(s => s.status !== 'Skipped'); const w = counted.reduce((a, s) => a + s.weight, 0);
     return w ? Math.round(counted.reduce((a, s) => a + s.weight * stageProgress(s), 0) / w) : 0; };
@@ -121,14 +121,27 @@ function createFollowUpPreview(ctx) {
     const remaining = s ? s.items.filter(x => !x.done).length : 0;
     const tabBtn = (key, label) => `<button type="button" class="tabbar__tab${state.tab === key ? ' is-active' : ''}" data-u-action="fu-tab" data-id="${key}">${label}</button>`;
     const kpi = (label, value, sub, tone = '') => `<article class="fu-kpi${tone ? ' fu-kpi--' + tone : ''}"><small>${label}</small><strong>${e(value)}</strong><span>${e(sub)}</span></article>`;
-    const stagesPanel = `<div class="fu-stages"><div class="panel"><div class="panel-heading"><div><strong>مراحل پرونده</strong><small>پیشرفت کل = Σ (وزن × پیشرفت مرحله) ÷ ۱۰۰</small></div><span class="fu-total">${fa(p)}٪</span></div>
-      <div class="table-wrap"><table class="list-table fu-stage-table"><thead><tr><th>#</th><th>مرحله</th><th>وزن</th><th>پیشرفت</th><th>وضعیت</th></tr></thead><tbody>
-      ${c.stages.map((x, i) => `<tr class="${x === s ? 'is-current' : ''}"><td>${fa(i + 1)}</td><td><strong class="cell-title">${e(x.name)}</strong><small class="cell-sub">${e(x.role)}</small></td><td>${fa(x.weight)}٪</td><td>${bar(stageProgress(x))}</td><td>${pill(stageLabel[x.status][0], stageLabel[x.status][1])}</td></tr>`).join('')}</tbody></table></div></div>
-      <div class="panel fu-active-stage">${s ? `<div class="panel-heading"><div><strong>مرحلهٔ فعال: ${e(s.name)}</strong><small>مسئول: ${e(c.owner || '—')} · وزن ${fa(s.weight)}٪</small></div>${pill(stageLabel[s.status][0], stageLabel[s.status][1], false)}</div>
-        <div class="fu-checklist"><fieldset ${write ? '' : 'disabled'}><legend>وظایف این مرحله</legend>${s.items.map((x, j) => `<label class="fu-check${x.done ? ' is-done' : ''}"><input type="checkbox" data-fu-item="${c.id}:${j}" ${x.done ? 'checked' : ''}><span>${e(x.title)}</span></label>`).join('')}</fieldset>
-        ${remaining ? `<p class="fu-warning">${icon('alert')}<span>برای تکمیل مرحله، <b>${fa(remaining)}</b> مورد باقی‌مانده انجام شود.</span></p>` : ''}
-        ${write ? `<div class="fu-inline-actions"><button type="button" class="button button--primary" data-u-action="fu-complete" data-id="${c.id}" ${remaining ? 'disabled' : ''}>${icon('lock')}تکمیل مرحله</button></div>` : ''}</div>`
-        : `<div class="panel-heading"><div><strong>مرحلهٔ فعال</strong><small>${isOpen(c) ? 'همهٔ مراحل انجام شد؛ پرونده آمادهٔ بستن است.' : 'پرونده بسته است.'}</small></div></div>`}</div></div>`;
+    // Form ۵ — the same card as Views/FollowUps/_Stages.cshtml.
+    const stateCls = {Done: 'done', Active: 'active', Returned: 'returned', Skipped: 'skipped', Pending: 'pending'};
+    const stateIco = {Done: 'check', Active: 'more', Returned: 'sort', Skipped: 'ban', Pending: 'clock'};
+    const stageIco = n => /نیاز|دریافت|ثبت/.test(n) ? 'inbox' : /فنی|بررسی/.test(n) ? 'flask' : /موجودی|انبار|تأمین/.test(n) ? 'box' : /پیش‌فاکتور|قیمت/.test(n) ? 'file' : /تأیید/.test(n) ? 'shield' : /ارسال|تحویل/.test(n) ? 'send' : 'task';
+    const words = n => ['صفر', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه', 'ده'][n] ?? fa(n);
+    const pctWords = n => { const ones = ['', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'], teens = ['ده', 'یازده', 'دوازده', 'سیزده', 'چهارده', 'پانزده', 'شانزده', 'هفده', 'هجده', 'نوزده'], tens = ['', '', 'بیست', 'سی', 'چهل', 'پنجاه', 'شصت', 'هفتاد', 'هشتاد', 'نود'];
+      return n === 0 ? 'صفر' : n === 100 ? 'صد' : n < 10 ? ones[n] : n < 20 ? teens[n - 10] : tens[Math.floor(n / 10)] + (n % 10 ? ' و ' + ones[n % 10] : ''); };
+    const total = s ? s.items.length : 0, doneCount = s ? s.items.filter(x => x.done).length : 0, stagePct = total ? Math.round(100 * doneCount / total) : 0;
+    const stagesPanel = `<section class="panel fu-stagecard"><div class="fu-stagecard__head"><header class="fu-sheet__head"><span class="fu-chip">${icon('file')}<bdi>${e(c.code)} / ${e(c.customer)}</bdi></span><div class="fu-sheet__title"><h2>مراحل و وظایف پرونده</h2></div><span class="fu-num" aria-hidden="true">۵</span></header></div>
+      <div class="fu-stagecard__top"><div class="fu-stagecard__total"><div><span class="fu-total-label">پیشرفت کل</span><b class="fu-total">${fa(p)}٪</b><small>${pctWords(p)} درصد</small></div><div class="fu-progressbar"><span style="width:${p}%"></span></div></div>
+        <div class="fu-person"><span class="fu-avatar">${e((c.owner || '؟')[0])}</span><span><small>مسئول پرونده</small><strong>${e(c.owner || 'بدون مسئول')}</strong></span></div></div>
+      <div class="table-wrap"><table class="fu-t fu-stage-table"><thead><tr><th>مرحله</th><th>وزن</th><th>پیشرفت</th><th>وضعیت</th></tr></thead><tbody>
+      ${c.stages.map(x => `<tr class="${x === s ? 'is-current' : ''}"><td><span class="fu-stage-name"><span class="fu-stage-ico">${icon(stageIco(x.name))}</span><span>${e(x.name)}<small>${e(x.role)}</small></span></span></td><td>${fa(x.weight)}٪</td><td>${bar(stageProgress(x))}</td><td><span class="fu-state fu-state--${stateCls[x.status]}" title="${stageLabel[x.status][0]}">${icon(stateIco[x.status])}</span><span class="sr-only">${stageLabel[x.status][0]}</span></td></tr>`).join('')}</tbody></table></div>
+      ${s ? `<div class="fu-active fu-checklist"><h3 class="fu-sec__h">${icon('clipboard')}چک‌لیست مرحله فعال<small class="fu-f__hint">${e(s.name)}</small></h3>
+        <div class="fu-g"><div class="fu-person"><span class="fu-avatar">${e((c.owner || '؟')[0])}</span><span><small>مسئول مرحله</small><strong>${e(c.owner || '—')}</strong></span></div><div class="fu-person"><span class="fu-avatar">${icon('clock')}</span><span><small>مهلت مرحله</small><strong>${e(due(c.nextAt || c.dueAt)[0])}</strong></span></div></div>
+        <div class="fu-ready"><div class="fu-stage-progress"><span>پیشرفت مرحله : ${fa(stagePct)}٪</span><div class="fu-progressbar"><span style="width:${stagePct}%"></span></div><b>${fa(doneCount)} از ${fa(total)} مورد تکمیل شده</b></div></div>
+        <fieldset ${write ? '' : 'disabled'}><legend class="sr-only">وظایف این مرحله</legend>${s.items.map((x, j) => `<label class="fu-check${x.done ? ' is-done' : ''}"><input type="checkbox" data-fu-item="${c.id}:${j}" ${x.done ? 'checked' : ''}><span>${e(x.title)}</span></label>`).join('')}</fieldset>
+        <div class="fu-active__docs"><span>${icon('clip')}مستندات مرتبط</span><small class="fu-f__hint">مدرکی برای این مرحله ثبت نشده است.</small>${write ? btn('fu-documents', 'افزودن مدرک', c.id, 'fu-add', 'plus') : ''}</div>
+        ${remaining ? `<p class="fu-note fu-note--amber">${icon('alert')}<span>برای تکمیل مرحله، <b>${words(remaining)}</b> مورد باقی‌مانده انجام شود.</span></p>` : ''}
+        ${write ? `<div class="fu-inline-actions fu-halves"><button type="button" class="button button--primary" data-u-action="fu-save-tasks" data-id="${c.id}">${icon('save')}ذخیره وضعیت وظایف</button><button type="button" class="button button--plain" data-u-action="fu-complete" data-id="${c.id}" ${remaining ? 'disabled' : ''}>${icon('lock')}تکمیل مرحله</button></div>` : ''}</div>`
+        : `<p class="fu-note">${icon('info')}<span>${isOpen(c) ? 'همهٔ مراحل انجام شد؛ پرونده آمادهٔ بستن است.' : 'پرونده بسته است.'}</span></p>`}</section>`;
     const activities = `<div class="panel"><div class="panel-heading"><div><strong>فعالیت‌های پرونده</strong><small>ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند؛ هر نتیجه با اقدام بعدی همراه است.</small></div></div>
       <ul class="fu-activities">${c.activities.map((a, i) => `<li class="fu-activity fu-activity--${a.done ? 'success' : 'info'}"><span class="fu-activity__icon">${icon('phone')}</span><div><strong>${e(a.title)}</strong><small>${e(a.kind)} · ${when(a.at)} · ${e(a.owner)}</small>${a.outcome ? `<p class="fu-activity__outcome"><b>${e(a.result)}:</b> ${e(a.outcome)}</p>` : ''}</div>
         <div class="fu-activity__side">${pill(a.done ? 'انجام‌شده' : 'برنامه‌ریزی‌شده', a.done ? 'success' : 'info')}${!a.done && write ? btn('fu-result', 'ثبت نتیجه', `${c.id}:${i}`, 'button button--primary button--xs') : ''}</div></li>`).join('') || '<li class="empty-mini">فعالیتی ثبت نشده است.</li>'}</ul></div>`;
@@ -140,7 +153,7 @@ function createFollowUpPreview(ctx) {
     const panels = {stages: stagesPanel, activities, items, referrals, history};
     return `<header class="fu-head panel"><div class="fu-head__main"><span class="fu-head__icon">${icon('file')}</span><div class="fu-head__title"><div class="fu-head__badges">${pill(statusLabel[c.status], statusTone[c.status], false)}${pill('اولویت ' + pl, pt, false)}${overdue(c) ? pill('عقب‌افتاده', 'danger', false) : ''}${c.paused ? pill('مهلت متوقف', 'violet', false) : ''}</div>
       <h1>${e(c.subject)}</h1><p class="fu-head__meta"><span><b>کد:</b> ${e(c.code)}</span><span><b>نوع:</b> ${e(c.type)}</span><span><b>مشتری:</b> ${e(c.customer)}</span>${c.related ? `<span><b>مرتبط:</b> ${e(c.related)}</span>` : ''}<span><b>شعبه:</b> ${e(c.branch)}</span><span><b>الگو:</b> ${e(c.template)} · نسخه ۱</span></p></div></div>
-      <div class="fu-head__actions">${write ? btn('fu-plan', 'برنامه‌ریزی اقدام', c.id, 'button button--primary', 'calendar') + btn('fu-refer', 'ارجاع', c.id, 'button button--ghost', 'send') + btn(isWaiting(c) ? 'fu-resume' : 'fu-wait', isWaiting(c) ? 'ازسرگیری' : 'انتظار', c.id, 'button button--ghost', isWaiting(c) ? 'play' : 'pause') + btn('fu-close', 'بستن پرونده', c.id, 'button button--ghost', 'check') : ''}${btn('fu-back', 'بازگشت به فهرست', '', 'button button--ghost', 'chevron')}</div>
+      <div class="fu-head__actions">${write ? btn('fu-plan', 'برنامه‌ریزی اقدام', c.id, 'button button--primary', 'calendar') + btn('fu-refer', 'ارجاع', c.id, 'button button--ghost', 'send') + btn('fu-documents', 'مدارک و تأییدها', c.id, 'button button--ghost', 'file') + btn(isWaiting(c) ? 'fu-resume' : 'fu-wait', isWaiting(c) ? 'ازسرگیری' : 'انتظار', c.id, 'button button--ghost', isWaiting(c) ? 'play' : 'pause') + btn('fu-close', 'بستن پرونده', c.id, 'button button--ghost', 'check') : ''}${btn('fu-back', 'بازگشت به فهرست', '', 'button button--ghost', 'chevron')}</div>
       <div class="fu-head__progress"><div class="fu-bar"><span style="width:${p}%"></span></div><span><b>${fa(p)}٪</b> پیشرفت وزنی</span></div></header>
       ${isWaiting(c) ? `<p class="account-banner fu-banner--wait">${icon('pause')}<span><b>${statusLabel[c.status]}:</b> ${e(c.waitReason || '')} · ${c.paused ? 'مهلت تا ازسرگیری متوقف است.' : 'طبق سیاست، زمان متوقف نمی‌شود.'}</span></p>` : ''}
       ${c.status === 'Closed' ? `<p class="account-banner fu-banner--closed">${icon('check')}<span><b>نتیجهٔ نهایی:</b> ${e(c.outcome || '')}</span></p>` : ''}
@@ -152,64 +165,163 @@ function createFollowUpPreview(ctx) {
 
   // ── Settings (۹–۱۱) and supervision (۱۲) ──
   function settingsView() {
+    // Forms ۹–۱۱: the application's own pages (static demo data; saving is done by the server version).
+    const page = ['template', 'policy', 'queue'].includes(state.settings) ? state.settings : 'template';
+    const nav = [['template', '۹. طراحی الگوی گردش کار'], ['policy', '۱۰. مهلت‌ها و هشدارها'], ['queue', '۱۱. صف‌ها و تخصیص کار']]
+      .map(([key, label]) => `<button type="button" class="list-tabs__tab${page === key ? ' is-active' : ''}" data-u-action="fu-settings" data-id="${key}">${label}</button>`).join('');
     return `<header class="list-head"><div class="list-head__title"><span class="list-head__icon">${icon('settings')}</span><div><h1>تنظیمات مرکز پیگیری</h1><p>الگوهای گردش کار نسخه‌دار، سیاست‌های مهلت و هشدار، صف‌ها و قواعد تخصیص</p></div></div><div class="list-head__actions">${btn('fu-back', 'بازگشت', '', 'button button--ghost', 'chevron')}</div></header>
-      ${store.fuTemplates.map(t => { const sum = t.stages.reduce((a, s) => a + s.weight, 0); return `<section class="panel"><div class="panel-heading"><div><strong>${e(t.name)}</strong><small>${e(t.code)} · ${e(t.type)} · نسخه ${fa(t.version)} · ${e(t.status)}</small></div><span class="fu-weight-sum ${sum === 100 ? 'is-ok' : 'is-bad'}">مجموع وزن‌ها: <b>${fa(sum)}</b>٪</span></div>
-        <div class="table-wrap"><table class="list-table"><thead><tr><th>مرحله</th><th>وزن</th><th>نقش مسئول</th><th>چک‌لیست</th></tr></thead><tbody>${t.stages.map(s => `<tr><td>${e(s.name)}</td><td>${fa(s.weight)}٪</td><td>${e(s.role)}</td><td>${s.items.map(e).join('، ')}</td></tr>`).join('')}</tbody></table></div>
-        ${t.rules.length ? `<div class="fu-rules"><strong>${icon('flow')}قواعد</strong>${t.rules.map(([a, b]) => `<span class="chip-action">اگر <b>${e(a)}</b> → ${e(b)}</span>`).join('')}</div>` : ''}</section>`; }).join('')}
-      <section class="panel"><div class="panel-heading"><div><strong>مهلت‌ها و هشدارها</strong><small>ساعت کاری شنبه تا چهارشنبه ۸ تا ۱۷ به وقت تهران؛ هشدار مالک پرونده را تغییر نمی‌دهد.</small></div></div><div class="table-wrap"><table class="list-table"><thead><tr><th>سیاست</th><th>پاسخ / مرحله / حل</th><th>توقف مجاز</th><th>هشدار</th></tr></thead><tbody>
-        ${store.fuPolicies.map(p => `<tr><td>${e(p.name)}${pill(priority[p.priority][0], priority[p.priority][1])}</td><td>${fa(p.first)} / ${fa(p.stage)} / ${fa(p.resolution)} ساعت کاری</td><td>${p.pauseCustomer ? 'انتظار مشتری' : '—'}</td><td>${p.steps.map(e).join('<br>')}</td></tr>`).join('')}</tbody></table></div></section>
-      <section class="panel"><div class="panel-heading"><div><strong>صف‌ها و تخصیص کار</strong><small>پرونده فقط به فرد آماده با ظرفیت آزاد سپرده می‌شود؛ در غیر این صورت صف پشتیبان و اعلان سرپرست.</small></div></div><div class="table-wrap"><table class="list-table"><thead><tr><th>صف</th><th>روش</th><th>افراد و ظرفیت</th></tr></thead><tbody>
-        ${store.fuQueues.map(q => `<tr><td>${e(q.name)}<small class="cell-sub">شعبه ${e(q.branch)}</small></td><td>${e(q.method)}</td><td>${q.members.map(([n, load, cap, ok]) => `${e(n)} ${bar(Math.round(100 * load / cap))} ${pill(ok ? 'آماده' : 'خارج از شیفت', ok ? 'success' : 'neutral')}`).join('<br>')}</td></tr>`).join('')}</tbody></table></div></section>`;
+      <nav class="list-tabs fu-settings-nav">${nav}</nav>${S?.[page] ? fill(S[page], null, page) : '<p class="empty-mini">این صفحه در نسخهٔ نمایشی در دسترس نیست.</p>'}`;
   }
   function supervisionView() {
+    // Form ۱۲ — the same page as Views/FollowUpSettings/Supervision.cshtml, from the preview data.
     const open = visibleCases().filter(isOpen), noNext = open.filter(c => !c.nextAt), late = open.filter(overdue), pendingRefs = open.flatMap(c => c.referrals.filter(r => r.status === 'در انتظار پذیرش'));
-    const reasons = c => [!c.owner && 'بدون مسئول', !c.nextAt && 'بدون اقدام بعدی', overdue(c) && 'عقب‌افتاده', c.referrals.some(r => r.status === 'در انتظار پذیرش') && 'ارجاع در انتظار پذیرش'].filter(Boolean);
-    const rowsHtml = open.filter(c => reasons(c).length).map(c => `<tr><td><button type="button" class="link-button" data-u-action="fu-open" data-id="${c.id}">${e(c.code)}</button><small class="cell-sub">${e(c.subject)}</small></td><td>${e(c.customer)}</td><td>${pill(reasons(c).join(' · '), reasons(c).includes('بدون اقدام بعدی') ? 'danger' : 'warning')}</td><td>${e(c.owner || 'بدون مسئول')}</td><td>${btn('fu-open', 'بررسی پرونده', c.id, 'button button--ghost button--xs')}</td></tr>`).join('');
-    return `<header class="list-head"><div class="list-head__title"><span class="list-head__icon">${icon('grid')}</span><div><h1>نظارت مدیر</h1><p>برای هر پرونده معلوم است چرا متوقف شده و اقدام بعدی با کیست</p></div></div><div class="list-head__actions">${btn('fu-back', 'بازگشت', '', 'button button--ghost', 'chevron')}</div></header>
-      <section class="list-tiles">${[['باز', open.length, 'flow', 'green'], ['عقب‌افتاده', late.length, 'alert', 'red'], ['بدون اقدام بعدی', noNext.length, 'clock', 'amber'], ['ارجاع نپذیرفته', pendingRefs.length, 'send', 'blue']].map(([l, v, ic, tone]) => `<div class="list-tile list-tile--${tone}"><span class="list-tile__icon">${icon(ic)}</span><span class="list-tile__body"><small>${l}</small><strong>${fa(v)}</strong></span></div>`).join('')}</section>
-      ${noNext.length ? `<p class="account-banner fu-banner--alert">${icon('alert')}<span><b>${fa(noNext.length)} پرونده</b> نیازمند تعیین اقدام بعدی است.</span></p>` : ''}
-      <section class="panel"><div class="panel-heading"><div><strong>پرونده‌های نیازمند توجه</strong></div></div><div class="table-wrap"><table class="list-table"><thead><tr><th>پرونده</th><th>مشتری</th><th>علت</th><th>مسئول</th><th></th></tr></thead><tbody>${rowsHtml || '<tr><td colspan="5"><p class="empty-mini">پروندهٔ نیازمند توجهی نیست.</p></td></tr>'}</tbody></table></div></section>`;
+    const now = Date.now();
+    const row = c => {
+      const ref = c.referrals.find(r => r.status === 'در انتظار پذیرش');
+      const lateH = c.nextAt && Date.parse(c.nextAt) < now ? (now - Date.parse(c.nextAt)) / 3600000 : c.dueAt && !c.paused && Date.parse(c.dueAt) < now ? (now - Date.parse(c.dueAt)) / 3600000 : 0;
+      const nearH = !lateH && c.nextAt ? (Date.parse(c.nextAt) - now) / 3600000 : 99;
+      const [label, tone, ic, sev] = !c.owner ? ['بدون مسئول', 'danger', 'alert', 6] : !c.nextAt ? ['بدون اقدام بعدی', 'warning', 'alert', 5]
+        : lateH ? [lateH >= 48 ? `${fa(Math.floor(lateH / 24))} روز تأخیر` : `${fa(Math.max(1, Math.floor(lateH)))} ساعت تأخیر`, 'danger', 'clock', 4]
+        : ref ? ['در انتظار پذیرش', 'violet', 'hourglass', 2] : nearH <= 4 ? [`${fa(Math.max(1, Math.ceil(nearH)))} ساعت تا مهلت`, 'warning', 'clock', 2] : [null];
+      return label ? {c, label, tone, ic, sev} : null;
+    };
+    const rows = open.map(row).filter(Boolean).sort((a, b) => b.sev - a.sev);
+    const waits = store.fuTemplates.flatMap(t => t.stages.map(x => x.name)).filter((x, i, all) => all.indexOf(x) === i).slice(0, 5)
+      .map((name, i) => [name, [72, 48, 26, 12, 6][i]]);
+    const time = new Intl.DateTimeFormat('fa-IR', {hour: '2-digit', minute: '2-digit', hour12: false}).format(new Date());
+    return `<div class="fu-page"><section class="fu-sheet fu-sheet--card fu-super-sheet">
+      <header class="fu-sheet__head"><span class="fu-head-side">${icon('clock')}به‌روزرسانی: ${time}</span><div class="fu-sheet__title"><h2>نظارت مدیر</h2></div><span class="fu-num" aria-hidden="true">۱۲</span></header>
+      <div class="fu-sheet__body">
+        <div class="fu-g fu-g--3 fu-card fu-super-filters2">
+          <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-globe"/></svg>حوزه</span><span class="fu-f__c"><select><option>همهٔ شعب در دامنهٔ شما</option></select></span></label>
+          <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-users"/></svg>تیم</span><span class="fu-f__c"><select><option>همه</option>${store.fuQueues.map(q => `<option>${e(q.name)}</option>`).join('')}</select></span></label>
+          <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-calendar"/></svg>بازه</span><span class="fu-f__c"><select><option>هفته جاری</option><option>امروز</option><option>۳۰ روز اخیر</option></select></span></label>
+        </div>
+        <div class="fu-tiles" aria-label="شمارنده‌ها">
+          <button type="button" class="fu-tile" data-u-action="fu-view-list" data-id="all"><small>باز</small><strong>${fa(open.length)}</strong>${icon('file')}</button>
+          <button type="button" class="fu-tile fu-tile--red" data-u-action="fu-view-list" data-id="overdue"><small>عقب‌افتاده</small><strong>${fa(late.length)}</strong>${icon('clock')}</button>
+          <button type="button" class="fu-tile fu-tile--amber" data-u-action="fu-view-list" data-id="nonext"><small>بدون اقدام بعدی</small><strong>${fa(noNext.length)}</strong>${icon('alert')}</button>
+          <button type="button" class="fu-tile fu-tile--purple" data-u-action="fu-view-list" data-id="referrals"><small>ارجاع نپذیرفته</small><strong>${fa(pendingRefs.length)}</strong>${icon('ban')}</button>
+        </div>
+        <div class="fu-stack">
+          <section class="fu-sec fu-card"><h2 class="fu-sec__h">${icon('file')}پرونده‌های نیازمند توجه</h2>
+            <div class="table-wrap"><table class="fu-t fu-attention"><thead><tr><th>پرونده / مشتری</th><th class="hide-sm">مسئول</th><th>وضعیت</th><th><span class="sr-only">بررسی</span></th></tr></thead><tbody>
+            ${rows.map(r => `<tr><td title="${e(r.c.subject)}"><button type="button" class="cell-title link-button" data-u-action="fu-open" data-id="${r.c.id}"><bdi>${e(r.c.code)}</bdi></button><small class="cell-sub">${e(r.c.customer)}</small></td><td class="hide-sm">${e(r.c.owner || 'بدون مسئول')}</td><td><span class="pill pill--sm pill--${r.tone} fu-pill-ico">${icon(r.ic)}${r.label}</span></td><td>${btn('fu-open', 'بررسی پرونده', r.c.id, 'fu-add fu-add--line')}</td></tr>`).join('') || '<tr><td colspan="4"><p class="empty-mini">پروندهٔ نیازمند توجهی نیست.</p></td></tr>'}
+            </tbody></table></div></section>
+          <section class="fu-sec fu-card"><h2 class="fu-sec__h">${icon('clock')}بیشترین زمان انتظار<small class="fu-f__hint">میانگین در بازه انتخاب‌شده</small></h2>
+            <ol class="fu-rank">${waits.map(([name, h], i) => { const tone = i === 0 ? 'is-red' : i === 1 ? 'is-amber' : 'is-blue'; return `<li class="${tone}"><span>${e(name)}</span><b class="${tone}">${fa(h)} ساعت</b></li>`; }).join('')}</ol></section>
+        </div>
+        ${noNext.length ? `<p class="fu-note fu-note--amber fu-note--strong">${icon('alert')}<span>${fa(noNext.length)} پرونده نیازمند تعیین اقدام بعدی است.</span></p>` : ''}
+      </div>
+      <footer class="fu-sheet__foot">${btn('fu-save-view', 'ذخیره نما', '', 'button button--primary', 'save')}${btn('fu-export', 'خروجی گزارش', '', 'button button--plain fu-foot__end', 'download')}</footer>
+    </section></div>`;
   }
 
   // ── Actions and drawers ──
   const byId = id => store.followUps.find(x => x.id === Number(String(id).split(':')[0]));
-  // v1.11: forms open as numbered sheets like the twelve form images (same classes as the MVC popups).
-  const f = (label, control, opts = {}) => `<label class="fu-f${opts.span ? ' fu-span' : ''}"><span class="fu-f__l">${label}${opts.req ? '<i>*</i>' : ''}</span><span class="fu-f__c">${opts.icon ? icon(opts.icon) : ''}${control}</span></label>`;
-  const chipOf = c => c ? `${c.code} / ${c.customer}` : '';
-  function showSheet(num, title, chip, body, kind, id, submitLabel, submitIcon = 'send') {
+  // v1.11.1: the forms are the application's own markup (preview/follow-up-snapshots.js, captured from Crm.Web), filled with this case.
+  const S = typeof FU_SNAPSHOTS === 'undefined' ? null : FU_SNAPSHOTS;
+  const latin = v => String(v ?? '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const jFormat = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', {year: 'numeric', month: '2-digit', day: '2-digit'});
+  const jDay = offset => jFormat.format(new Date(Date.now() + offset * 86400000));
+  function j2g(jy, jm, jd) {
+    jy += 1595;
+    let days = -355668 + 365 * jy + Math.floor(jy / 33) * 8 + Math.floor((jy % 33 + 3) / 4) + jd + (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
+    let gy = 400 * Math.floor(days / 146097); days %= 146097;
+    if (days > 36524) { gy += 100 * Math.floor(--days / 36524); days %= 36524; if (days >= 365) days++; }
+    gy += 4 * Math.floor(days / 1461); days %= 1461;
+    if (days > 365) { gy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+    let gd = days + 1, gm = 0;
+    const months = [0, 31, (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    for (gm = 0; gm < 13 && gd > months[gm]; gm++) gd -= months[gm];
+    return [gy, gm, gd];
+  }
+  // «۱۴۰۵/۰۷/۱۴» + «۱۰:۳۰» (Tehran time as typed) → ISO; must be in the future like on the server.
+  function futureJ(date, time, label = 'زمان') {
+    const d = latin(date).match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/), t = latin(time || '09:00').match(/^(\d{1,2}):(\d{2})$/);
+    if (!d || !t) throw new Error(`${label}: تاریخ را به شکل ۱۴۰۵/۰۷/۱۲ و ساعت را به شکل ۱۴:۳۰ وارد کنید.`);
+    const [gy, gm, gd] = j2g(+d[1], +d[2], +d[3]);
+    const at = new Date(gy, gm - 1, gd, +t[1], +t[2]);
+    if (!(at > new Date())) throw new Error(`${label} باید در آینده باشد.`);
+    return at.toISOString();
+  }
+  const optText = name => document.querySelector(`#modalBody [name="${name}"]`)?.selectedOptions?.[0]?.textContent?.trim();
+  const kindLabel = {Call: 'تماس', Meeting: 'جلسه', Visit: 'بازدید', Task: 'کار داخلی'};
+  function formKind(path) {
+    if (/\/follow-ups$/.test(path)) return 'fu-new';
+    for (const k of ['plan', 'result', 'refer', 'wait', 'resume', 'close', 'reopen', 'documents', 'approvals']) if (new RegExp(`/${k}(/|$)`).test(path)) return 'fu-' + k;
+    if (/\/referrals\//.test(path)) return 'fu-referral';
+    return 'fu-config';
+  }
+  // Snapshot → this case: chip, customer and subject, fresh dates, preview form routing and an error line.
+  function fill(html, c, id) {
+    const m = S.meta;
+    if (c) html = html.split(m.caseCode).join(c.code).split(m.customer).join(c.customer).split(m.subject).join(c.subject);
+    html = html.replace(/(name="(?:Date|NextDate|ReviewDate|ExpectedDate|AcceptDate|CorrectionDate|DueDate)"[^>]*?value=")[^"]*"/g, `$1${jDay(1)}"`)
+      .replace(/(name="(?:DoneDate|RequestedDate)"[^>]*?value=")[^"]*"/g, `$1${jDay(0)}"`)
+      .replace(/<form([^>]*?) action="([^"]*)"/g, (all, attrs, path) => `<form${attrs} action="#" novalidate data-u-form="${formKind(path)}" data-id="${e(id ?? '')}"`)
+      .replace(/<footer class="fu-sheet__foot/g, '<div class="u-form-error" role="alert"></div><footer class="fu-sheet__foot');
+    return html;
+  }
+  function openSnapshot(key, c, id, adjust = h => h) {
+    if (!S?.[key]) { toast('این فرم در نسخهٔ نمایشی در دسترس نیست.', 'warning'); return; }
     closeDrawer();
     const modal = document.getElementById('modal');
     modal.classList.add('modal--form', 'modal--sheet');
-    document.getElementById('modalTitle').textContent = title;
+    const html = adjust(fill(S[key], c, id));
+    document.getElementById('modalTitle').textContent = (html.match(/<span data-drawer-title hidden>([^<]*)/) || [])[1] || 'فرم';
     const footer = document.getElementById('modalFooter'); if (footer) footer.innerHTML = '';
-    document.getElementById('modalBody').innerHTML = `<form class="fu-sheet" data-u-form="${kind}" data-id="${id ?? ''}" novalidate>
-      <header class="fu-sheet__head"><span class="fu-num" aria-hidden="true">${fa(num)}</span><div class="fu-sheet__title"><h2>${e(title)}</h2></div>${chip ? `<span class="fu-chip">${icon('case')}<bdi>${e(chip)}</bdi></span>` : ''}<button type="button" class="icon-button fu-sheet__close" data-action="close-modal" aria-label="بستن">${icon('close')}</button></header>
-      <div class="fu-sheet__body">${body}<div class="u-form-error" role="alert"></div></div>
-      <footer class="fu-sheet__foot"><button class="button button--primary" type="submit">${icon(submitIcon)}${submitLabel}</button><button type="button" class="button button--ghost fu-foot__end" data-action="close-modal">انصراف</button></footer></form>`;
+    document.getElementById('modalBody').innerHTML = html;
     modal.classList.add('is-open'); document.getElementById('modalBackdrop').classList.add('is-open'); modal.setAttribute('aria-hidden', 'false');
+    // Same client behaviour as the application (tabs, rows, priority dot, counters, capacity card).
+    if (typeof CustomEvent === 'function') document.body.dispatchEvent?.(new CustomEvent('htmx:afterSettle', {detail: {target: document.getElementById('modalBody')}}));
   }
-  const localAt = h => { const d = new Date(Date.now() + h * 3600000); d.setMinutes(0, 0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+  const options = (html, name, items) => html.replace(new RegExp(`(<select name="${name}"[^>]*>)[\\s\\S]*?(</select>)`), (all, open, close) => open + items + close);
+  const closeChecks = c => [['تمام مراحل الزامی تکمیل شده', c.stages.every(s => ['Done', 'Skipped'].includes(s.status)), c.stages.filter(s => !['Done', 'Skipped'].includes(s.status)).map(s => s.name).join('، ')],
+    ['فعالیت باز وجود ندارد', c.activities.every(a => a.done), ''], ['ارجاع در انتظار پذیرش وجود ندارد', c.referrals.every(r => r.status !== 'در انتظار پذیرش'), '']];
+
   function action(name, id) {
     if (!name.startsWith('fu-')) return false;
     if (name === 'fu-view') { state.view = id; render(); return true; }
     if (name === 'fu-open') { state.selected = Number(id); state.tab = 'stages'; ctx.navigate('follow-up'); return true; }
     if (name === 'fu-back') { state.selected = null; ctx.navigate('follow-ups'); return true; }
-    if (name === 'fu-settings') { ctx.navigate('follow-up-settings'); return true; }
+    if (name === 'fu-settings') { state.settings = id || state.settings || 'template'; ctx.navigate('follow-up-settings'); return true; }
     if (name === 'fu-supervision') { ctx.navigate('follow-up-supervision'); return true; }
     if (name === 'fu-tab') { state.tab = id; render(); return true; }
+    if (name === 'fu-save-tasks') { toast('وضعیت وظایف ذخیره شد.'); return true; }
+    if (name === 'fu-view-list') { state.view = id; ctx.navigate('follow-ups'); return true; }
+    if (name === 'fu-save-view') { const n = window.prompt?.('نام نما (مثلاً شعبه مرکزی — هفتگی)'); if (n) toast(`نمای «${n}» ذخیره شد.`); return true; }
+    if (name === 'fu-export') { toast('خروجی گزارش در نسخهٔ سرور به‌صورت فایل CSV دریافت می‌شود.'); return true; }
     const c = byId(id);
-    if (name === 'fu-new') { showSheet(1, 'ثبت پرونده پیگیری', '', `<p class="fu-note fu-note--plain">${icon('info')}<span>ایجاد مسیر رسیدگی برای مشتری</span></p><div class="fu-g">${f('موضوع', '<input name="subject" required maxlength="200" placeholder="مثلاً پیش‌فاکتور قطعات یدکی خط بسته‌بندی">', {req: 1, icon: 'note', span: 1})}${f('مشتری / حساب', `<select name="customer">${store.customers.map(x => `<option>${e(x.name)}</option>`).join('')}</select>`, {req: 1, icon: 'building'})}${f('تیم مسئول', '<select name="queue"><option>فروش قطعات صنعتی</option><option>صف پشتیبان فروش</option></select>', {req: 1, icon: 'users'})}${f('اولویت', '<span class="fu-dot" data-tone="Normal"></span><select name="priority" data-dot><option value="Normal">عادی</option><option value="High">بالا</option><option value="Critical">بحرانی (توقف تولید)</option></select>')}${f('الگوی گردش کار', `<select name="template">${store.fuTemplates.map(t => `<option value="${t.code}">${e(t.name)} · نسخه ${fa(t.version)}</option>`).join('')}</select>`, {req: 1, icon: 'flow'})}</div><label class="fu-dropzone">${icon('upload')}<span>افزودن فایل یا تصویر قطعه</span><small>در نسخهٔ سرور ذخیره می‌شود</small><input type="file" multiple></label><p class="fu-note">${icon('info')}<span>مهلت پاسخ اولیه براساس نوع درخواست تعیین می‌شود (۲ و حل ۲۴ ساعت کاری).</span></p>`, 'fu-new', '', 'ذخیره و شروع پیگیری'); return true; }
+    if (name === 'fu-new') {
+      openSnapshot('create', null, '', h => options(options(h, 'CustomerId', `<option value="">— انتخاب مشتری —</option>${store.customers.map((x, i) => `<option value="${e(x.name)}"${i === 0 ? ' selected' : ''}>${e(x.name)}</option>`).join('')}`),
+        'TemplateId', store.fuTemplates.map(t => `<option value="${t.code}">${e(t.name)} · نسخه ${fa(t.version)}</option>`).join('')));
+      return true;
+    }
     if (!c) return true;
-    if (name === 'fu-plan') { showSheet(2, 'برنامه‌ریزی اقدام', chipOf(c), `<div class="fu-g">${f('نوع اقدام', '<select name="kind"><option>تماس</option><option>جلسه</option><option>بازدید</option><option>کار داخلی</option></select>', {req: 1, icon: 'layers'})}${f('عنوان اقدام', '<input name="title" required value="تماس پیگیری">', {req: 1, icon: 'note'})}${f('مسئول اقدام', `<select name="owner"><option>${e(c.owner)}</option></select>`, {req: 1, icon: 'user'})}${f('زمان شروع', `<input type="datetime-local" name="at" required value="${localAt(2)}">`, {req: 1, icon: 'calendar'})}</div><section class="fu-box fu-box--blue"><p class="fu-box__h">${icon('clipboard')}چک‌لیست قبل از تماس</p><div class="fu-checks-inline fu-checks-inline--col"><label><input type="checkbox" checked><span>بررسی آخرین پیش‌فاکتور</span></label><label><input type="checkbox"><span>دریافت تأیید مدیر فروش</span></label></div></section><p class="fu-note fu-note--plain">${icon('clock')}<span>زمان‌ها به وقت شعبهٔ تهران نمایش داده می‌شوند.</span></p>`, 'fu-plan', c.id, 'ثبت برنامه', 'calendar'); return true; }
-    if (name === 'fu-result') { showSheet(3, 'ثبت نتیجه پیگیری', chipOf(c), `<div class="fu-done-card"><span class="fu-done-card__icon">${icon('phone')}</span><div><strong>${e(c.activities[Number(String(id).split(':')[1])]?.title || 'فعالیت')}</strong><small>${e(c.subject)}</small></div><span class="pill pill--success">انجام شد</span></div><div class="fu-g">${f('نتیجهٔ پیگیری', `<select name="result" required>${results.map(([k, l]) => `<option value="${l}">${l}</option>`).join('')}</select>`, {req: 1, icon: 'check', span: 1})}${f('شرح نتیجه', '<textarea name="outcome" required></textarea>', {req: 1, span: 1})}</div><section class="fu-box fu-box--blue"><p class="fu-box__h">${icon('calendar')}اقدام بعدی</p><div class="fu-g">${f('عنوان', '<input name="next" required value="ارسال پیش‌فاکتور اصلاحی">', {req: 1, icon: 'note'})}${f('موعد', `<input type="datetime-local" name="at" required value="${localAt(24)}">`, {req: 1, icon: 'calendar'})}</div></section><p class="fu-note fu-note--plain">${icon('info')}<span>ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>`, 'fu-result', id, 'ذخیرهٔ نتیجه و اقدام بعدی', 'save'); return true; }
-    if (name === 'fu-refer') { showSheet(4, 'ارجاع و پذیرش مسئولیت', chipOf(c), `<fieldset class="fu-radios"><legend>محدودهٔ ارجاع<i class="fu-req">*</i></legend><label><input type="radio" name="scope" value="اجرای مرحله" checked><span>اجرای مرحله</span></label><label><input type="radio" name="scope" value="کل پرونده"><span>کل پرونده</span></label></fieldset><section class="fu-box fu-box--blue"><div class="fu-person"><span class="fu-avatar">${e(c.owner[0])}</span><span><small>مسئول پرونده</small><strong>${e(c.owner)}</strong></span></div></section><div class="fu-g">${f('گیرنده', `<select name="to">${Object.values(names).map(n => `<option>${e(n)}</option>`).join('')}</select>`, {req: 1, icon: 'user'})}${f('مهلت پذیرش', '<select name="accept"><option>امروز ۱۶:۰۰</option><option>فردا ۱۰:۰۰</option></select>', {req: 1, icon: 'clock'})}${f('دلیل ارجاع', '<textarea name="reason" required></textarea>', {req: 1, span: 1})}</div><section class="fu-box fu-box--green"><div class="fu-capacity"><span class="fu-avatar">ا</span><div><strong>آماده دریافت</strong><small>ظرفیت: ۳ از ۸ پرونده</small><div class="fu-progressbar"><span style="width:38%"></span></div></div></div></section><p class="fu-note fu-note--amber">${icon('alert')}<span>تا پذیرش گیرنده، مسئول فعلی پاسخ‌گو می‌ماند.</span></p>`, 'fu-refer', c.id, 'ثبت و ارسال ارجاع'); return true; }
+    if (name === 'fu-plan') { openSnapshot('plan' + (['Meeting', 'Visit', 'Task'].includes(state.planKind) ? state.planKind : 'Call'), c, c.id); state.planKind = null; return true; }
+    if (name === 'fu-result') {
+      const a = c.activities[Number(String(id).split(':')[1])];
+      openSnapshot('result', c, id, h => h.replace(/(<div class="fu-done-card">[\s\S]*?<strong>)[^<]*(<\/strong>\s*<small[^>]*>)[^<]*(<\/small>)/, `$1${e(a?.kind || 'تماس')}$2${e(a?.title || '')}$3`));
+      return true;
+    }
+    if (name === 'fu-refer') { openSnapshot('refer', c, c.id); return true; }
     if (name === 'fu-accept') { const r = c.referrals[Number(String(id).split(':')[1])]; if (r && r.to === me()) { r.status = 'پذیرفته شد'; if (r.scope === 'کل پرونده') c.owner = me(); log(c, `ارجاع توسط ${me()} پذیرفته شد`); save(); render(); toast('ارجاع پذیرفته شد.'); } return true; }
-    if (name === 'fu-wait') { showSheet(6, 'انتظار و ازسرگیری', `${c.code} / ${c.subject}`, `<div class="fu-g">${f('وضعیت جدید', '<select name="status"><option value="WaitingCustomer">در انتظار مشتری</option><option value="WaitingInternal">در انتظار واحد داخلی</option><option value="OnHold">متوقف</option></select>', {req: 1, icon: 'hourglass'})}${f('موعد بازبینی', `<input type="datetime-local" name="at" required value="${localAt(48)}">`, {req: 1, icon: 'calendar'})}${f('علت انتظار', '<textarea name="reason" required maxlength="500"></textarea>', {req: 1, span: 1})}</div><section class="fu-box fu-box--orange"><p class="fu-box__h">${icon('clock')}اثر بر مهلت مرحله</p><p>در انتظار مشتری: مهلت متوقف می‌شود؛ مهلت جدید پس از ازسرگیری محاسبه می‌شود.</p></section><div class="fu-note">${icon('info')}<ul><li>مسئول پرونده حفظ می‌شود.</li><li>بازبینی در موعد تعیین‌شده الزامی است.</li></ul></div>`, 'fu-wait', c.id, 'ثبت وضعیت انتظار', 'pause'); return true; }
-    if (name === 'fu-resume') { showForm('ازسرگیری', `<label>اقدام بعدی<input name="next" required></label><label>زمان<input type="datetime-local" name="at" required></label>`, 'fu-resume', c.id); return true; }
+    if (name === 'fu-wait' || name === 'fu-resume') {
+      // One sheet (۶) with two tabs; while the case waits, «ازسرگیری» is the open tab.
+      openSnapshot('wait', c, c.id, h => !isWaiting(c) ? h : h.replace(/class="is-active" data-fu-tab="wait">/, 'class="" data-fu-tab="wait" disabled="disabled">')
+        .replace(/class="" data-fu-tab="resume" disabled="disabled">/, 'class="is-active" data-fu-tab="resume">')
+        .replace('<form data-fu-panel="wait"', '<form data-fu-panel="wait" hidden="hidden"').replace('<form data-fu-panel="resume" hidden="hidden"', '<form data-fu-panel="resume"'));
+      return true;
+    }
+    if (name === 'fu-documents') { openSnapshot('documents', c, c.id); return true; }
     if (name === 'fu-close') {
-      const checks = [['تمام مراحل الزامی تکمیل شده', c.stages.every(s => ['Done', 'Skipped'].includes(s.status))], ['فعالیت باز وجود ندارد', c.activities.every(a => a.done)], ['ارجاع در انتظار پذیرش وجود ندارد', c.referrals.every(r => r.status !== 'در انتظار پذیرش')]];
-      const ready = checks.every(x => x[1]), pct = Math.round(100 * checks.filter(x => x[1]).length / checks.length);
-      showSheet(8, 'بستن و بازگشایی پرونده', chipOf(c), `<section class="fu-box ${ready ? 'fu-box--green' : 'fu-box--amber'} fu-ready"><div class="fu-ready__top">${icon(ready ? 'check' : 'alert')}<strong>${ready ? 'آماده بستن' : 'هنوز آماده بستن نیست'}</strong><b>${fa(pct)}٪</b></div><div class="fu-progressbar"><span style="width:${pct}%"></span></div></section><h3 class="fu-sec__h">${icon('clipboard')}کنترل‌های پیش از بستن</h3><ul class="fu-ticks">${checks.map(([l, ok]) => `<li class="${ok ? 'is-ok' : 'is-fail'}">${icon(ok ? 'check' : 'close')}<span>${l}</span></li>`).join('')}</ul>${f('نتیجهٔ نهایی', '<input name="outcome" required value="موفق — نتیجهٔ مورد انتظار حاصل شد">', {req: 1, icon: 'flag'})}<input type="hidden" name="ready" value="${checks.every(x => x[1]) ? 1 : 0}">`, 'fu-close', c.id, 'تأیید و بستن پرونده', 'lock'); return true;
+      const checks = closeChecks(c), passed = checks.filter(x => x[1]).length, ready = passed === checks.length, p = progress(c);
+      openSnapshot('close', c, c.id, h => h
+        .replace(/<section class="fu-box [^"]*fu-ready fu-ready--row">[\s\S]*?<\/section>/, `<section class="fu-box ${ready ? 'fu-box--green' : 'fu-box--amber'} fu-ready fu-ready--row"><span class="fu-ready__mark">${icon(ready ? 'check' : 'alert')}</span><div><strong>${ready ? 'آماده بستن' : 'هنوز آماده بستن نیست'}</strong><small>${ready ? 'تمام مراحل تکمیل شده است.' : `${fa(passed)} از ${fa(checks.length)} کنترل برقرار است.`}</small></div><div class="fu-ready__bar"><span>پیشرفت: ${fa(p)}٪</span><div class="fu-progressbar"><span style="width:${p}%"></span></div></div></section>`)
+        .replace(/<ul class="fu-ticks fu-close-checks">[\s\S]*?<\/ul>/, `<ul class="fu-ticks fu-close-checks">${checks.map(([l, ok, hint]) => `<li class="${ok ? 'is-ok' : 'is-fail'}">${icon(ok ? 'check' : 'close')}<span>${l}${hint ? `<small>باقی‌مانده: ${e(hint)}</small>` : ''}</span></li>`).join('')}</ul>`)
+        .replace(/(<button class="button button--primary" type="submit")( disabled="disabled")?(><svg><use href="#i-lock"\/><\/svg>)/, `$1${ready ? '' : ' disabled="disabled"'}$3`));
+      return true;
     }
     if (name === 'fu-complete') { const s = active(c); if (s && s.items.every(x => x.done)) { s.status = 'Done'; log(c, `مرحلهٔ «${s.name}» تکمیل شد`); advance(c); save(); render(); toast(`مرحلهٔ «${s.name}» تکمیل شد.`); } return true; }
     return false;
@@ -217,22 +329,81 @@ function createFollowUpPreview(ctx) {
   function submit(kind, data, id) {
     if (!kind.startsWith('fu-')) return false;
     const future = value => { const t = Date.parse(value); if (!Number.isFinite(t) || t <= Date.now()) throw new Error('زمان باید در آینده باشد.'); return new Date(t).toISOString(); };
+    const when2 = (iso, date, time, label) => iso ? future(iso) : futureJ(date, time, label);
+    const text = (...values) => String(values.find(v => v != null && String(v).trim() !== '') ?? '').trim();
     if (kind === 'fu-new') {
-      const template = store.fuTemplates.find(t => t.code === data.template), nid = Math.max(...store.followUps.map(x => x.id)) + 1;
-      if (store.followUps.some(x => isOpen(x) && x.customer === data.customer && x.subject.trim() === String(data.subject).trim())) throw new Error('پروندهٔ باز مشابه برای این مشتری وجود دارد.');
-      const c = {id: nid, code: 'RQ-' + nid, subject: String(data.subject).trim(), customer: data.customer, type: template.type, priority: data.priority, status: 'InProgress', owner: 'سارا احمدی', branch: 'مرکزی',
-        template: template.code, next: 'پاسخ اولیه به مشتری', nextAt: hours(2), firstDone: false, dueAt: hours(24), stages: instantiate(template), activities: [], referrals: [], items: [], history: []};
-      log(c, 'پرونده ثبت شد؛ مسئول از صف و مهلت‌ها از سیاست تعیین شد'); store.followUps.push(c); save(); closeDrawer(); state.selected = nid; state.tab = 'stages'; ctx.navigate('follow-up'); toast(`پرونده ${c.code} ثبت شد.`); return true;
+      const subject = text(data.Subject, data.subject), customer = text(data.CustomerId, data.customer);
+      const template = store.fuTemplates.find(t => t.code === text(data.TemplateId, data.template)) || store.fuTemplates[0];
+      if (!subject) throw new Error('موضوع پیگیری الزامی است.');
+      if (!customer) throw new Error('مشتری را انتخاب کنید.');
+      if (store.followUps.some(x => isOpen(x) && x.customer === customer && x.subject.trim() === subject)) throw new Error('پروندهٔ باز مشابه برای این مشتری وجود دارد.');
+      const nid = Math.max(...store.followUps.map(x => x.id)) + 1;
+      const parts = Object.keys(data).map(k => k.match(/^Parts\[(\d+)\]\.PartCode$/)).filter(Boolean).map(m => [text(data[m[0]]), text(data[`Parts[${m[1]}].Description`]), Number(latin(data[`Parts[${m[1]}].Quantity`])) || 0, 0, 'در انتظار']).filter(x => x[0]);
+      const c = {id: nid, code: 'RQ-' + nid, subject, customer, type: template.type, priority: text(data.Priority, data.priority) || 'Normal', status: 'InProgress', owner: optText('OwnerUserId')?.replace(/^—.*/, '') || 'سارا احمدی', branch: 'مرکزی',
+        template: template.code, next: 'پاسخ اولیه به مشتری', nextAt: hours(2), firstDone: false, dueAt: hours(24), stages: instantiate(template), activities: [], referrals: [], items: parts, history: []};
+      log(c, 'پرونده ثبت شد؛ مسئول از صف و مهلت‌ها از سیاست تعیین شد'); store.followUps.push(c); delete store.fuDraft; save(); closeDrawer(); state.selected = nid; state.tab = 'stages'; ctx.navigate('follow-up'); toast(`پرونده ${c.code} ثبت شد.`); return true;
     }
-    const c = byId(id); if (!c) return true;
-    if (kind === 'fu-plan') { const at = future(data.at); c.activities.unshift({title: String(data.title).trim(), kind: data.kind, at, owner: me(), done: false}); c.next = String(data.title).trim(); c.nextAt = at; log(c, 'اقدام برنامه‌ریزی شد: ' + c.next); }
-    if (kind === 'fu-result') { const a = c.activities[Number(String(id).split(':')[1])]; const at = future(data.at); Object.assign(a, {done: true, result: data.result, outcome: String(data.outcome).trim()}); c.firstDone = true; c.next = String(data.next).trim(); c.nextAt = at; log(c, `نتیجه ثبت شد: ${data.result}`); }
-    if (kind === 'fu-refer') { if (!String(data.reason).trim()) throw new Error('دلیل ارجاع الزامی است.'); c.referrals.unshift({from: me(), to: data.to, scope: data.scope === 'کل پرونده' ? 'کل پرونده' : `مرحلهٔ «${active(c)?.name || '—'}»`, reason: String(data.reason).trim(), status: 'در انتظار پذیرش', due: hours(4)}); log(c, `ارجاع به ${data.to}؛ تا پذیرش، مسئول فعلی پاسخ‌گو می‌ماند`); }
-    if (kind === 'fu-wait') { const at = future(data.at); Object.assign(c, {status: data.status, waitReason: String(data.reason).trim(), paused: data.status === 'WaitingCustomer', next: 'بازبینی: ' + String(data.reason).trim().slice(0, 80), nextAt: at}); log(c, `وضعیت: ${statusLabel[data.status]}`); }
-    if (kind === 'fu-resume') { const at = future(data.at); Object.assign(c, {status: 'InProgress', paused: false, waitReason: '', next: String(data.next).trim(), nextAt: at}); log(c, 'کار از سر گرفته شد'); }
-    if (kind === 'fu-close') { if (data.ready !== '1') throw new Error('پرونده هنوز آمادهٔ بستن نیست؛ کنترل‌های قرمز را برطرف کنید.'); Object.assign(c, {status: 'Closed', outcome: data.outcome, next: null, nextAt: null}); log(c, 'پرونده بسته شد: ' + data.outcome); }
+    const c = byId(id);
+    if (['fu-config', 'fu-documents', 'fu-approvals', 'fu-referral'].includes(kind) || !c) { closeDrawer(); toast('در نسخهٔ نمایشی ثبت شد؛ نسخهٔ سرور این تغییر را ذخیره می‌کند.'); return true; }
+    if (kind === 'fu-plan') {
+      const title = text(data.Title, data.title); if (!title) throw new Error('عنوان اقدام الزامی است.');
+      const at = when2(data.at, data.Date, data.Time, 'تاریخ و ساعت اقدام'); const k = kindLabel[data.Kind] || data.kind || 'تماس';
+      c.activities.unshift({title, kind: k, at, owner: optText('OwnerUserId') || me(), done: false}); c.next = title; c.nextAt = at; log(c, 'اقدام برنامه‌ریزی شد: ' + title);
+    }
+    if (kind === 'fu-result') {
+      const a = c.activities[Number(String(id).split(':')[1])]; const outcome = text(data.Outcome, data.outcome), next = text(data.NextTitle, data.next);
+      const result = data.result || results.find(([k]) => k === data.ResultCode)?.[1]; if (!result) throw new Error('نتیجه پیگیری را انتخاب کنید.');
+      if (!outcome) throw new Error('شرح نتیجه الزامی است.'); if (!next) throw new Error('اقدام بعدی الزامی است.');
+      const at = when2(data.at, data.NextDate, data.NextTime, 'موعد اقدام بعدی');
+      Object.assign(a, {done: true, result, outcome}); c.firstDone = true; c.next = next; c.nextAt = at; log(c, `نتیجه ثبت شد: ${result}`);
+    }
+    if (kind === 'fu-refer') {
+      const reason = text(data.Reason, data.reason); if (!reason) throw new Error('دلیل ارجاع الزامی است.');
+      const to = (data.to || optText('ToUserId') || '').split(' — ')[0]; const whole = data.Scope === 'Case' || data.scope === 'کل پرونده';
+      c.referrals.unshift({from: me(), to, scope: whole ? 'کل پرونده' : `مرحلهٔ «${active(c)?.name || '—'}»`, reason, status: 'در انتظار پذیرش', due: hours(4)}); log(c, `ارجاع به ${to}`);
+    }
+    if (kind === 'fu-wait') {
+      const status = text(data.Status, data.status), reason = text(data.Reason, data.reason); if (!reason) throw new Error('علت انتظار الزامی است.');
+      const at = when2(data.at, data.ReviewDate, data.ReviewTime, 'موعد بازبینی');
+      Object.assign(c, {status, waitReason: reason, paused: status === 'WaitingCustomer', next: 'بازبینی: ' + reason.slice(0, 80), nextAt: at}); log(c, `وضعیت: ${statusLabel[status]}`);
+    }
+    if (kind === 'fu-resume') { const next = text(data.NextTitle, data.next); if (!next) throw new Error('اقدام بعدی الزامی است.'); const at = when2(data.at, data.NextDate, data.NextTime, 'اقدام بعدی'); Object.assign(c, {status: 'InProgress', paused: false, waitReason: '', next, nextAt: at}); log(c, 'کار از سر گرفته شد'); }
+    if (kind === 'fu-close') {
+      const outcome = text(data.Outcome, data.outcome); if (!outcome) throw new Error('نتیجه نهایی را انتخاب کنید.');
+      const ready = data.ready != null ? data.ready === '1' : closeChecks(c).every(x => x[1]);
+      if (!ready) throw new Error('پرونده هنوز آمادهٔ بستن نیست؛ کنترل‌های قرمز را برطرف کنید.'); Object.assign(c, {status: 'Closed', outcome, next: null, nextAt: null}); log(c, 'پرونده بسته شد: ' + outcome);
+    }
+    if (kind === 'fu-reopen') { const reason = text(data.Reason); if (!reason) throw new Error('دلیل بازگشایی الزامی است.'); Object.assign(c, {status: 'InProgress', outcome: null, next: 'پیگیری پس از بازگشایی', nextAt: hours(24)}); log(c, 'پرونده بازگشایی شد: ' + reason); }
     save(); closeDrawer(); render(); toast('ثبت شد.'); return true;
   }
+  // Clicks inside the application's markup that would call the server: handled in the preview.
+  document.addEventListener('click', event => {
+    const t = event.target;
+    if (!t?.closest) return;
+    if (t.closest('[data-drawer-close]')) { closeDrawer(); return; }
+    const remove = t.closest('[data-remove-row]'); if (remove && t.closest('.fu-sheet, .fu-page')) { remove.closest('[data-row]')?.remove(); return; }
+    const kindTile = t.closest('#modalBody a[hx-get*="/plan?kind="]');
+    if (kindTile) { event.preventDefault(); state.planKind = kindTile.getAttribute('hx-get').match(/kind=(\w+)/)?.[1]; action('fu-plan', state.selected); return; }
+    const draft = t.closest('[hx-post*="/drafts/create"]');
+    if (draft) { const form = draft.closest('form'); store.fuDraft = form ? Object.fromEntries(new FormData(form)) : {}; save(); toast('پیش‌نویس در این مرورگر ذخیره شد (در نسخهٔ سرور روی سرور ذخیره می‌شود).'); return; }
+    const link = t.closest('.fu-sheet a[href^="/follow-ups"], .fu-page a[href^="/follow-ups"]');
+    if (link) {
+      event.preventDefault();
+      const href = link.getAttribute('href'), caseCode = S?.meta.ids[href.match(/\/follow-ups\/([0-9a-f-]{36})/)?.[1]];
+      if (/\/settings\/templates/.test(href)) action('fu-settings', 'template');
+      else if (/\/settings\/policies/.test(href)) action('fu-settings', 'policy');
+      else if (/\/settings\/queues/.test(href)) action('fu-settings', 'queue');
+      else if (/\/supervision/.test(href)) action('fu-supervision');
+      else if (caseCode) action('fu-open', caseCode.replace('RQ-', ''));
+      else if (/\/documents\//.test(href)) toast('فایل‌ها در نسخهٔ نمایشی ذخیره نمی‌شوند.', 'warning');
+      else { state.view = href.match(/view=(\w+)/)?.[1] || 'all'; closeDrawer(); ctx.navigate('follow-ups'); }
+      return;
+    }
+    const server = t.closest('.fu-sheet [hx-post], .fu-sheet [hx-get], .fu-page [hx-post], .fu-page [hx-get]');
+    if (server && !server.matches('select, input')) { event.preventDefault(); toast('این عملیات در نسخهٔ سرور انجام می‌شود (پیش‌نمایش محاسبه، آزمون تخصیص و مانند آن).'); }
+  });
+  // «صف مقصد» would navigate to the server page.
+  document.addEventListener('change', event => { if (event.target?.matches?.('select[data-navigate]')) { event.stopImmediatePropagation(); toast('در نسخهٔ نمایشی یک صف نمونه نمایش داده می‌شود.'); } }, true);
   document.addEventListener('change', event => {
     const box = event.target.closest?.('[data-fu-item]'); if (!box) return;
     const [cid, j] = box.dataset.fuItem.split(':').map(Number); const c = store.followUps.find(x => x.id === cid); const s = c && active(c);

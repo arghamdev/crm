@@ -14,40 +14,42 @@
     var canDecide = approval is { CanDecide: true };
 }
 <div class="fu-sheet" data-fu-tabs>
-    <partial name="_SheetHead" model="@(new FollowUpSheetHead(7, "مدارک و تأییدها", null, FollowUpSheetHead.CaseChip(c)))" />
+    <partial name="_SheetHead" model="@(FollowUpSheetHead.ForCase(7, "مدارک و تأییدها", c, twoLine: true, icon: "i-building") with { Icon = "i-file" })" />
     <div class="fu-sheet__body fu-sheet__body--tabs">
-        <div class="fu-g">
-            <label class="fu-f"><span class="fu-f__l">مرحله</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><input value="@(stage?.Name ?? "کل پرونده")" readonly aria-readonly="true" /></span></label>
-            <div class="fu-f"><span class="fu-f__l">وضعیت</span><span class="fu-f__c"><span class="pill pill--@(approval is { Decision: null } ? "warning" : stage is null ? FollowUpLabels.StatusTone(c.Status) : FollowUpLabels.StageTone(stage.Status)) fu-pill-lg">@stageStatus</span></span></div>
+        <div class="fu-g fu-statusrow">
+            <span class="fu-info-pill"><svg><use href="#i-settings"/></svg><b>مرحله:</b> @(stage?.Name ?? "کل پرونده")</span>
+            <span class="fu-info-pill fu-info-pill--@(approval is { Decision: null } ? "amber" : "plain")"><svg><use href="#i-clock"/></svg><b>وضعیت:</b> @stageStatus</span>
         </div>
         <div class="fu-tabs-fill" role="tablist">
-            <button type="button" role="tab" class="@(tab == "documents" ? "is-active" : "")" data-fu-tab="documents"><svg><use href="#i-folder"/></svg>مدارک <b>@FollowUpLabels.Fa(latest.Count)</b></button>
-            <button type="button" role="tab" class="@(tab == "request" ? "is-active" : "")" data-fu-tab="request"><svg><use href="#i-shield"/></svg>@(canDecide ? "بررسی و تصمیم" : "درخواست تأیید")</button>
+            <button type="button" role="tab" class="@(tab == "documents" ? "is-active" : "")" data-fu-tab="documents"><svg><use href="#i-file"/></svg>مدارک</button>
+            <button type="button" role="tab" class="@(tab == "request" ? "is-active" : "")" data-fu-tab="request"><svg><use href="#i-task"/></svg>درخواست تأیید</button>
         </div>
+    </div>
+    <div class="fu-sheet__body fu-doclist">
+            <h3 class="fu-sec__h"><svg><use href="#i-file"/></svg>فهرست مدارک</h3>
+        @if (latest.Count == 0) { <p class="empty-mini">مدرکی ثبت نشده است.</p> }
+        else
+        {
+            <table class="fu-t">
+                <thead><tr><th>مدرک</th><th>نسخه</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+                <tbody>
+                    @foreach (var d in latest)
+                    {
+                        <tr>
+                            <td><span class="fu-stage-name"><span class="fu-stage-ico"><svg><use href="#i-file"/></svg></span><span>@d.Title<small>@FollowUpLabels.Document(d.Kind)@(d.StageName is not null ? $" · {d.StageName}" : "") · @d.UploadedBy</small></span></span></td>
+                            <td>@FollowUpLabels.Fa(d.Version)</td>
+                            <td><span class="pill pill--sm pill--@FollowUpLabels.DocumentTone(d.Status)">@FollowUpLabels.DocumentStatus(d.Status)</span>@if (d.ReviewNote is not null) { <small class="cell-sub">@d.ReviewedBy: @d.ReviewNote</small> }</td>
+                            <td><span class="fu-inline-actions"><a class="fu-add fu-add--plain" href="@basePath/documents/@d.Id" target="_blank"><svg><use href="#i-eye"/></svg>مشاهده نسخه</a>@if (c.IsOpen && c.CanUpdate) { <button type="button" class="fu-add" data-new-version="@d.Title" data-new-version-kind="@d.Kind"><svg><use href="#i-plus"/></svg>افزودن نسخه</button> }</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 
     <section data-fu-panel="documents" hidden="@(tab != "documents")">
         <div class="fu-sheet__body">
             @if (tab == "documents") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
-            <h3 class="fu-sec__h"><svg><use href="#i-folder"/></svg>فهرست مدارک</h3>
-            @if (latest.Count == 0) { <p class="empty-mini">مدرکی ثبت نشده است.</p> }
-            else
-            {
-                <table class="fu-t">
-                    <thead><tr><th>مدرک</th><th>نسخه</th><th>وضعیت</th><th>عملیات</th></tr></thead>
-                    <tbody>
-                        @foreach (var d in latest)
-                        {
-                            <tr>
-                                <td><span class="fu-stage-name"><span class="fu-stage-ico"><svg><use href="#i-file"/></svg></span><span>@d.Title<small>@FollowUpLabels.Document(d.Kind)@(d.StageName is not null ? $" · {d.StageName}" : "") · @d.UploadedBy</small></span></span></td>
-                                <td>@FollowUpLabels.Fa(d.Version)</td>
-                                <td><span class="pill pill--sm pill--@FollowUpLabels.DocumentTone(d.Status)">@FollowUpLabels.DocumentStatus(d.Status)</span>@if (d.ReviewNote is not null) { <small class="cell-sub">@d.ReviewedBy: @d.ReviewNote</small> }</td>
-                                <td><span class="fu-inline-actions"><a class="fu-add" href="@basePath/documents/@d.Id" target="_blank"><svg><use href="#i-eye"/></svg>مشاهده</a>@if (c.IsOpen && c.CanUpdate) { <button type="button" class="fu-add" data-new-version="@d.Title" data-new-version-kind="@d.Kind"><svg><use href="#i-plus"/></svg>افزودن نسخه</button> }</span></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
             @if (c.IsOpen && c.CanUpdate)
             {
                 <details class="fu-more-fields" data-upload open="@(latest.Count == 0)">
@@ -66,7 +68,7 @@
                 </details>
             }
         </div>
-        <footer class="fu-sheet__foot"><button class="button button--ghost fu-foot__end" type="button" data-drawer-close>بستن</button></footer>
+        <footer class="fu-sheet__foot"><button class="button button--plain fu-foot__end" type="button" data-drawer-close>بستن</button></footer>
     </section>
 
     @if (canDecide && approval is not null)
@@ -75,13 +77,13 @@
             <div class="fu-sheet__body">
                 @Html.AntiForgeryToken()
                 @if (tab == "request") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
-                <h3 class="fu-sec__h"><svg><use href="#i-shield"/></svg>بررسی و تصمیم</h3>
+                <h3 class="fu-sec__h"><svg><use href="#i-edit"/></svg>بررسی و تصمیم</h3>
                 <div class="fu-g">
                     <label class="fu-f"><span class="fu-f__l">تأییدکننده</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><input value="@approval.Approver" readonly aria-readonly="true" /></span></label>
                     <label class="fu-f"><span class="fu-f__l">سمت</span><span class="fu-f__c"><svg><use href="#i-org"/></svg><input value="@approval.ApproverRole" readonly aria-readonly="true" /></span></label>
                 </div>
                 <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>درخواست @approval.RequestedBy · @FollowUpLabels.When(approval.RequestedAtUtc, now) · @(approval.StageName ?? "کل پرونده")</span></p>
-                <fieldset class="fu-checks-inline">
+                <fieldset class="fu-checks-inline fu-checks-box">
                     <legend>موارد بررسی (تیک = پذیرفته)</legend>
                     @foreach (var item in approval.ReviewItems) { <label><input type="checkbox" name="PassedItems" value="@item" checked="@passed.Contains(item)" /><span>@item</span></label> }
                 </fieldset>
@@ -101,11 +103,11 @@
                         <span><svg><use href="#i-clock"/></svg><input name="CorrectionTime" value="@dec.CorrectionTime" dir="ltr" inputmode="numeric" aria-label="ساعت مهلت اصلاح" /></span>
                     </span></div>
                 </div>
-                <p class="fu-note"><svg><use href="#i-info"/></svg><span>تصمیم همراه با نام تأییدکننده و زمان ثبت می‌شود. «نیازمند اصلاح» یا «رد» مرحله را برمی‌گرداند و پیشرفت را با دلیل کاهش می‌دهد.</span></p>
+                <p class="fu-note fu-note--plain" title="«نیازمند اصلاح» یا «رد» مرحله را برمی‌گرداند و پیشرفت را با دلیل کاهش می‌دهد."><svg><use href="#i-info"/></svg><span>تصمیم همراه با نام تأییدکننده و زمان ثبت می‌شود.</span></p>
             </div>
             <footer class="fu-sheet__foot">
-                <button class="button button--primary" type="submit"><svg><use href="#i-check"/></svg>ثبت تصمیم</button>
-                <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+                <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ثبت تصمیم</button>
+                <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
             </footer>
         </form>
     }
@@ -131,7 +133,7 @@
             </div>
             <footer class="fu-sheet__foot">
                 <button class="button button--primary" type="submit"><svg><use href="#i-shield"/></svg>ارسال درخواست تأیید</button>
-                <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+                <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
             </footer>
         </form>
     }

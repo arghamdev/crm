@@ -251,8 +251,33 @@ public sealed record FollowUpListPage(FollowUpListDto List, ListState State, IRe
     public string BranchName(string branchId) => Branches.FirstOrDefault(x => string.Equals(x.Id, branchId, StringComparison.OrdinalIgnoreCase))?.Name ?? branchId;
 }
 
-/// <summary>Header of a follow-up form sheet (v1.11.0): the numbered badge of the form image, the title, a subtitle and the case chip.</summary>
-public sealed record FollowUpSheetHead(int Number, string Title, string? Subtitle = null, string? Chip = null, string ChipTone = "", string? CloseHref = null)
+/// <summary>
+/// Header of a follow-up form sheet as drawn in the reference images: the title with its number badge (or an icon tile for forms ۷–۱۰)
+/// sits at the end side, the case chip / short description at the start side.
+/// </summary>
+public sealed record FollowUpSheetHead(int Number, string Title)
 {
+    /// <summary>Text at the start side (form ۱: «ایجاد مسیر رسیدگی برای مشتری»; ۱۱: «توزیع براساس تخصص و ظرفیت»; ۱۲: «به‌روزرسانی»).</summary>
+    public string? Side { get; init; }
+    public string? SideIcon { get; init; }
+    /// <summary>The case chip (code / customer); with <see cref="ChipSub"/> it has two lines.</summary>
+    public string? Chip { get; init; }
+    public string? ChipSub { get; init; }
+    public string ChipIcon { get; init; } = "i-file";
+    public string ChipTone { get; init; } = "";
+    /// <summary>An icon tile instead of the number badge (forms ۷ to ۱۰), and the title is numbered («۷. مدارک و تأییدها»).</summary>
+    public string? Icon { get; init; }
+    /// <summary>A second line under the title (form ۱۰).</summary>
+    public string? Under { get; init; }
+    public bool Numbered { get; init; }
+
+    public string DisplayTitle => Numbered || Icon is not null ? $"{FollowUpLabels.Fa(Number)}. {Title}" : Title;
+    public string Badge => Number <= 2 ? Number.ToString(System.Globalization.CultureInfo.InvariantCulture) : FollowUpLabels.Fa(Number);
+
+    public static FollowUpSheetHead ForCase(int number, string title, FollowUpCaseDto c, bool twoLine = false, string icon = "i-file") => new(number, title)
+    {
+        Chip = twoLine ? c.Code : $"{c.Code} / {c.CustomerName}", ChipSub = twoLine ? c.CustomerName : null, ChipIcon = icon
+    };
+
     public static string CaseChip(FollowUpCaseDto c) => $"{c.Code} / {c.CustomerName}";
 }

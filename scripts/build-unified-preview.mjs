@@ -12,7 +12,12 @@ for (const line of readFileSync(resolve(root, 'CHANGELOG.md'), 'utf8').split(/\r
 }
 if (releases[0]?.version !== version) throw new Error(`CHANGELOG.md top entry (${releases[0]?.version}) must equal <Version> ${version}.`);
 const versionScript = `window.CRM_VERSION=${JSON.stringify(version)};window.CRM_RELEASES=${JSON.stringify(releases)};`;
-const script = versionScript + '\n' + readFileSync(resolve(root, 'preview/self-service.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/account-file.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/list-kit.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/follow-ups.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/unified.js'), 'utf8');
+// v1.11.1: the follow-up client code of the application (tabs, rows, priority dot, counters, capacity card, drag-and-drop) runs in the preview unchanged.
+const siteJs = readFileSync(resolve(root, 'src/Crm.Web/wwwroot/js/site.js'), 'utf8');
+const fuStart = siteJs.indexOf('  // ───────────── Follow-up center (مرکز پیگیری)'), fuEnd = siteJs.indexOf('  // ───────────── Account file (پرونده حساب)');
+if (fuStart < 0 || fuEnd <= fuStart) throw new Error('Follow-up client markers not found in site.js.');
+const followUpClient = `(() => {\n  "use strict";\n  const faDigits = value => String(value).replace(/\\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);\n  const showToast = () => {};\n${siteJs.slice(fuStart, fuEnd)}})();`;
+const script = versionScript + '\n' + readFileSync(resolve(root, 'preview/self-service.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/account-file.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/list-kit.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/follow-up-snapshots.js'), 'utf8') + '\n' + followUpClient + '\n' + readFileSync(resolve(root, 'preview/follow-ups.js'), 'utf8') + '\n' + readFileSync(resolve(root, 'preview/unified.js'), 'utf8');
 // The account-file and version styles are taken from the MVC stylesheet so both look the same.
 const siteCss = readFileSync(resolve(root, 'src/Crm.Web/wwwroot/css/site.css'), 'utf8');
 const start = siteCss.indexOf('/* ───────────── Account file'), end = siteCss.length;

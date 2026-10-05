@@ -3,11 +3,12 @@
     var q = Model.Queue;
     var o = Model.Overview;
     var isNew = q is null;
-    var tab = ViewBag.Tab as string == "rules" ? "rules" : "queue";
+    var tab = ViewBag.Tab as string == "queues" ? "queues" : "rules";
     ViewData["Title"] = isNew ? "صف جدید" : $"صف · {q!.Name}";
     var members = q?.Members.ToList() ?? [];
     var suggestion = Model.Test;
     var languages = new[] { ("fa", "فارسی"), ("en", "انگلیسی"), ("ar", "عربی") };
+    var overflow = q?.OverflowQueueId is { } backup ? $"q:{backup}" + (q.NotifySupervisorOnOverflow ? ":notify" : "") : q?.NotifySupervisorOnOverflow ?? true ? "notify" : "none";
 }
 <nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><a href="/follow-ups/settings?tab=queues">تنظیمات</a><svg><use href="#i-chevron"/></svg><span>صف‌ها و تخصیص کار</span></nav>
 <div class="fu-page">
@@ -15,102 +16,103 @@
 @if (Context.Request.Query["moved"].FirstOrDefault() is { } moved) { <p class="account-banner"><svg><use href="#i-check"/></svg>@moved پروندهٔ باز به افراد آماده بازتوزیع شد.</p> }
 @if (TempData["FollowUpError"] is string error) { <div class="validation-summary">@error</div> }
 <div class="fu-sheet fu-sheet--card" data-fu-tabs>
-    <partial name="/Views/FollowUps/_SheetHead.cshtml" model="@(new FollowUpSheetHead(11, "صف‌ها و تخصیص کار", "توزیع براساس تخصص و ظرفیت", q?.Name ?? "صف جدید", q is { IsActive: false } ? "muted" : "", "/follow-ups/settings?tab=queues"))" />
+    <partial name="/Views/FollowUps/_SheetHead.cshtml" model="@(new FollowUpSheetHead(11, "صف‌ها و تخصیص کار") { Side = "توزیع براساس تخصص و ظرفیت", SideIcon = "i-users" })" />
     <div class="fu-sheet__body fu-sheet__body--tabs">
-        <div class="fu-tabs-fill" role="tablist">
-            <button type="button" role="tab" class="@(tab == "queue" ? "is-active" : "")" data-fu-tab="queue"><svg><use href="#i-inbox"/></svg>صف‌ها</button>
-            <button type="button" role="tab" class="@(tab == "rules" ? "is-active" : "")" data-fu-tab="rules"><svg><use href="#i-target"/></svg>قواعد تخصیص</button>
+        <div class="fu-utabs fu-utabs--box" role="tablist">
+            <button type="button" role="tab" class="@(tab == "queues" ? "is-active" : "")" data-fu-tab="queues">صف‌ها</button>
+            <button type="button" role="tab" class="@(tab == "rules" ? "is-active" : "")" data-fu-tab="rules"><svg><use href="#i-settings"/></svg>قواعد تخصیص</button>
         </div>
     </div>
-    <form data-fu-panel="queue" hidden="@(tab != "queue")" id="queueForm" method="post" action="/follow-ups/settings/queues">
+    <form data-fu-panel="rules" hidden="@(tab != "rules")" id="queueForm" method="post" action="/follow-ups/settings/queues">
         <div class="fu-sheet__body">
             @Html.AntiForgeryToken()
             <input type="hidden" name="id" value="@q?.Id" />
             <input type="hidden" name="ExpectedVersion" value="@(q?.Version ?? 0)" />
             <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
             <div class="fu-g">
-                <label class="fu-f fu-span"><span class="fu-f__l">صف مقصد<i>*</i></span><span class="fu-f__c"><svg><use href="#i-inbox"/></svg><input name="Name" value="@q?.Name" required maxlength="120" placeholder="فروش قطعات صنعتی" /></span></label>
-                <label class="fu-f"><span class="fu-f__l">کشور</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><input value="@(q?.Country ?? "ایران")" disabled /></span></label>
-                <label class="fu-f"><span class="fu-f__l">شعبه</span><span class="fu-f__c"><svg><use href="#i-pin"/></svg><select name="BranchId"><option value="">همهٔ شعب</option>@foreach (var b in o.Branches) { <option value="@b.Value" selected="@(q?.BranchId == b.Value)">@b.Label</option> }</select></span></label>
+                @if (isNew)
+                {
+                    <label class="fu-f fu-span"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-calendar"/></svg>صف مقصد<i>*</i></span><span class="fu-f__c"><input name="Name" required maxlength="120" placeholder="نام صف، مثلاً فروش قطعات صنعتی" /></span></label>
+                }
+                else
+                {
+                    <label class="fu-f fu-span"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-calendar"/></svg>صف مقصد<i>*</i></span><span class="fu-f__c"><select data-navigate aria-label="صف مقصد">@foreach (var x in o.Queues) { <option value="/follow-ups/settings/queues/@x.Id" selected="@(x.Id == q!.Id)">@x.Name</option> }<option value="/follow-ups/settings/queues/new">+ صف جدید…</option></select></span><input type="hidden" name="Name" value="@q!.Name" /></label>
+                }
+                <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-globe"/></svg>کشور</span><span class="fu-f__c"><select disabled><option>@(q?.Country ?? "ایران")</option></select></span></label>
+                <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-building"/></svg>شعبه</span><span class="fu-f__c"><select name="BranchId"><option value="">همهٔ شعب</option>@foreach (var b in o.Branches) { <option value="@b.Value" selected="@(q?.BranchId == b.Value)">@b.Label</option> }</select></span></label>
             </div>
-            <section class="fu-sec">
+            <section class="fu-sec fu-card">
                 <h3 class="fu-sec__h"><svg><use href="#i-filter"/></svg>شرایط ورود به صف</h3>
-                <table class="fu-t fu-cond">
-                    <thead><tr><th>ویژگی پرونده</th><th>عملگر</th><th>مقدار</th></tr></thead>
-                    <tbody>
-                        <tr><td>نوع پیگیری</td><td><span class="pill pill--sm pill--info">برابر</span></td><td><select name="CaseType" aria-label="نوع پیگیری"><option value="">همه</option>@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(q?.CaseType == x.Key)">@x.Label</option> }</select></td></tr>
-                        <tr><td>خانوادهٔ قطعه</td><td><span class="pill pill--sm pill--info">برابر</span></td><td><input name="PartFamily" value="@q?.PartFamily" maxlength="80" placeholder="همه" aria-label="خانوادهٔ قطعه" /></td></tr>
-                        <tr><td>زبان مشتری</td><td><span class="pill pill--sm pill--info">برابر</span></td><td><select name="Language" aria-label="زبان مشتری"><option value="">همه</option>@foreach (var (key, label) in languages) { <option value="@key" selected="@(q?.Language == key)">@label</option> }</select></td></tr>
-                    </tbody>
-                </table>
+                <div class="fu-conds">
+                    <div class="fu-cond"><span><svg><use href="#i-file"/></svg>نوع پیگیری</span><select name="CaseType" aria-label="نوع پیگیری"><option value="">همه</option>@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(q?.CaseType == x.Key)">@x.Label</option> }</select><select disabled aria-label="عملگر"><option>برابر</option></select></div>
+                    <div class="fu-cond"><span><svg><use href="#i-box"/></svg>خانواده قطعه</span><input name="PartFamily" value="@q?.PartFamily" maxlength="80" placeholder="همه" aria-label="خانوادهٔ قطعه" /><select disabled aria-label="عملگر"><option>برابر</option></select></div>
+                    <div class="fu-cond"><span><svg><use href="#i-chat"/></svg>زبان مشتری</span><select name="Language" aria-label="زبان مشتری"><option value="">همه</option>@foreach (var (key, label) in languages) { <option value="@key" selected="@(q?.Language == key)">@label</option> }</select><select disabled aria-label="عملگر"><option>برابر</option></select></div>
+                </div>
+                <div class="fu-g">
+                    <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-org"/></svg>روش تخصیص<i>*</i></span><span class="fu-f__c"><select name="Method">@foreach (var m in Enum.GetValues<AssignmentMethod>()) { <option value="@m" selected="@(q?.Method == m)">@FollowUpLabels.Method(m)</option> }</select></span></label>
+                    <label class="fu-f"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-flag"/></svg>اولویت صف</span><span class="fu-f__c"><select name="Ordering">@foreach (var m in Enum.GetValues<QueueOrdering>()) { <option value="@m" selected="@(q?.Ordering == m)">@FollowUpLabels.Ordering(m)</option> }</select></span></label>
+                </div>
             </section>
-            <div class="fu-g">
-                <label class="fu-f"><span class="fu-f__l">روش تخصیص<i>*</i></span><span class="fu-f__c"><svg><use href="#i-swap"/></svg><select name="Method">@foreach (var m in Enum.GetValues<AssignmentMethod>()) { <option value="@m" selected="@(q?.Method == m)">@FollowUpLabels.Method(m)</option> }</select></span></label>
-                <label class="fu-f"><span class="fu-f__l">اولویت صف</span><span class="fu-f__c"><svg><use href="#i-sort"/></svg><select name="Ordering">@foreach (var m in Enum.GetValues<QueueOrdering>()) { <option value="@m" selected="@(q?.Ordering == m)">@FollowUpLabels.Ordering(m)</option> }</select></span></label>
-            </div>
-            <section class="fu-sec" data-rows>
-                <h3 class="fu-sec__h"><svg><use href="#i-users"/></svg>افراد واجد شرایط<button type="button" class="fu-add" data-add-row><svg><use href="#i-plus"/></svg>افزودن فرد</button></h3>
+            <section class="fu-sec fu-card" data-rows>
+                <h3 class="fu-sec__h"><svg><use href="#i-users"/></svg>افراد واجد شرایط<button type="button" class="fu-add fu-add--line" data-add-row><svg><use href="#i-plus"/></svg>افزودن فرد</button></h3>
                 <table class="fu-t fu-members-t">
-                    <thead><tr><th>کارشناس</th><th>ظرفیت مصرف‌شده</th><th>وضعیت</th><th class="hide-sm">توضیح</th><th class="fu-t__ops"><span class="sr-only">حذف</span></th></tr></thead>
+                    <thead><tr><th>کارشناس</th><th><svg class="fu-l-ico"><use href="#i-pie"/></svg>ظرفیت مصرف‌شده</th><th><svg class="fu-l-ico"><use href="#i-pulse"/></svg>وضعیت</th><th class="fu-t__ops"><span class="sr-only">حذف</span></th></tr></thead>
                     <tbody>
                         @foreach (var m in members)
                         {
                             var full = m.Load >= m.Capacity;
-                            <tr data-row class="fu-members__row">
-                                <td><span class="fu-person"><span class="fu-avatar">@ListFormat.Initial(m.Name)</span><select name="MemberUserId" aria-label="کارشناس">@foreach (var u in o.Users) { <option value="@u.Value" selected="@(m.UserId.ToString() == u.Value)">@u.Label</option> }</select></span></td>
-                                <td><span class="fu-cap"><b>@FollowUpLabels.Fa(m.Load) از</b><input name="MemberCapacity" value="@m.Capacity" type="number" min="1" max="500" dir="ltr" aria-label="ظرفیت" /><span class="fu-progressbar"><span style="width:@(m.Capacity == 0 ? 0 : Math.Min(100, m.Load * 100 / m.Capacity))%"></span></span></span></td>
-                                <td><label class="fu-checks-inline"><input type="checkbox" name="MemberAvailable" value="@m.UserId" checked="@m.Available" /><span class="pill pill--sm pill--@(m.Available ? full ? "warning" : "success" : "neutral")">@(m.Available ? full ? "ظرفیت تکمیل" : "آماده" : "خارج از شیفت")</span></label></td>
-                                <td class="hide-sm"><input name="MemberNote" value="@m.Note" maxlength="200" placeholder="مثلاً مرخصی" aria-label="توضیح" /></td>
-                                <td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف عضو"><svg><use href="#i-trash"/></svg></button></td>
+                            <tr data-row class="fu-members__row@(suggestion?.UserId == m.UserId ? " is-current" : "")">
+                                <td><input type="hidden" name="MemberUserId" value="@m.UserId" /><strong>@m.Name</strong><input type="hidden" name="MemberNote" value="@m.Note" /></td>
+                                <td><span class="fu-cap2">@FollowUpLabels.Fa(m.Load) از <input name="MemberCapacity" value="@m.Capacity" type="number" min="1" max="500" dir="ltr" aria-label="ظرفیت @m.Name" /></span></td>
+                                <td><label class="fu-state-toggle"><input type="checkbox" name="MemberAvailable" value="@m.UserId" checked="@m.Available" /><span class="fu-st fu-st--on"><i></i>@(full ? "ظرفیت تکمیل" : "آماده")</span><span class="fu-st fu-st--off"><i></i>@(m.Note ?? "خارج از شیفت")</span></label></td>
+                                <td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف @m.Name"><svg><use href="#i-trash"/></svg></button></td>
                             </tr>
                         }
-                        <template data-row-template><tr data-row class="fu-members__row"><td><span class="fu-person"><span class="fu-avatar">+</span><select name="MemberUserId" aria-label="کارشناس">@foreach (var u in o.Users) { <option value="@u.Value">@u.Label</option> }</select></span></td><td><span class="fu-cap"><b>@FollowUpLabels.Fa(0) از</b><input name="MemberCapacity" value="8" type="number" min="1" max="500" dir="ltr" aria-label="ظرفیت" /></span></td><td><label class="fu-checks-inline"><input type="checkbox" name="MemberAvailable" value="" checked /><span class="pill pill--sm pill--success">آماده</span></label></td><td class="hide-sm"><input name="MemberNote" maxlength="200" aria-label="توضیح" /></td><td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف عضو"><svg><use href="#i-trash"/></svg></button></td></tr></template>
+                        <template data-row-template><tr data-row class="fu-members__row"><td><select name="MemberUserId" aria-label="کارشناس">@foreach (var u in o.Users) { <option value="@u.Value">@u.Label</option> }</select><input type="hidden" name="MemberNote" value="" /></td><td><span class="fu-cap2">@FollowUpLabels.Fa(0) از <input name="MemberCapacity" value="8" type="number" min="1" max="500" dir="ltr" aria-label="ظرفیت" /></span></td><td><label class="fu-state-toggle"><input type="checkbox" name="MemberAvailable" value="" checked /><span class="fu-st fu-st--on"><i></i>آماده</span><span class="fu-st fu-st--off"><i></i>خارج از شیفت</span></label></td><td class="fu-t__ops"><button type="button" class="fu-trash" data-remove-row aria-label="حذف"><svg><use href="#i-trash"/></svg></button></td></tr></template>
                     </tbody>
                 </table>
+                <div id="assignmentLive" aria-live="polite">
+                    @if (suggestion is not null)
+                    {
+                        <p class="fu-sum @(suggestion.UserId is null ? "is-bad" : "is-ok")" title="@suggestion.Explanation"><svg><use href="#@(suggestion.UserId is null ? "i-alert" : "i-check")"/></svg><span>@(suggestion.UserId is null ? "پیشنهاد تخصیص: فرد آماده‌ای نیست" : $"پیشنهاد تخصیص: {suggestion.UserName}")</span></p>
+                    }
+                </div>
+                <label class="fu-f fu-f--row"><span class="fu-f__l"><svg class="fu-l-ico"><use href="#i-swap"/></svg>در نبود ظرفیت</span><span class="fu-f__c"><select name="Overflow">
+                    @foreach (var x in o.Queues.Where(x => x.Id != q?.Id))
+                    {
+                        <option value="q:@x.Id:notify" selected="@(overflow == $"q:{x.Id}:notify")">@x.Name و اعلان سرپرست</option>
+                        <option value="q:@x.Id" selected="@(overflow == $"q:{x.Id}")">@x.Name (بدون اعلان)</option>
+                    }
+                    <option value="notify" selected="@(overflow == "notify")">فقط اعلان سرپرست</option>
+                    <option value="none" selected="@(overflow == "none")">بدون اقدام</option>
+                </select></span></label>
             </section>
-            <div id="assignmentLive" aria-live="polite">
-                @if (suggestion is not null)
-                {
-                    <section class="fu-box @(suggestion.UserId is null ? "fu-box--amber" : "fu-box--green")">
-                        <p class="fu-box__h"><svg><use href="#@(suggestion.UserId is null ? "i-alert" : "i-check")"/></svg>@(suggestion.UserId is null ? "پیشنهاد تخصیص: فرد آماده‌ای نیست" : $"پیشنهاد تخصیص: {suggestion.UserName}")</p>
-                        <p>@suggestion.Explanation</p>
-                    </section>
-                }
-            </div>
-            <div class="fu-g">
-                <label class="fu-f"><span class="fu-f__l">در نبود ظرفیت</span><span class="fu-f__c"><svg><use href="#i-alert"/></svg><select name="OverflowQueueId"><option value="">فقط اعلان به سرپرست (بدون انتقال)</option>@foreach (var x in o.Queues.Where(x => x.Id != q?.Id)) { <option value="@x.Id" selected="@(q?.OverflowQueueId == x.Id)">انتقال به صف «@x.Name»</option> }</select></span></label>
-                <label class="fu-checks-inline fu-f--toggle"><input type="checkbox" name="NotifySupervisorOnOverflow" value="true" checked="@(q?.NotifySupervisorOnOverflow ?? true)" /><span>اعلان به سرپرست هنگام سرریز</span></label>
-            </div>
             <details class="fu-more-fields">
-                <summary><svg><use href="#i-chevron"/></svg>ترتیب بررسی قواعد و فعال بودن صف</summary>
+                <summary><svg><use href="#i-chevron"/></svg>نام صف، ترتیب بررسی قواعد و فعال بودن</summary>
                 <div class="fu-g">
+                    @if (!isNew) { <label class="fu-f"><span class="fu-f__l">تغییر نام صف</span><span class="fu-f__c"><input data-rename value="@q!.Name" maxlength="120" aria-label="نام صف" /></span></label> }
                     <label class="fu-f"><span class="fu-f__l">ترتیب بررسی</span><span class="fu-f__c"><svg><use href="#i-sort"/></svg><input name="RuleOrder" value="@(q?.RuleOrder ?? 100)" type="number" min="1" max="9999" dir="ltr" /></span><small class="fu-f__hint">عدد کمتر زودتر بررسی می‌شود.</small></label>
                     <label class="fu-checks-inline fu-f--toggle"><input type="checkbox" name="IsActive" value="true" checked="@(q?.IsActive ?? true)" /><span>صف فعال است</span></label>
                 </div>
             </details>
         </div>
         <footer class="fu-sheet__foot">
-            <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ذخیرهٔ قواعد</button>
-            <button class="button button--secondary" type="button" hx-post="/follow-ups/settings/queues/test" hx-include="#queueForm" hx-vals='{"queueId":"@q?.Id"}' hx-target="#assignmentLive" hx-swap="innerHTML" hx-disabled-elt="this"><svg><use href="#i-target"/></svg>آزمون تخصیص</button>
-            <a class="button button--ghost fu-foot__end" href="/follow-ups/settings?tab=queues">انصراف</a>
+            <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ذخیره قواعد</button>
+            <button class="button button--plain fu-foot__end" type="button" hx-post="/follow-ups/settings/queues/test" hx-include="#queueForm" hx-vals='{"queueId":"@q?.Id"}' hx-target="#assignmentLive" hx-swap="innerHTML" hx-disabled-elt="this"><svg><use href="#i-flask"/></svg>آزمون تخصیص</button>
         </footer>
     </form>
-    <section data-fu-panel="rules" hidden="@(tab != "rules")">
+    <section data-fu-panel="queues" hidden="@(tab != "queues")">
         <div class="fu-sheet__body">
-            <h3 class="fu-sec__h"><svg><use href="#i-target"/></svg>آزمون تخصیص</h3>
-            <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>بدون ثبت پرونده، نشان می‌دهد پرونده‌ای با این مشخصات به کدام صف و چه کسی می‌رسد. صف‌ها به ترتیب بررسی آزموده می‌شوند.</span></p>
-            <form id="assignmentTest" method="post" action="/follow-ups/settings/queues/test" hx-post="/follow-ups/settings/queues/test" hx-target="#assignmentResult" hx-swap="innerHTML">
-                @Html.AntiForgeryToken()
-                <div class="fu-g">
-                    <label class="fu-f"><span class="fu-f__l">شعبه<i>*</i></span><span class="fu-f__c"><svg><use href="#i-pin"/></svg><select name="branchId">@foreach (var b in o.Branches) { <option value="@b.Value" selected="@(q?.BranchId == b.Value)">@b.Label</option> }</select></span></label>
-                    <label class="fu-f"><span class="fu-f__l">نوع پیگیری</span><span class="fu-f__c"><svg><use href="#i-layers"/></svg><select name="caseType">@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(q?.CaseType == x.Key)">@x.Label</option> }</select></span></label>
-                    <label class="fu-f"><span class="fu-f__l">خانوادهٔ قطعه</span><span class="fu-f__c"><svg><use href="#i-tag"/></svg><input name="partFamily" value="@q?.PartFamily" maxlength="80" /></span></label>
-                    <label class="fu-f"><span class="fu-f__l">زبان</span><span class="fu-f__c"><svg><use href="#i-globe"/></svg><select name="language">@foreach (var (key, label) in languages) { <option value="@key">@label</option> }</select></span></label>
-                    <label class="fu-checks-inline fu-span"><input type="checkbox" name="queueId" value="@q?.Id" disabled="@(q is null)" /><span>فقط همین صف</span></label>
-                </div>
-                <div class="fu-inline-actions"><button class="button button--primary" type="submit"><svg><use href="#i-target"/></svg>آزمون تخصیص</button></div>
-            </form>
-            <div id="assignmentResult" aria-live="polite"></div>
+            <table class="fu-t">
+                <thead><tr><th>صف</th><th>شعبه</th><th>افراد آماده</th><th>منتظر تخصیص</th><th><span class="sr-only">ویرایش</span></th></tr></thead>
+                <tbody>
+                    @foreach (var x in o.Queues)
+                    {
+                        <tr class="@(x.Id == q?.Id ? "is-current" : "")"><td><strong>@x.Name</strong>@if (!x.IsActive) { <small class="cell-sub">غیرفعال</small> }</td><td>@(x.BranchId is null ? "همهٔ شعب" : o.Branches.FirstOrDefault(b => b.Value == x.BranchId)?.Label ?? x.BranchId)</td><td>@FollowUpLabels.Fa(x.Members.Count(m => m.Available)) از @FollowUpLabels.Fa(x.Members.Count)</td><td>@FollowUpLabels.Fa(x.WaitingCases)</td><td><a class="fu-add fu-add--plain" href="/follow-ups/settings/queues/@x.Id">قواعد</a></td></tr>
+                    }
+                </tbody>
+            </table>
+            <a class="fu-add fu-add--line" href="/follow-ups/settings/queues/new"><svg><use href="#i-plus"/></svg>صف جدید</a>
             @if (q is not null && members.Count > 0)
             {
                 <h3 class="fu-sec__h"><svg><use href="#i-refresh"/></svg>بازتوزیع پرونده‌های فرد غایب</h3>

@@ -8,7 +8,7 @@
     var stageDocs = c.Documents.Where(x => a.Stage is not null && x.StageName == a.Stage).OrderByDescending(x => x.UploadedAtUtc).Take(2).ToList();
 }
 <form class="fu-sheet" method="post" action="@action" enctype="multipart/form-data" hx-post="@action" hx-encoding="multipart/form-data" hx-target="#modalBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
-    <partial name="_SheetHead" model="@(new FollowUpSheetHead(3, "ثبت نتیجه پیگیری", null, FollowUpSheetHead.CaseChip(c)))" />
+    <partial name="_SheetHead" model="@(FollowUpSheetHead.ForCase(3, "ثبت نتیجه پیگیری", c, twoLine: true, icon: "i-case"))" />
     <div class="fu-sheet__body">
         @Html.AntiForgeryToken()
         <input type="hidden" name="ExpectedVersion" value="@cmd.ExpectedVersion" />
@@ -17,17 +17,17 @@
             <span class="fu-done-card__icon"><svg><use href="#@FollowUpLabels.ActivityIcon(a.Type)"/></svg></span>
             <div>
                 <strong>@kindLabel@(a.Contact is not null ? $" با {a.Contact}" : "")</strong>
-                <small>@a.Subject · @FollowUpLabels.Channel(a.Channel) · برنامه: @FollowUpLabels.When(a.AtUtc, DateTimeOffset.UtcNow)@(a.Stage is not null ? $" · مرحله: {a.Stage}" : "")</small>
+                <small title="@FollowUpLabels.Channel(a.Channel) · برنامه: @FollowUpLabels.When(a.AtUtc, DateTimeOffset.UtcNow)@(a.Stage is not null ? $" · مرحله: {a.Stage}" : "")">@a.Subject</small>
             </div>
-            <span class="pill pill--success">انجام شد</span>
+            <span class="fu-done-pill"><svg><use href="#i-check"/></svg>انجام شد</span>
         </div>
         <div class="fu-g">
             <label class="fu-f"><span class="fu-f__l">نوع فعالیت</span><span class="fu-f__c"><svg><use href="#@FollowUpLabels.ActivityIcon(a.Type)"/></svg><input value="@kindLabel · @FollowUpLabels.Channel(a.Channel)" readonly aria-readonly="true" /></span></label>
             <label class="fu-f"><span class="fu-f__l">انجام‌دهنده</span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="DoneByUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.DoneByUserId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
             <label class="fu-f"><span class="fu-f__l">تاریخ انجام</span><span class="fu-f__c"><svg><use href="#i-calendar"/></svg><input name="DoneDate" value="@cmd.DoneDate" inputmode="numeric" data-jalali /></span></label>
             <label class="fu-f"><span class="fu-f__l">ساعت</span><span class="fu-f__c"><svg><use href="#i-clock"/></svg><input name="DoneTime" value="@cmd.DoneTime" dir="ltr" inputmode="numeric" /></span></label>
-            <label class="fu-f fu-span"><span class="fu-f__l">نتیجهٔ پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-check"/></svg><select name="ResultCode" required><option value="">— انتخاب —</option>@foreach (var (key, label) in FollowUpResults.All) { <option value="@key" selected="@(cmd.ResultCode == key)">@label</option> }</select></span></label>
-            <label class="fu-f fu-span"><span class="fu-f__l">شرح نتیجه<i>*</i></span><span class="fu-f__c"><textarea name="Outcome" rows="3" required maxlength="4000" placeholder="چه شد و چه توافقی انجام شد؟">@cmd.Outcome</textarea></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">نتیجه پیگیری<i>*</i></span><span class="fu-f__c"><svg><use href="#i-check"/></svg><select name="ResultCode" required><option value="">— انتخاب —</option>@foreach (var (key, label) in FollowUpResults.All) { <option value="@key" selected="@(cmd.ResultCode == key)">@label</option> }</select></span></label>
+            <label class="fu-f fu-span"><span class="fu-f__l">شرح نتیجه<i>*</i></span><span class="fu-f__c"><svg class="fu-f__ta-icon"><use href="#i-note"/></svg><textarea name="Outcome" rows="3" required maxlength="4000" placeholder="چه شد و چه توافقی انجام شد؟">@cmd.Outcome</textarea></span></label>
             <div class="fu-f fu-span">
                 <span class="fu-f__l">مدرک مرتبط</span>
                 <div class="fu-file-row">
@@ -38,7 +38,7 @@
             </div>
         </div>
         <section class="fu-box fu-box--blue">
-            <p class="fu-box__h"><svg><use href="#i-calendar"/></svg>اقدام بعدی</p>
+            <p class="fu-box__h fu-box__bar"><svg><use href="#i-calendar"/></svg>اقدام بعدی</p>
             <div class="fu-g">
                 <label class="fu-f"><span class="fu-f__l">عنوان<i>*</i></span><span class="fu-f__c"><svg><use href="#i-note"/></svg><input name="NextTitle" value="@cmd.NextTitle" maxlength="200" placeholder="مثلاً ارسال پیش‌فاکتور اصلاحی" /></span></label>
                 <label class="fu-f"><span class="fu-f__l">مسئول<i>*</i></span><span class="fu-f__c"><svg><use href="#i-user"/></svg><select name="NextOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.NextOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></span></label>
@@ -54,10 +54,9 @@
                 <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>تکمیل مرحله پس از احراز شروط انجام می‌شود (تکمیل چک‌لیست و تأییدهای لازم).</span></p>
             }
         </section>
-        <p class="fu-note fu-note--plain"><svg><use href="#i-info"/></svg><span>هر پروندهٔ باز باید اقدام بعدی داشته باشد؛ ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>
     </div>
     <footer class="fu-sheet__foot">
         <button class="button button--primary" type="submit"><svg><use href="#i-save"/></svg>ذخیرهٔ نتیجه و اقدام بعدی</button>
-        <button class="button button--ghost fu-foot__end" type="button" data-drawer-close>انصراف</button>
+        <button class="button button--plain fu-foot__end" type="button" data-drawer-close>انصراف</button>
     </footer>
 </form>
