@@ -1,0 +1,34 @@
+@model FollowUpListPage
+@{ ViewData["Title"] = "مرکز پیگیری"; }
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-flow"/></svg></span>
+        <div><h1>مرکز پیگیری</h1><p>پرونده‌های پیگیری با مسئول، مرحله، اقدام بعدی و مهلت؛ هیچ پرونده‌ای بدون صاحب یا اقدام بعدی رها نمی‌شود</p></div>
+    </div>
+    <div class="list-head__actions">
+        @if (Model.List.CanSupervise) { <a class="button button--ghost button--outline" href="/follow-ups/supervision"><svg><use href="#i-grid"/></svg>نظارت مدیر</a> }
+        @if (Model.List.CanConfigure) { <a class="button button--ghost button--outline" href="/follow-ups/settings"><svg><use href="#i-settings"/></svg>تنظیمات پیگیری</a> }
+        @if (Model.List.CanCreate) { <a class="button button--primary" href="/follow-ups/new"><svg><use href="#i-plus"/></svg>پرونده پیگیری جدید</a> }
+    </div>
+</header>
+@if (Model.Inbox.Count > 0)
+{
+    <section class="panel fu-inbox" aria-label="ارجاع‌های دریافتی">
+        <div class="panel-heading"><div><strong>ارجاع‌های در انتظار پذیرش شما</strong><small>تا پذیرش شما، مسئول فعلی پاسخ‌گو می‌ماند؛ پس از مهلت، سرپرست مطلع می‌شود.</small></div><span class="pill pill--warning">@Model.Inbox.Count</span></div>
+        <ul class="fu-inbox__list">
+            @foreach (var r in Model.Inbox)
+            {
+                <li class="@(r.IsLate ? "is-late" : "")">
+                    <a href="/follow-ups/@r.CaseId"><bdi>@r.CaseCode</bdi> · @r.CaseSubject</a>
+                    <small>@r.CustomerName · از @r.From · @(r.Scope == ReferralScope.Case ? "کل پرونده" : $"مرحلهٔ «{r.StageName}»") · مهلت پذیرش: <span class="due due--@(r.IsLate ? "danger" : "info")">@Crm.Domain.Common.TehranTime.Format(r.AcceptDueAtUtc)</span></small>
+                    <p>@r.Reason</p>
+                    <div class="fu-inbox__actions">
+                        <form method="post" action="/follow-ups/referrals/@r.Id/accept" hx-post="/follow-ups/referrals/@r.Id/accept" hx-swap="none">@Html.AntiForgeryToken()<button class="button button--primary button--sm" type="submit"><svg><use href="#i-check"/></svg>پذیرش</button></form>
+                        <form method="post" action="/follow-ups/referrals/@r.Id/reject" hx-post="/follow-ups/referrals/@r.Id/reject" hx-swap="none" data-prompt="دلیل رد ارجاع">@Html.AntiForgeryToken()<button class="button button--ghost button--sm" type="submit"><svg><use href="#i-close"/></svg>رد</button></form>
+                    </div>
+                </li>
+            }
+        </ul>
+    </section>
+}
+<partial name="_List" model="Model" />

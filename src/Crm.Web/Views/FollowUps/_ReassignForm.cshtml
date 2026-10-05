@@ -1,0 +1,31 @@
+@model FollowUpReassignModel
+@{
+    var c = Model.Case;
+    var basePath = $"/follow-ups/{c.Id}";
+}
+<div class="drawer-form">
+    <span data-drawer-title hidden>تغییر مسئول، انتقال یا ادغام</span>
+    <partial name="_CaseContext" model="c" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <form class="form-section" method="post" action="@basePath/reassign" hx-post="@basePath/reassign" hx-target="#drawerBody" hx-swap="innerHTML">
+        @Html.AntiForgeryToken()
+        <h3>مسئول و شعبه</h3>
+        <div class="form-grid">
+            <label><span>مسئول جدید *</span><select name="ownerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@((Model.OwnerUserId ?? c.OwnerUserId)?.ToString() == u.Value)">@u.Label</option> }</select></label>
+            <label><span>انتقال به شعبه</span><select name="branchId">@foreach (var b in c.Branches) { <option value="@b.Value" selected="@(string.Equals(Model.BranchId ?? c.BranchId, b.Value, StringComparison.OrdinalIgnoreCase))">@b.Label</option> }</select></label>
+            <label class="field--full"><span>دلیل *</span><input name="reason" value="@Model.Reason" required maxlength="500" /></label>
+        </div>
+        <small class="field-help">با انتقال شعبه، شناسهٔ پرونده، سوابق و مهلت‌ها تغییر نمی‌کند. مسئول جدید باید کاربر فعال شعبهٔ مقصد باشد.</small>
+        <div class="fu-inline-actions"><button class="button button--primary" type="submit">ثبت تغییر مسئول</button></div>
+    </form>
+    <form class="form-section" method="post" action="@basePath/merge" hx-post="@basePath/merge" hx-target="#drawerBody" hx-swap="innerHTML" data-confirm="این پرونده لغو و در پروندهٔ مقصد ادغام می‌شود. ادامه می‌دهید؟">
+        @Html.AntiForgeryToken()
+        <h3>ادغام پروندهٔ تکراری</h3>
+        <div class="form-grid">
+            <label><span>کد پروندهٔ مقصد *</span><input name="targetCode" value="@Model.TargetCode" required maxlength="24" dir="ltr" placeholder="RQ-24085" /></label>
+            <label><span>دلیل *</span><input name="mergeReason" required maxlength="500" /></label>
+        </div>
+        <small class="field-help">سوابق هر دو پرونده حفظ می‌شود؛ این پرونده با اشاره به پروندهٔ مقصد لغو می‌شود.</small>
+        <div class="fu-inline-actions"><button class="button button--ghost" type="submit">ادغام</button></div>
+    </form>
+</div>

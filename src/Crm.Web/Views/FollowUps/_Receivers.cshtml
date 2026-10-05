@@ -1,0 +1,14 @@
+@model IReadOnlyList<AssignmentCandidateDto>
+<div id="fuReceivers" class="fu-receivers" role="radiogroup" aria-label="گیرنده">
+    @if (Model.Count == 0) { <p class="empty-mini">در این شعبه کاربر فعالی نیست.</p> }
+    @foreach (var r in Model)
+    {
+        var tone = !r.Available ? "neutral" : r.Capacity > 0 && r.Load >= r.Capacity ? "danger" : r.Capacity > 0 && r.Load * 10 >= r.Capacity * 8 ? "warning" : "success";
+        <label class="fu-receiver@(r.Eligible ? "" : " is-muted")">
+            <input type="radio" name="ToUserId" value="@r.UserId" />
+            <span class="entity-avatar entity-avatar--blue">@ListFormat.Initial(r.Name)</span>
+            <span><strong>@r.Name</strong><small>@(r.Available ? r.Capacity > 0 ? $"ظرفیت: {r.Load} از {r.Capacity}" : $"{r.Load} پروندهٔ باز" : r.Note ?? "در دسترس نیست")</small></span>
+            <span class="pill pill--sm pill--@tone">@(!r.Available ? "خارج از دسترس" : tone == "danger" ? "ظرفیت تکمیل" : tone == "warning" ? "نزدیک ظرفیت" : "آماده")</span>
+        </label>
+    }
+</div>

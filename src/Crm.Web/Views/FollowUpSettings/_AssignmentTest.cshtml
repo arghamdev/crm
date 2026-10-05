@@ -1,0 +1,16 @@
+@model AssignmentSuggestionDto
+<div class="fu-assign-result">
+    <p class="account-banner@(Model.UserId is null ? " account-banner--muted" : "")"><svg><use href="#@(Model.UserId is null ? "i-alert" : "i-check")"/></svg><span>@if (Model.UserId is not null) { <b>پیشنهاد: @Model.UserName</b><text> — </text> }@Model.Explanation</span></p>
+    @if (Model.Candidates.Count > 0)
+    {
+        <div class="table-wrap"><table class="list-table">
+            <thead><tr><th>فرد</th><th>ظرفیت</th><th>وضعیت</th></tr></thead>
+            <tbody>
+                @foreach (var c in Model.Candidates)
+                {
+                    <tr class="@(c.UserId == Model.UserId ? "is-current" : "")"><td>@c.Name</td><td>@c.Load از @c.Capacity</td><td><span class="pill pill--sm pill--@(c.Eligible ? "success" : c.Available ? "warning" : "neutral")">@(c.Eligible ? "آماده" : c.Available ? "ظرفیت تکمیل" : c.Note ?? "خارج از شیفت")</span></td></tr>
+                }
+            </tbody>
+        </table></div>
+    }
+</div>

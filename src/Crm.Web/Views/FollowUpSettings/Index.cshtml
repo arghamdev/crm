@@ -1,0 +1,92 @@
+@model FollowUpConfigurationDto
+@{
+    ViewData["Title"] = "تنظیمات مرکز پیگیری";
+    var tab = (string)ViewBag.Tab;
+}
+<nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><span>تنظیمات</span></nav>
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-settings"/></svg></span>
+        <div><h1>تنظیمات مرکز پیگیری</h1><p>الگوهای گردش کار نسخه‌دار، سیاست‌های مهلت و هشدار، صف‌ها و قواعد تخصیص</p></div>
+    </div>
+</header>
+@if (TempData["FollowUpError"] is string error) { <div class="validation-summary">@error</div> }
+<div class="fu-tabs" data-fu-tabs>
+    <div class="tabbar tabbar--main" role="tablist">
+        <button type="button" role="tab" class="tabbar__tab@(tab == "templates" ? " is-active" : "")" data-fu-tab="templates">الگوهای گردش کار <b class="tabbar__count">@Model.Templates.Count</b></button>
+        <button type="button" role="tab" class="tabbar__tab@(tab == "policies" ? " is-active" : "")" data-fu-tab="policies">مهلت‌ها و هشدارها <b class="tabbar__count">@Model.Policies.Count</b></button>
+        <button type="button" role="tab" class="tabbar__tab@(tab == "queues" ? " is-active" : "")" data-fu-tab="queues">صف‌ها و تخصیص <b class="tabbar__count">@Model.Queues.Count</b></button>
+    </div>
+    <section data-fu-panel="templates" hidden="@(tab != "templates")">
+        <div class="panel">
+            <div class="panel-heading"><div><strong>الگوهای گردش کار</strong><small>نسخهٔ منتشرشده ویرایش نمی‌شود؛ تغییرات در نسخهٔ جدید اعمال و فقط برای پرونده‌های جدید استفاده می‌شود.</small></div>
+                <div class="fu-inline-actions">
+                    @if (Model.Templates.Count == 0 || Model.Policies.Count == 0)
+                    {
+                        <form method="post" action="/follow-ups/settings/defaults">@Html.AntiForgeryToken()<button class="button button--ghost button--sm" type="submit"><svg><use href="#i-download"/></svg>نصب الگوها و سیاست‌های پیش‌فرض</button></form>
+                    }
+                    <a class="button button--primary button--sm" href="/follow-ups/settings/templates/new"><svg><use href="#i-plus"/></svg>الگوی جدید</a>
+                </div>
+            </div>
+            <div class="table-wrap"><table class="list-table">
+                <thead><tr><th>الگو</th><th>نوع پیگیری</th><th>نسخه</th><th>مراحل</th><th>پرونده‌های باز</th><th>وضعیت</th></tr></thead>
+                <tbody>
+                    @if (Model.Templates.Count == 0) { <tr><td colspan="6"><p class="empty-mini">الگویی تعریف نشده است؛ بدون الگوی منتشرشده پرونده ثبت نمی‌شود.</p></td></tr> }
+                    @foreach (var t in Model.Templates)
+                    {
+                        <tr>
+                            <td><a class="cell-title" href="/follow-ups/settings/templates/@t.Id">@t.Name</a><small class="cell-sub"><bdi>@t.Code</bdi></small></td>
+                            <td>@FollowUpLabels.Type(t.CaseType)</td>
+                            <td>نسخه @t.Version@if (t.HasDraft) { <small class="cell-flag"><svg><use href="#i-edit"/></svg>پیش‌نویس نسخهٔ بعد</small> }</td>
+                            <td>@t.StageCount</td>
+                            <td>@t.OpenCases</td>
+                            <td><span class="pill pill--sm pill--@(t.Status == FollowUpTemplateStatus.Published ? "success" : t.Status == FollowUpTemplateStatus.Draft ? "warning" : "neutral")">@FollowUpLabels.Template(t.Status)</span>@if (t.PublishedAtUtc is { } p) { <small class="cell-sub">@Crm.Domain.Common.TehranTime.Date(p)</small> }</td>
+                        </tr>
+                    }
+                </tbody>
+            </table></div>
+        </div>
+    </section>
+    <section data-fu-panel="policies" hidden="@(tab != "policies")">
+        <div class="panel">
+            <div class="panel-heading"><div><strong>سیاست‌های مهلت</strong><small>مهلت‌های مستقل پاسخ اولیه، مرحله و حل؛ با ساعات کاری، تعطیلات و منطقهٔ زمانی شعبه. هشدار سلسله‌مراتبی مالک پرونده را تغییر نمی‌دهد.</small></div><a class="button button--primary button--sm" href="/follow-ups/settings/policies/new"><svg><use href="#i-plus"/></svg>سیاست جدید</a></div>
+            <div class="table-wrap"><table class="list-table">
+                <thead><tr><th>سیاست</th><th>اولویت</th><th>پاسخ اولیه / مرحله / حل</th><th class="hide-sm">ساعات کاری</th><th class="hide-sm">توقف مجاز</th><th>وضعیت</th></tr></thead>
+                <tbody>
+                    @foreach (var p in Model.Policies)
+                    {
+                        <tr>
+                            <td><a class="cell-title" href="/follow-ups/settings/policies/@p.Id">@p.Name</a><small class="cell-sub">@(p.CaseType is null ? "همهٔ انواع" : FollowUpLabels.Type(p.CaseType)) · @p.UsedByTemplates الگو</small></td>
+                            <td><span class="pill pill--sm pill--@FollowUpLabels.PriorityTone(p.Priority)">@FollowUpLabels.Priority(p.Priority)</span></td>
+                            <td>@p.FirstResponseHours / @p.StageHours / @p.ResolutionHours ساعت کاری</td>
+                            <td class="hide-sm">@string.Join("، ", p.WorkDays.Select(FollowUpLabels.Day)) · @p.WorkStart تا @p.WorkEnd</td>
+                            <td class="hide-sm">@(p.PauseOnWaitingCustomer ? "انتظار مشتری" : "—")@(p.PauseOnWaitingInternal ? "، انتظار داخلی" : "")</td>
+                            <td><span class="pill pill--sm pill--@(p.IsActive ? "success" : "neutral")">@(p.IsActive ? "فعال" : "غیرفعال")</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table></div>
+        </div>
+    </section>
+    <section data-fu-panel="queues" hidden="@(tab != "queues")">
+        <div class="panel">
+            <div class="panel-heading"><div><strong>صف‌ها و قواعد تخصیص</strong><small>اولین صفی که شرایط ورود آن برقرار باشد پرونده را می‌گیرد؛ اگر کسی ظرفیت آزاد نداشت، صف پشتیبان و اعلان سرپرست.</small></div><a class="button button--primary button--sm" href="/follow-ups/settings/queues/new"><svg><use href="#i-plus"/></svg>صف جدید</a></div>
+            <div class="table-wrap"><table class="list-table">
+                <thead><tr><th>ترتیب</th><th>صف</th><th class="hide-sm">شرایط ورود</th><th>روش تخصیص</th><th>اعضا</th><th>منتظر تخصیص</th></tr></thead>
+                <tbody>
+                    @foreach (var q in Model.Queues)
+                    {
+                        <tr>
+                            <td>@q.RuleOrder</td>
+                            <td><a class="cell-title" href="/follow-ups/settings/queues/@q.Id">@q.Name</a><small class="cell-sub">@q.Country · @(q.BranchId ?? "همهٔ شعب")@(q.IsActive ? "" : " · غیرفعال")</small></td>
+                            <td class="hide-sm">@(q.CaseType is null ? "همهٔ انواع" : FollowUpLabels.Type(q.CaseType))@if (q.PartFamily is not null) { <text> · @q.PartFamily</text> }@if (q.Language is not null) { <text> · زبان @q.Language</text> }</td>
+                            <td>@FollowUpLabels.Method(q.Method)<small class="cell-sub">@FollowUpLabels.Ordering(q.Ordering)</small></td>
+                            <td>@q.Members.Count(x => x.Available) آماده از @q.Members.Count</td>
+                            <td>@q.WaitingCases</td>
+                        </tr>
+                    }
+                </tbody>
+            </table></div>
+        </div>
+    </section>
+</div>

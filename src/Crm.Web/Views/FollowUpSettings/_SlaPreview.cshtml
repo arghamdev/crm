@@ -1,0 +1,8 @@
+@model SlaPreviewDto
+<dl class="fu-facts fu-facts--preview">
+    <div><dt>ثبت پرونده</dt><dd>@Model.Start</dd></div>
+    <div><dt>مهلت پاسخ اولیه</dt><dd>@Model.FirstResponseDue</dd></div>
+    <div><dt>مهلت مرحله</dt><dd>@Model.StageDue</dd></div>
+    <div><dt>مهلت حل کامل</dt><dd>@Model.ResolutionDue</dd></div>
+</dl>
+@if (Model.EscalationTimes.Count > 0) { <ul class="fu-checks">@foreach (var e in Model.EscalationTimes) { <li class="is-ok"><svg><use href="#i-bell"/></svg><span>@e</span></li> }</ul> }

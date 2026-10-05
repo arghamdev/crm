@@ -1,0 +1,228 @@
+@model FollowUpCaseDto
+@{
+    var c = Model;
+    var now = DateTimeOffset.UtcNow;
+    var basePath = $"/follow-ups/{c.Id}";
+    var active = c.ActiveStage;
+    var next = ListFormat.Due(c.NextActionAtUtc, now);
+    var first = c.FirstRespondedAtUtc is null ? ListFormat.Due(c.FirstResponseDueAtUtc, now) : ("پاسخ داده شد", "success");
+    var resolution = c.IsPaused ? ("متوقف (انتظار)", "info") : ListFormat.Due(c.ResolutionDueAtUtc, now);
+    var openActivities = c.Activities.Count(x => x.Status == ActivityStatus.Planned);
+    var pendingApprovals = c.Approvals.Count(x => x.Decision is null);
+    var pendingReferrals = c.Referrals.Count(x => x.Status == ReferralStatus.Pending);
+    string Drawer(string path) => $"{basePath}/{path}";
+}
+<header class="fu-head panel">
+    <div class="fu-head__main">
+        <span class="fu-head__icon"><svg><use href="#@FollowUpLabels.TypeIcon(c.CaseType)"/></svg></span>
+        <div class="fu-head__title">
+            <div class="fu-head__badges">
+                <span class="pill pill--@FollowUpLabels.StatusTone(c.Status)">@FollowUpLabels.Status(c.Status)</span>
+                <span class="pill pill--@FollowUpLabels.PriorityTone(c.Priority)" title="@c.PriorityReason">اولویت @FollowUpLabels.Priority(c.Priority)</span>
+                @if (c.IsOverdue) { <span class="pill pill--danger"><svg><use href="#i-alert"/></svg>عقب‌افتاده</span> }
+                @if (c.IsPaused) { <span class="pill pill--violet"><svg><use href="#i-pause"/></svg>مهلت متوقف</span> }
+                @if (c.ReopenCount > 0) { <span class="pill pill--warning">بازگشایی‌شده (@c.ReopenCount)</span> }
+            </div>
+            <h1>@c.Subject</h1>
+            <p class="fu-head__meta">
+                <span><b>کد:</b> <bdi>@c.Code</bdi></span>
+                <span><b>نوع:</b> @FollowUpLabels.Type(c.CaseType)</span>
+                <span><b>مشتری:</b> <a href="/customers/@c.CustomerId">@c.CustomerName</a>@if (c.Contact is not null) { <text> · @c.Contact</text> }</span>
+                @if (c.RelatedLabel is not null) { <span><b>مرتبط:</b> @if (c.RelatedUrl is not null) { <a href="@c.RelatedUrl">@c.RelatedLabel</a> } else { @c.RelatedLabel }</span> }
+                <span><b>شعبه:</b> @c.BranchName</span>
+                @if (c.Dealer is not null) { <span><b>نمایندگی:</b> @c.Dealer</span> }
+                <span><b>الگو:</b> @c.TemplateName · نسخه @c.TemplateVersion</span>
+                <span><b>کانال:</b> @FollowUpLabels.Channel(c.Channel)</span>
+            </p>
+        </div>
+    </div>
+    <div class="fu-head__actions">
+        @if (c.IsOpen && c.CanUpdate)
+        {
+            <button class="button button--primary" type="button" hx-get="@Drawer("plan")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>برنامه‌ریزی اقدام</button>
+            <button class="button button--ghost" type="button" hx-get="@Drawer("refer")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع</button>
+            <button class="button button--ghost" type="button" hx-get="@Drawer("wait")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#@(c.IsWaiting ? "i-play" : "i-pause")"/></svg>@(c.IsWaiting ? "ازسرگیری" : "انتظار")</button>
+            <button class="button button--ghost" type="button" hx-get="@Drawer("documents")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-file"/></svg>مدارک و تأییدها</button>
+        }
+        @if (c.CanClose) { <button class="button button--ghost" type="button" hx-get="@Drawer("close")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-check"/></svg>بستن پرونده</button> }
+        @if (c.CanReopen) { <button class="button button--primary" type="button" hx-get="@Drawer("close?tab=reopen")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-sort"/></svg>بازگشایی</button> }
+        @if (c.IsOpen && (c.CanAssign || c.CanClose))
+        {
+            <details class="row-menu fu-more">
+                <summary aria-label="عملیات بیشتر"><svg><use href="#i-more"/></svg></summary>
+                <div class="row-menu__list">
+                    @if (c.CanAssign) { <a href="@Drawer("reassign")" hx-get="@Drawer("reassign")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-user"/></svg>تغییر مسئول / انتقال شعبه / ادغام</a> }
+                    @if (c.CanClose) { <form method="post" action="@Drawer("cancel")" hx-post="@Drawer("cancel")" hx-swap="none" data-prompt="علت لغو پرونده">@Html.AntiForgeryToken()<button type="submit"><svg><use href="#i-close"/></svg>لغو پرونده</button></form> }
+                </div>
+            </details>
+        }
+    </div>
+    <div class="fu-head__progress">
+        <div class="fu-bar" role="progressbar" aria-valuenow="@c.Progress" aria-valuemin="0" aria-valuemax="100" aria-label="پیشرفت وزنی پرونده"><span style="width:@c.Progress%"></span></div>
+        <span><b>@c.Progress٪</b> پیشرفت وزنی (Σ وزن × پیشرفت مرحله)</span>
+    </div>
+</header>
+
+@if (c.IsWaiting)
+{
+    <p class="account-banner fu-banner--wait"><svg><use href="#i-pause"/></svg><span><b>@FollowUpLabels.Status(c.Status):</b> @c.WaitReason@if (c.WaitingOn is not null) { <text> · منتظر پاسخ از </text><b>@c.WaitingOn</b> } · بازبینی: <b>@(c.ReviewAtUtc is { } r ? Crm.Domain.Common.TehranTime.Format(r) : "—")</b> · @(c.IsPaused ? "مهلت این پرونده تا ازسرگیری متوقف است." : "طبق سیاست مهلت، زمان در این وضعیت متوقف نمی‌شود.")</span></p>
+}
+@if (c.Status == FollowUpStatus.Closed)
+{
+    <p class="account-banner fu-banner--closed"><svg><use href="#i-check"/></svg><span><b>نتیجهٔ نهایی:</b> @c.Outcome@if (c.OutcomeNote is not null) { <text> · @c.OutcomeNote</text> } · بسته‌شده در @(c.ClosedAtUtc is { } closed ? Crm.Domain.Common.TehranTime.Format(closed) : "—")</span></p>
+}
+@if (c.Status == FollowUpStatus.Cancelled)
+{
+    <p class="account-banner account-banner--muted"><svg><use href="#i-close"/></svg><span>پرونده لغو شده است: @c.CancelReason@if (c.MergedIntoCaseId is { } merged) { <text> · </text><a href="/follow-ups/@merged">پروندهٔ ادامه‌دهنده</a> }</span></p>
+}
+
+<section class="fu-kpis" aria-label="وضعیت پرونده">
+    <article class="fu-kpi"><small>مسئول پرونده</small><strong>@(c.Owner ?? "بدون مسئول")</strong><span>@(c.Queue is null ? "—" : $"صف: {c.Queue}")</span></article>
+    <article class="fu-kpi fu-kpi--@(c.NextAction is null && c.IsOpen ? "danger" : next.Item2)"><small>اقدام بعدی</small><strong>@(c.NextAction ?? (c.IsOpen ? "تعیین نشده" : "—"))</strong><span>@(c.NextActionAtUtc is { } na ? $"{Crm.Domain.Common.TehranTime.Format(na)} · {c.NextActionOwner}" : c.IsOpen ? "هر پروندهٔ باز باید اقدام بعدی داشته باشد" : "")</span></article>
+    <article class="fu-kpi fu-kpi--@first.Item2"><small>پاسخ اولیه</small><strong>@first.Item1</strong><span>@(c.FirstResponseDueAtUtc is { } f ? "مهلت: " + Crm.Domain.Common.TehranTime.Format(f) : "")</span></article>
+    <article class="fu-kpi fu-kpi--@resolution.Item2"><small>مهلت حل پرونده</small><strong>@resolution.Item1</strong><span>@(c.ResolutionDueAtUtc is { } rd ? Crm.Domain.Common.TehranTime.Format(rd) : "") · @c.SlaPolicy</span></article>
+    <article class="fu-kpi"><small>زمان سپری‌شده (ساعات کاری)</small><strong>@FollowUpLabels.Minutes(c.ElapsedWorkingMinutes)</strong><span>توقف مجاز: @FollowUpLabels.Minutes(c.PausedMinutes) · زمان مهلت: @FollowUpLabels.Minutes(Math.Max(0, c.ElapsedWorkingMinutes - c.PausedMinutes))</span></article>
+    <article class="fu-kpi"><small>مرحلهٔ فعال</small><strong>@(active?.Name ?? (c.IsOpen ? "—" : "پایان"))</strong><span>@(active is null ? "" : $"{active.Responsible ?? "—"} · {(active.DueAtUtc is { } sd ? Crm.Domain.Common.TehranTime.Format(sd) : "بدون مهلت")}")</span></article>
+</section>
+
+<div class="fu-tabs" data-fu-tabs="case-@c.Id">
+    <div class="tabbar tabbar--main" role="tablist">
+        <button type="button" role="tab" class="tabbar__tab is-active" data-fu-tab="stages">مراحل و وظایف</button>
+        <button type="button" role="tab" class="tabbar__tab" data-fu-tab="activities">فعالیت‌ها @if (openActivities > 0) { <b class="tabbar__count">@openActivities</b> }</button>
+        <button type="button" role="tab" class="tabbar__tab" data-fu-tab="items">قطعات <b class="tabbar__count">@c.Items.Count</b></button>
+        <button type="button" role="tab" class="tabbar__tab" data-fu-tab="documents">مدارک و تأییدها @if (pendingApprovals > 0) { <b class="tabbar__count">@pendingApprovals</b> }</button>
+        <button type="button" role="tab" class="tabbar__tab" data-fu-tab="referrals">ارجاع‌ها @if (pendingReferrals > 0) { <b class="tabbar__count">@pendingReferrals</b> }</button>
+        <button type="button" role="tab" class="tabbar__tab" data-fu-tab="info">اطلاعات پرونده</button>
+        <button type="button" role="tab" class="tabbar__tab" data-fu-tab="history">تاریخچه</button>
+    </div>
+
+    <section data-fu-panel="stages">
+        <partial name="_Stages" model="Model" />
+    </section>
+
+    <section data-fu-panel="activities" hidden>
+        <div class="panel">
+            <div class="panel-heading"><div><strong>فعالیت‌های پرونده</strong><small>ثبت تماس یا یادداشت به‌تنهایی مرحله را تکمیل نمی‌کند؛ هر نتیجه با اقدام بعدی همراه است.</small></div>
+                @if (c.IsOpen && c.CanUpdate)
+                {
+                    <div class="fu-inline-actions">
+                        <button class="button button--ghost button--sm" type="button" hx-get="@Drawer("plan?kind=Call")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-phone"/></svg>تماس</button>
+                        <button class="button button--ghost button--sm" type="button" hx-get="@Drawer("plan?kind=Meeting")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>جلسه</button>
+                        <button class="button button--ghost button--sm" type="button" hx-get="@Drawer("plan?kind=Visit")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-pin"/></svg>بازدید</button>
+                        <button class="button button--ghost button--sm" type="button" hx-get="@Drawer("plan?kind=Task")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-task"/></svg>کار داخلی</button>
+                    </div>
+                }
+            </div>
+            @if (c.Activities.Count == 0) { <p class="empty-mini">فعالیتی برای این پرونده ثبت نشده است.</p> }
+            <ul class="fu-activities">
+                @foreach (var a in c.Activities)
+                {
+                    var tone = a.Status == ActivityStatus.Completed ? "success" : a.Status == ActivityStatus.Cancelled ? "neutral" : a.IsOverdue ? "danger" : "info";
+                    <li class="fu-activity fu-activity--@tone">
+                        <span class="fu-activity__icon"><svg><use href="#@FollowUpLabels.ActivityIcon(a.Type)"/></svg></span>
+                        <div>
+                            <strong>@a.Subject</strong>
+                            <small>@FollowUpLabels.Activity(a.Type) · @FollowUpLabels.Channel(a.Channel) · @Crm.Domain.Common.TehranTime.Format(a.AtUtc) · @a.Owner@if (a.Contact is not null) { <text> · با @a.Contact</text> }@if (a.Stage is not null) { <text> · مرحله: @a.Stage</text> }</small>
+                            @if (a.PreChecklist.Count > 0) { <div class="fu-chips">@foreach (var item in a.PreChecklist) { <span class="chip@(item.StartsWith("✓") ? " chip--done" : "")">@item</span> }</div> }
+                            @if (a.Description is not null) { <p>@a.Description</p> }
+                            @if (a.Outcome is not null) { <p class="fu-activity__outcome"><b>@FollowUpLabels.Result(a.ResultCode):</b> @a.Outcome</p> }
+                        </div>
+                        <div class="fu-activity__side">
+                            <span class="pill pill--sm pill--@tone">@(a.Status == ActivityStatus.Completed ? "انجام‌شده" : a.Status == ActivityStatus.Cancelled ? "لغوشده" : a.IsOverdue ? "عقب‌افتاده" : "برنامه‌ریزی‌شده")</span>
+                            @if (a.CanRecordResult) { <button class="button button--primary button--xs" type="button" hx-get="@Drawer($"activities/{a.Id}/result")" hx-target="#drawerBody" hx-swap="innerHTML">ثبت نتیجه</button> }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+
+    <section data-fu-panel="items" hidden>
+        <partial name="_Items" model="Model" />
+    </section>
+
+    <section data-fu-panel="documents" hidden>
+        <div class="panel">
+            <div class="panel-heading"><div><strong>مدارک و تأییدها</strong><small>هر بارگذاری با همان عنوان، نسخهٔ جدید است و در پروندهٔ حساب مشتری هم دیده می‌شود.</small></div>
+                @if (c.IsOpen && c.CanUpdate) { <button class="button button--ghost button--sm" type="button" hx-get="@Drawer("documents")" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-upload"/></svg>افزودن مدرک / درخواست تأیید</button> }
+            </div>
+            <partial name="_DocumentList" model="Model" />
+            @if (c.Approvals.Count > 0)
+            {
+                <h4 class="fu-subhead">درخواست‌های تأیید</h4>
+                <ul class="fu-approvals">
+                    @foreach (var a in c.Approvals)
+                    {
+                        <li>
+                            <span class="pill pill--sm pill--@FollowUpLabels.DecisionTone(a.Decision)">@FollowUpLabels.Decision(a.Decision)</span>
+                            <div><strong>@(a.StageName is null ? "کل پرونده" : $"مرحلهٔ «{a.StageName}»") — @a.Approver (@a.ApproverRole)</strong>
+                                <small>درخواست: @a.RequestedBy · @Crm.Domain.Common.TehranTime.Format(a.RequestedAtUtc)@if (a.DecidedAtUtc is { } d) { <text> · تصمیم: @a.DecidedBy · @Crm.Domain.Common.TehranTime.Format(d)</text> }</small>
+                                @if (a.DecisionNote is not null) { <p>@a.DecisionNote@if (a.CorrectionOwner is not null) { <text> · اصلاح: @a.CorrectionOwner تا @(a.CorrectionDueAtUtc is { } cd ? Crm.Domain.Common.TehranTime.Format(cd) : "—")</text> }</p> }
+                            </div>
+                            @if (a.CanDecide) { <button class="button button--primary button--xs" type="button" hx-get="@Drawer($"documents?tab=decide&approvalId={a.Id}")" hx-target="#drawerBody" hx-swap="innerHTML">ثبت تصمیم</button> }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+
+    <section data-fu-panel="referrals" hidden>
+        <div class="panel">
+            <div class="panel-heading"><div><strong>ارجاع‌ها</strong><small>فرستنده، گیرنده، دلیل، مهلت و زمان پذیرش؛ تا پذیرش، مسئول فعلی پاسخ‌گو می‌ماند.</small></div></div>
+            @if (c.Referrals.Count == 0) { <p class="empty-mini">ارجاعی ثبت نشده است.</p> }
+            else
+            {
+                <div class="table-wrap"><table class="list-table">
+                    <thead><tr><th>دامنه</th><th>از / به</th><th class="hide-sm">دلیل</th><th>مهلت پذیرش</th><th>وضعیت</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in c.Referrals)
+                        {
+                            <tr>
+                                <td>@(r.Scope == ReferralScope.Case ? "کل پرونده" : $"مرحلهٔ «{r.StageName}»")<small class="cell-sub">@Crm.Domain.Common.TehranTime.Format(r.SentAtUtc)</small></td>
+                                <td>@r.From → <b>@r.To</b>@if (r.ToTeam is not null) { <small class="cell-sub">تیم: @r.ToTeam</small> }</td>
+                                <td class="hide-sm">@r.Reason@if (!string.IsNullOrEmpty(r.Attachments)) { <small class="cell-sub">همراه: @r.Attachments</small> }</td>
+                                <td><span class="due due--@(r.IsLate ? "danger" : "muted")">@Crm.Domain.Common.TehranTime.Format(r.AcceptDueAtUtc)</span></td>
+                                <td><span class="pill pill--sm pill--@FollowUpLabels.ReferralTone(r.Status)">@FollowUpLabels.Referral(r.Status)</span>@if (r.ResponseNote is not null) { <small class="cell-sub">@r.ResponseNote</small> }
+                                    @if (r.CanRespond)
+                                    {
+                                        <div class="fu-inline-actions">
+                                            <form method="post" action="/follow-ups/referrals/@r.Id/accept" hx-post="/follow-ups/referrals/@r.Id/accept" hx-swap="none">@Html.AntiForgeryToken()<button class="button button--primary button--xs" type="submit">پذیرش</button></form>
+                                            <form method="post" action="/follow-ups/referrals/@r.Id/reject" hx-post="/follow-ups/referrals/@r.Id/reject" hx-swap="none" data-prompt="دلیل رد ارجاع">@Html.AntiForgeryToken()<button class="button button--ghost button--xs" type="submit">رد</button></form>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table></div>
+            }
+        </div>
+    </section>
+
+    <section data-fu-panel="info" hidden>
+        <div class="panel fu-info">
+            <dl>
+                <div><dt>شرح</dt><dd>@(c.Description ?? "—")</dd></div>
+                <div><dt>معیار پایان</dt><dd>@(c.ExpectedOutcome ?? "—")</dd></div>
+                @foreach (var (label, value) in c.ExtraFields) { <div><dt>@label</dt><dd>@value</dd></div> }
+                <div><dt>دلیل اولویت</dt><dd>@(c.PriorityReason ?? "—")</dd></div>
+                <div><dt>سیاست مهلت</dt><dd>@c.SlaPolicy</dd></div>
+                <div><dt>ثبت</dt><dd>@Crm.Domain.Common.TehranTime.Format(c.OpenedAtUtc)</dd></div>
+                @if (c.ParentCaseId is { } parent) { <div><dt>ادامهٔ پرونده</dt><dd><a href="/follow-ups/@parent">پروندهٔ قبلی</a></dd></div> }
+            </dl>
+        </div>
+    </section>
+
+    <section data-fu-panel="history" hidden>
+        <div class="panel">
+            <div class="panel-heading"><div><strong>تاریخچه</strong><small>تغییر مسئول، مهلت، وضعیت، پیشرفت و نتیجه با کاربر، زمان و دلیل</small></div></div>
+            <ol class="fu-timeline">
+                @foreach (var e in c.History)
+                {
+                    <li><span class="fu-timeline__icon"><svg><use href="#@FollowUpLabels.EventIcon(e.Kind)"/></svg></span><div><strong>@e.Title</strong>@if (e.Detail is not null) { <p>@e.Detail</p> }<small>@(e.Actor ?? "سامانه") · @Crm.Domain.Common.TehranTime.Format(e.AtUtc)</small></div></li>
+                }
+            </ol>
+        </div>
+    </section>
+</div>

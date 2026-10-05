@@ -78,6 +78,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
         ConfigureCustomerProfile(modelBuilder);
         ConfigureNotifications(modelBuilder);
         ConfigureAccountFile(modelBuilder);
+        ConfigureFollowUps(modelBuilder);
         ConfigureCustomerTimeline(modelBuilder.Entity<CustomerTimelineEvent>());
         ConfigureCustomerOwnership(modelBuilder.Entity<CustomerOwnershipHistory>());
         ConfigureCustomerDuplicate(modelBuilder.Entity<CustomerDuplicateCandidate>());
@@ -938,6 +939,246 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : DbCon
     public DbSet<Crm.Domain.Accounts.TargetListMember> TargetListMembers => Set<Crm.Domain.Accounts.TargetListMember>();
     public DbSet<Crm.Domain.Accounts.Survey> Surveys => Set<Crm.Domain.Accounts.Survey>();
     public DbSet<Crm.Domain.Accounts.SurveyResponse> SurveyResponses => Set<Crm.Domain.Accounts.SurveyResponse>();
+
+    public DbSet<Crm.Domain.FollowUps.SlaPolicy> FollowUpSlaPolicies => Set<Crm.Domain.FollowUps.SlaPolicy>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpTemplate> FollowUpTemplates => Set<Crm.Domain.FollowUps.FollowUpTemplate>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpTemplateStage> FollowUpTemplateStages => Set<Crm.Domain.FollowUps.FollowUpTemplateStage>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpQueue> FollowUpQueues => Set<Crm.Domain.FollowUps.FollowUpQueue>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpQueueMember> FollowUpQueueMembers => Set<Crm.Domain.FollowUps.FollowUpQueueMember>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpCase> FollowUpCases => Set<Crm.Domain.FollowUps.FollowUpCase>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpStage> FollowUpStages => Set<Crm.Domain.FollowUps.FollowUpStage>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpChecklistItem> FollowUpChecklistItems => Set<Crm.Domain.FollowUps.FollowUpChecklistItem>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpItem> FollowUpItems => Set<Crm.Domain.FollowUps.FollowUpItem>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpReferral> FollowUpReferrals => Set<Crm.Domain.FollowUps.FollowUpReferral>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpDocument> FollowUpDocuments => Set<Crm.Domain.FollowUps.FollowUpDocument>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpApproval> FollowUpApprovals => Set<Crm.Domain.FollowUps.FollowUpApproval>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpEvent> FollowUpEvents => Set<Crm.Domain.FollowUps.FollowUpEvent>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpActivityLink> FollowUpActivityLinks => Set<Crm.Domain.FollowUps.FollowUpActivityLink>();
+    public DbSet<Crm.Domain.FollowUps.FollowUpSavedView> FollowUpSavedViews => Set<Crm.Domain.FollowUps.FollowUpSavedView>();
+
+    /// <summary>Follow-up center (مرکز پیگیری): cases, stages, referrals, approvals, templates, SLA policies and queues; schema "followup".</summary>
+    private static void ConfigureFollowUps(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Crm.Domain.FollowUps.SlaPolicy>(entity => {
+            ConfigureEntity(entity, "SlaPolicies", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Priority).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.CaseType).HasMaxLength(40);
+            entity.Property(x => x.TimeZoneId).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.WorkDays).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.WorkStart).HasMaxLength(5).IsRequired();
+            entity.Property(x => x.WorkEnd).HasMaxLength(5).IsRequired();
+            entity.Property(x => x.Holidays).HasMaxLength(2000);
+            entity.Property(x => x.Escalations).HasMaxLength(400).IsRequired();
+            entity.HasIndex(x => new { x.CompanyId, x.IsActive, x.Priority });
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpTemplate>(entity => {
+            ConfigureEntity(entity, "Templates", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Code).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.CaseType).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Scope).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.OwnerUnit).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.ClosingCriteria).HasMaxLength(500);
+            entity.Property(x => x.Rules).HasMaxLength(2000);
+            entity.Property(x => x.DefaultPriority).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.PublishedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.CompanyId, x.Code, x.TemplateVersion }).IsUnique();
+            entity.HasIndex(x => new { x.CompanyId, x.CaseType, x.Status });
+            entity.HasOne<Crm.Domain.FollowUps.SlaPolicy>().WithMany().HasForeignKey(x => x.SlaPolicyId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpTemplateStage>(entity => {
+            ConfigureEntity(entity, "TemplateStages", "followup");
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.ResponsibleRole).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.Checklist).HasMaxLength(2000);
+            entity.Property(x => x.Condition).HasMaxLength(200);
+            entity.HasIndex(x => new { x.TemplateId, x.Order });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpQueue>(entity => {
+            ConfigureEntity(entity, "Queues", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Country).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.BranchId).HasMaxLength(32);
+            entity.Property(x => x.CaseType).HasMaxLength(40);
+            entity.Property(x => x.PartFamily).HasMaxLength(80);
+            entity.Property(x => x.Language).HasMaxLength(16);
+            entity.Property(x => x.Method).HasConversion<string>().HasMaxLength(20);
+            entity.Property(x => x.Ordering).HasConversion<string>().HasMaxLength(20);
+            entity.HasIndex(x => new { x.CompanyId, x.IsActive, x.RuleOrder });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpQueue>().WithMany().HasForeignKey(x => x.OverflowQueueId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpQueueMember>(entity => {
+            ConfigureEntity(entity, "QueueMembers", "followup");
+            entity.Property(x => x.AvailabilityNote).HasMaxLength(200);
+            entity.Property(x => x.Skills).HasMaxLength(200);
+            entity.Property(x => x.LastAssignedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.QueueId, x.UserId }).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpQueue>().WithMany().HasForeignKey(x => x.QueueId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpCase>(entity => {
+            ConfigureEntity(entity, "Cases", "followup");
+            entity.Property(x => x.Code).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.BranchId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.TerritoryId).HasMaxLength(32);
+            entity.Property(x => x.Subject).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(4000);
+            entity.Property(x => x.ExpectedOutcome).HasMaxLength(500);
+            entity.Property(x => x.CaseType).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.ExtraFields).HasMaxLength(2000);
+            entity.Property(x => x.Priority).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.PriorityReason).HasMaxLength(300);
+            entity.Property(x => x.Channel).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Language).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.PartFamily).HasMaxLength(80);
+            entity.Property(x => x.RelatedKind).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.RelatedCode).HasMaxLength(40);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
+            entity.Property(x => x.OpenedAtUtc).HasPrecision(3);
+            entity.Property(x => x.FirstResponseDueAtUtc).HasPrecision(3);
+            entity.Property(x => x.FirstRespondedAtUtc).HasPrecision(3);
+            entity.Property(x => x.ResolutionDueAtUtc).HasPrecision(3);
+            entity.Property(x => x.PausedSinceUtc).HasPrecision(3);
+            entity.Property(x => x.NextAction).HasMaxLength(200);
+            entity.Property(x => x.NextActionAtUtc).HasPrecision(3);
+            entity.Property(x => x.ReviewAtUtc).HasPrecision(3);
+            entity.Property(x => x.WaitReason).HasMaxLength(500);
+            entity.Property(x => x.WaitingOn).HasMaxLength(120);
+            entity.Property(x => x.Outcome).HasMaxLength(200);
+            entity.Property(x => x.OutcomeNote).HasMaxLength(2000);
+            entity.Property(x => x.ClosedAtUtc).HasPrecision(3);
+            entity.Property(x => x.CancelReason).HasMaxLength(500);
+            entity.Ignore(x => x.IsOpen);
+            entity.Ignore(x => x.IsWaiting);
+            entity.Ignore(x => x.IsPaused);
+            entity.Ignore(x => x.NearestDueUtc);
+            entity.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+            entity.HasIndex(x => new { x.CompanyId, x.Status, x.NextActionAtUtc });
+            entity.HasIndex(x => new { x.OwnerUserId, x.Status });
+            entity.HasIndex(x => new { x.CustomerId, x.Status });
+            entity.HasIndex(x => new { x.RelatedKind, x.RelatedId });
+            entity.HasIndex(x => x.QueueId);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.OwnerUserId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpStage>(entity => {
+            ConfigureEntity(entity, "Stages", "followup");
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.ResponsibleRole).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.Condition).HasMaxLength(200);
+            entity.Property(x => x.DueAtUtc).HasPrecision(3);
+            entity.Property(x => x.StartedAtUtc).HasPrecision(3);
+            entity.Property(x => x.CompletedAtUtc).HasPrecision(3);
+            entity.Property(x => x.ReturnReason).HasMaxLength(500);
+            entity.Property(x => x.SkipReason).HasMaxLength(500);
+            entity.Ignore(x => x.IsWorking);
+            entity.HasIndex(x => new { x.CaseId, x.Order });
+            entity.HasIndex(x => new { x.ResponsibleUserId, x.Status });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpChecklistItem>(entity => {
+            ConfigureEntity(entity, "ChecklistItems", "followup");
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.DoneAtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.CaseId, x.StageId, x.Order });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpStage>().WithMany().HasForeignKey(x => x.StageId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpItem>(entity => {
+            ConfigureEntity(entity, "Items", "followup");
+            entity.Property(x => x.PartCode).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.AlternateCode).HasMaxLength(60);
+            entity.Property(x => x.Description).HasMaxLength(200);
+            entity.Property(x => x.Compatibility).HasMaxLength(200);
+            entity.Property(x => x.Quantity).HasPrecision(18, 3);
+            entity.Property(x => x.Unit).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Warehouse).HasMaxLength(60);
+            entity.Property(x => x.SerialOrBatch).HasMaxLength(60);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.DeliveredQuantity).HasPrecision(18, 3);
+            entity.Property(x => x.Note).HasMaxLength(300);
+            entity.HasIndex(x => x.CaseId);
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpReferral>(entity => {
+            ConfigureEntity(entity, "Referrals", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Scope).HasConversion<string>().HasMaxLength(8);
+            entity.Property(x => x.ToBranchId).HasMaxLength(32);
+            entity.Property(x => x.ToTeam).HasMaxLength(120);
+            entity.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.SentAtUtc).HasPrecision(3);
+            entity.Property(x => x.AcceptDueAtUtc).HasPrecision(3);
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.RespondedAtUtc).HasPrecision(3);
+            entity.Property(x => x.ResponseNote).HasMaxLength(500);
+            entity.HasIndex(x => new { x.CaseId, x.Status });
+            entity.HasIndex(x => new { x.ToUserId, x.Status });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<CrmUser>().WithMany().HasForeignKey(x => x.ToUserId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpDocument>(entity => {
+            ConfigureEntity(entity, "Documents", "followup");
+            entity.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.ReviewedAtUtc).HasPrecision(3);
+            entity.Property(x => x.ReviewNote).HasMaxLength(500);
+            entity.HasIndex(x => new { x.CaseId, x.Kind });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Crm.Domain.Accounts.CrmDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpApproval>(entity => {
+            ConfigureEntity(entity, "Approvals", "followup");
+            entity.Property(x => x.ApproverRole).HasMaxLength(60).IsRequired();
+            entity.Property(x => x.ReviewItems).HasMaxLength(1000);
+            entity.Property(x => x.PassedItems).HasMaxLength(1000);
+            entity.Property(x => x.RequestedAtUtc).HasPrecision(3);
+            entity.Property(x => x.Decision).HasConversion<string>().HasMaxLength(16);
+            entity.Property(x => x.DecisionNote).HasMaxLength(1000);
+            entity.Property(x => x.CorrectionDueAtUtc).HasPrecision(3);
+            entity.Property(x => x.DecidedAtUtc).HasPrecision(3);
+            entity.HasIndex(x => x.CaseId);
+            entity.HasIndex(x => new { x.ApproverUserId, x.Decision });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpEvent>(entity => {
+            ConfigureEntity(entity, "Events", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Kind).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(300).IsRequired();
+            entity.Property(x => x.Detail).HasMaxLength(2000);
+            entity.Property(x => x.AtUtc).HasPrecision(3);
+            entity.HasIndex(x => new { x.CaseId, x.AtUtc });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpActivityLink>(entity => {
+            ConfigureEntity(entity, "ActivityLinks", "followup");
+            entity.Property(x => x.Channel).HasConversion<string>().HasMaxLength(12);
+            entity.Property(x => x.PreChecklist).HasMaxLength(1000);
+            entity.Property(x => x.ResultCode).HasMaxLength(32);
+            entity.HasIndex(x => new { x.CaseId, x.StageId });
+            entity.HasOne<Crm.Domain.FollowUps.FollowUpCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<Crm.Domain.Accounts.CrmActivity>().WithOne().HasForeignKey<Crm.Domain.FollowUps.FollowUpActivityLink>(x => x.Id).OnDelete(DeleteBehavior.NoAction);
+        });
+        modelBuilder.Entity<Crm.Domain.FollowUps.FollowUpSavedView>(entity => {
+            ConfigureEntity(entity, "SavedViews", "followup");
+            entity.Property(x => x.CompanyId).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Query).HasMaxLength(500).IsRequired();
+            entity.HasIndex(x => new { x.UserId, x.CompanyId, x.Name }).IsUnique();
+        });
+    }
 
     /// <summary>Account file (پرونده حساب): activities, notes, documents and account-owned records; schema "account".</summary>
     private static void ConfigureAccountFile(ModelBuilder modelBuilder)

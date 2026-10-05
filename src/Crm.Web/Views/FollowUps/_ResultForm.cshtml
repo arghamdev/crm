@@ -1,0 +1,51 @@
+@model FollowUpResultModel
+@{
+    var c = Model.Case;
+    var a = Model.Activity;
+    var cmd = Model.Command;
+    var action = $"/follow-ups/{c.Id}/activities/{a.Id}/result";
+}
+<form class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ExpectedVersion" value="@cmd.ExpectedVersion" />
+    <span data-drawer-title hidden>ثبت نتیجه</span>
+    <partial name="_CaseContext" model="c" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <section class="form-section">
+        <h3>فعالیت انجام‌شده</h3>
+        <dl class="fu-facts">
+            <div><dt>فعالیت</dt><dd>@a.Subject</dd></div>
+            <div><dt>نوع</dt><dd>@FollowUpLabels.Activity(a.Type) · @FollowUpLabels.Channel(a.Channel)</dd></div>
+            <div><dt>انجام‌دهنده</dt><dd>@a.Owner</dd></div>
+            <div><dt>زمان</dt><dd>@Crm.Domain.Common.TehranTime.Format(a.AtUtc)</dd></div>
+            @if (a.Stage is not null) { <div><dt>مرحله</dt><dd>@a.Stage</dd></div> }
+        </dl>
+    </section>
+    <section class="form-section">
+        <h3>نتیجه</h3>
+        <div class="form-grid">
+            <label><span>نتیجه *</span><select name="ResultCode" required><option value="">— انتخاب —</option>@foreach (var (key, label) in FollowUpResults.All) { <option value="@key" selected="@(cmd.ResultCode == key)">@label</option> }</select></label>
+            @if (a.Type == ActivityType.Call)
+            {
+                <label><span>نتیجهٔ تماس</span><select name="CallResult"><option value="">—</option>@foreach (var r in Enum.GetValues<CallResult>()) { <option value="@r" selected="@(cmd.CallResult == r)">@AccountActivityService.CallResultLabel(r)</option> }</select></label>
+            }
+            <label class="field--full"><span>شرح نتیجه *</span><textarea name="Outcome" rows="3" required maxlength="4000" placeholder="چه شد و چه توافقی انجام شد؟">@cmd.Outcome</textarea></label>
+        </div>
+    </section>
+    <section class="form-section">
+        <h3>اقدام بعدی</h3>
+        <div class="form-grid">
+            <label class="field--full"><span>عنوان اقدام بعدی</span><input name="NextTitle" value="@cmd.NextTitle" maxlength="200" placeholder="مثلاً ارسال پیش‌فاکتور اصلاحی" /></label>
+            <label><span>نوع</span><select name="NextKind"><option value="Call" selected="@(cmd.NextKind == "Call")">تماس</option><option value="Meeting" selected="@(cmd.NextKind == "Meeting")">جلسه</option><option value="Task" selected="@(cmd.NextKind == "Task")">کار داخلی</option></select></label>
+            <label><span>مسئول</span><select name="NextOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(cmd.NextOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
+            <label><span>تاریخ</span><input name="NextDate" value="@cmd.NextDate" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></label>
+            <label><span>ساعت</span><input name="NextTime" value="@cmd.NextTime" placeholder="۱۰:۰۰" dir="ltr" inputmode="numeric" /></label>
+            @if (a.Stage is not null)
+            {
+                <label class="consent-row field--full"><input type="checkbox" name="RequestStageCompletion" value="true" checked="@cmd.RequestStageCompletion" /><span>درخواست تکمیل مرحلهٔ «@a.Stage» (فقط اگر چک‌لیست آن کامل باشد انجام می‌شود)</span></label>
+            }
+        </div>
+        <p class="fu-sla-note"><svg><use href="#i-info"/></svg><span>هر پروندهٔ باز باید اقدام بعدی داشته باشد؛ ثبت تماس به‌تنهایی مرحله را تکمیل نمی‌کند.</span></p>
+    </section>
+    <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ذخیرهٔ نتیجه و اقدام بعدی</button></div>
+</form>

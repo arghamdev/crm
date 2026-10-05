@@ -1,0 +1,88 @@
+@model FollowUpPolicyPage
+@{
+    var p = Model.Command;
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "سیاست مهلت جدید" : $"سیاست مهلت · {p.Name}";
+    var days = (p.WorkDays ?? []).ToHashSet();
+    var steps = (p.Escalations ?? []).ToList();
+    if (steps.Count == 0) steps.Add(new SlaEscalation(0, EscalationTarget.Supervisor));
+    var when = new[] { (-60, "۶۰ دقیقه قبل از سررسید"), (-30, "۳۰ دقیقه قبل از سررسید"), (-15, "۱۵ دقیقه قبل از سررسید"), (0, "در زمان سررسید"), (60, "۱ ساعت پس از سررسید"), (120, "۲ ساعت پس از سررسید"), (240, "۴ ساعت پس از سررسید"), (1440, "۱ روز پس از سررسید") };
+}
+<nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><a href="/follow-ups/settings?tab=policies">تنظیمات</a><svg><use href="#i-chevron"/></svg><span>مهلت‌ها و هشدارها</span></nav>
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-clock"/></svg></span>
+        <div><h1>مهلت‌ها و هشدارها</h1><p>مهلت‌های مستقل، تقویم کاری شعبه، توقف مجاز و هشدار سلسله‌مراتبی (هشدار مالک پرونده را تغییر نمی‌دهد)</p></div>
+    </div>
+</header>
+@if (Context.Request.Query.ContainsKey("saved")) { <p class="account-banner"><svg><use href="#i-check"/></svg>سیاست ذخیره شد؛ برای پرونده‌های جدید و محاسبهٔ بعدی مهلت‌ها اعمال می‌شود.</p> }
+<form id="policyForm" class="fu-form" method="post" action="/follow-ups/settings/policies">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+    <input type="hidden" name="ExpectedVersion" value="@p.ExpectedVersion" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+    <div class="fu-form__grid">
+        <section class="form-section">
+            <h3>سیاست</h3>
+            <div class="form-grid">
+                <label class="field--full"><span>نام سیاست *</span><input name="Name" value="@p.Name" required maxlength="120" /></label>
+                <label><span>اولویت</span><select name="Priority">@foreach (var x in Enum.GetValues<FollowUpPriority>()) { <option value="@x" selected="@(p.Priority == x)">@FollowUpLabels.Priority(x)</option> }</select></label>
+                <label><span>نوع پیگیری</span><select name="CaseType"><option value="">همهٔ انواع</option>@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(p.CaseType == x.Key)">@x.Label</option> }</select></label>
+                <label class="consent-row field--full"><input type="checkbox" name="IsActive" value="true" checked="@p.IsActive" /><span>فعال</span></label>
+            </div>
+        </section>
+        <section class="form-section">
+            <h3>تقویم کاری</h3>
+            <div class="form-grid">
+                <label><span>منطقهٔ زمانی</span><select name="TimeZoneId"><option value="Asia/Tehran" selected="@(p.TimeZoneId == "Asia/Tehran")">تهران (Asia/Tehran)</option><option value="Asia/Dubai" selected="@(p.TimeZoneId == "Asia/Dubai")">دبی (Asia/Dubai)</option><option value="Europe/Istanbul" selected="@(p.TimeZoneId == "Europe/Istanbul")">استانبول</option><option value="UTC" selected="@(p.TimeZoneId == "UTC")">UTC</option></select></label>
+                <label><span>ساعات کاری</span><span class="fu-range"><input name="WorkStart" value="@p.WorkStart" dir="ltr" aria-label="شروع" /> تا <input name="WorkEnd" value="@p.WorkEnd" dir="ltr" aria-label="پایان" /></span></label>
+                <fieldset class="field--full fu-days"><legend>روزهای کاری</legend>
+                    @foreach (var d in FollowUpLabels.WeekDays) { <label class="fu-day"><input type="checkbox" name="WorkDays" value="@d" checked="@days.Contains(d)" /><span>@FollowUpLabels.Day(d)</span></label> }
+                </fieldset>
+                <label class="field--full"><span>تعطیلات (تاریخ شمسی، هر مورد با ویرگول یا خط جدید)</span><textarea name="Holidays" rows="2" maxlength="2000" placeholder="۱۴۰۵/۰۷/۲۰، ۱۴۰۵/۰۸/۱۲">@p.Holidays</textarea></label>
+            </div>
+        </section>
+        <section class="form-section">
+            <h3>مهلت‌های مستقل (ساعت کاری)</h3>
+            <div class="form-grid fu-grid-3">
+                <label><span>پاسخ اولیه</span><input name="FirstResponseHours" value="@p.FirstResponseHours" type="number" min="1" max="720" dir="ltr" /></label>
+                <label><span>هر مرحله</span><input name="StageHours" value="@p.StageHours" type="number" min="1" max="2000" dir="ltr" /></label>
+                <label><span>حل کامل</span><input name="ResolutionHours" value="@p.ResolutionHours" type="number" min="1" max="5000" dir="ltr" /></label>
+            </div>
+            <h3 class="fu-h3-gap">توقف مجاز مهلت</h3>
+            <label class="consent-row"><input type="checkbox" name="PauseOnWaitingCustomer" value="true" checked="@p.PauseOnWaitingCustomer" /><span>در انتظار مشتری — بله</span></label>
+            <label class="consent-row"><input type="checkbox" name="PauseOnWaitingInternal" value="true" checked="@p.PauseOnWaitingInternal" /><span>در انتظار واحد داخلی / تأمین‌کننده</span></label>
+            <small class="field-help">وضعیت «متوقف» مهلت را متوقف نمی‌کند؛ توقف فقط با علت ثبت و در گزارش «زمان کل» و «زمان مهلت» جدا نمایش داده می‌شود.</small>
+        </section>
+        <section class="form-section">
+            <h3>هشدار سلسله‌مراتبی</h3>
+            <div class="fu-esc" data-rows>
+                @foreach (var step in steps)
+                {
+                    <div class="fu-esc__row" data-row>
+                        <select name="EscalationOffset" aria-label="زمان">@foreach (var (value, label) in when.Append((step.OffsetMinutes, $"{step.OffsetMinutes} دقیقه")).DistinctBy(x => x.Item1).OrderBy(x => x.Item1)) { <option value="@value" selected="@(value == step.OffsetMinutes)">@label</option> }</select>
+                        <span>←</span>
+                        <select name="EscalationTarget" aria-label="گیرنده">@foreach (var target in Enum.GetValues<EscalationTarget>()) { <option value="@target" selected="@(step.Target == target)">@FollowUpLabels.Escalation(target)</option> }</select>
+                        <button type="button" class="icon-button" data-remove-row aria-label="حذف"><svg><use href="#i-close"/></svg></button>
+                    </div>
+                }
+                <template data-row-template><div class="fu-esc__row" data-row><select name="EscalationOffset" aria-label="زمان">@foreach (var (value, label) in when) { <option value="@value">@label</option> }</select><span>←</span><select name="EscalationTarget" aria-label="گیرنده">@foreach (var target in Enum.GetValues<EscalationTarget>()) { <option value="@target">@FollowUpLabels.Escalation(target)</option> }</select><button type="button" class="icon-button" data-remove-row aria-label="حذف"><svg><use href="#i-close"/></svg></button></div></template>
+                <button type="button" class="link-button" data-add-row><svg><use href="#i-plus"/></svg>افزودن سطح هشدار</button>
+            </div>
+            <p class="fu-sla-note"><svg><use href="#i-info"/></svg><span>هشدار به سطح بعدی مدیریت می‌رسد اما مالک پرونده را تغییر نمی‌دهد. اجرای هشدارها در سرور است و هر پیام فقط یک بار ارسال می‌شود.</span></p>
+        </section>
+    </div>
+    <section class="form-section fu-preview">
+        <h3>پیش‌نمایش محاسبه</h3>
+        <div class="form-grid fu-grid-3">
+            <label><span>زمان ثبت فرضی (تاریخ)</span><input name="previewDate" placeholder="۱۴۰۵/۰۷/۱۵" inputmode="numeric" data-jalali /></label>
+            <label><span>ساعت</span><input name="previewTime" value="16:30" dir="ltr" /></label>
+            <div class="fu-preview__btn"><button class="button button--ghost" type="button" hx-post="/follow-ups/settings/policies/preview" hx-include="#policyForm" hx-target="#slaPreview" hx-swap="innerHTML"><svg><use href="#i-clock"/></svg>پیش‌نمایش محاسبه</button></div>
+        </div>
+        <div id="slaPreview" aria-live="polite"></div>
+    </section>
+    <div class="fu-form__actions">
+        <a class="button button--ghost" href="/follow-ups/settings?tab=policies">انصراف</a>
+        <button class="button button--primary" type="submit"><svg><use href="#i-check"/></svg>ذخیرهٔ سیاست</button>
+    </div>
+</form>

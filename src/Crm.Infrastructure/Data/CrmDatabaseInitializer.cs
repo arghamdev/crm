@@ -63,6 +63,17 @@ public static class CrmDatabaseInitializer
         db.AddRange(seed.RolePermissionGrants.Where(x => !db.RolePermissionGrants.Any(g => g.Id == x.Id)));
         db.AddRange(seed.ServiceCaseHistory);
         db.AddRange(seed.OrganizationChanges);
+        db.AddRange(seed.FollowUpSlaPolicies);
+        db.AddRange(seed.FollowUpTemplates);
+        db.AddRange(seed.FollowUpTemplateStages);
+        db.AddRange(seed.FollowUpQueues);
+        db.AddRange(seed.FollowUpQueueMembers);
+        db.AddRange(seed.FollowUpCases);
+        db.AddRange(seed.FollowUpStages);
+        db.AddRange(seed.FollowUpChecklistItems);
+        db.AddRange(seed.FollowUpItems);
+        db.AddRange(seed.FollowUpReferrals);
+        db.AddRange(seed.FollowUpEvents);
         await db.SaveChangesAsync(cancellationToken);
     }
 }

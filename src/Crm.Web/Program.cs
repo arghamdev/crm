@@ -208,6 +208,9 @@ builder.Services.AddScoped<IAccountFileService, AccountFileService>();
 builder.Services.AddScoped<IAccountActivityService, AccountActivityService>();
 builder.Services.AddScoped<IAccountNoteService, AccountNoteService>();
 builder.Services.AddScoped<IAccountRecordService, AccountRecordService>();
+builder.Services.AddScoped<IFollowUpService, FollowUpService>();
+builder.Services.AddScoped<IFollowUpConfigurationService, FollowUpConfigurationService>();
+builder.Services.AddScoped<IFollowUpSupervisionService, FollowUpSupervisionService>();
 // Email: Demo (log only) or Smtp; SMS: Demo or Http gateway. Secrets come from configuration/environment, never source.
 if (string.Equals(builder.Configuration["Notifications:Email:Mode"], "Smtp", StringComparison.OrdinalIgnoreCase))
     builder.Services.AddSingleton<INotificationSender>(_ => new Crm.Infrastructure.Notifications.SmtpEmailSender(new(
@@ -233,6 +236,7 @@ else
         Crm.Domain.Notifications.NotificationChannel.Sms, sp.GetRequiredService<ILogger<Crm.Infrastructure.Notifications.DemoNotificationSender>>()));
 builder.Services.AddSingleton<IAccountingCommissionGateway, Crm.Infrastructure.Channel.DemoAccountingCommissionGateway>();
 builder.Services.AddHostedService<Crm.Web.Background.ServiceEscalationWorker>();
+builder.Services.AddHostedService<Crm.Web.Background.FollowUpSlaWorker>();
 builder.Services.AddHostedService<Crm.Web.Background.CommissionPayoutWorker>();
 builder.Services.AddHostedService<Crm.Web.Background.NotificationWorker>();
 builder.Services.AddSingleton<IPortalReadSource, DemoPortalReadSource>();

@@ -1,0 +1,65 @@
+@model FollowUpCloseModel
+@{
+    var c = Model.Case;
+    var close = Model.Close;
+    var reopen = Model.Reopen;
+    var basePath = $"/follow-ups/{c.Id}";
+    var passed = c.CloseChecks.Count(x => x.Passed);
+    var readiness = c.CloseChecks.Count == 0 ? 100 : (int)Math.Round(passed * 100.0 / c.CloseChecks.Count);
+    var outcomes = new[] { "موفق — نتیجهٔ مورد انتظار حاصل شد", "انجام شد با اصلاحات", "مشتری منصرف شد", "تکراری / ادغام‌شده", "خارج از دامنه" };
+}
+<div class="drawer-form" data-fu-tabs>
+    <span data-drawer-title hidden>بستن و بازگشایی پرونده</span>
+    <partial name="_CaseContext" model="c" />
+    <div class="tabbar" role="tablist">
+        <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "close" ? " is-active" : "")" data-fu-tab="close" disabled="@(!c.IsOpen)">بستن پرونده</button>
+        <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "reopen" ? " is-active" : "")" data-fu-tab="reopen" disabled="@(!c.CanReopen)">بازگشایی</button>
+    </div>
+    <form data-fu-panel="close" hidden="@(Model.Tab != "close")" class="drawer-form" method="post" action="@basePath/close" enctype="multipart/form-data" hx-post="@basePath/close" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        @Html.AntiForgeryToken()
+        @if (Model.Tab == "close") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+        <section class="form-section">
+            <h3>آمادگی بستن: @readiness٪</h3>
+            <div class="fu-bar"><span style="width:@readiness%"></span></div>
+            <ul class="fu-checks">
+                @foreach (var check in c.CloseChecks)
+                {
+                    <li class="@(check.Passed ? "is-ok" : "is-fail")"><svg><use href="#@(check.Passed ? "i-check" : "i-close")"/></svg><span>@check.Label@if (check.Hint is not null) { <small>@check.Hint</small> }</span></li>
+                }
+            </ul>
+        </section>
+        <section class="form-section">
+            <h3>نتیجهٔ نهایی</h3>
+            <div class="form-grid">
+                <label class="field--full"><span>نتیجه *</span><select name="Outcome" required><option value="">— انتخاب —</option>@foreach (var o in outcomes) { <option value="@o" selected="@(close.Outcome == o)">@o</option> }</select></label>
+                <label class="field--full"><span>توضیح</span><textarea name="Note" rows="3" maxlength="2000">@close.Note</textarea></label>
+                <label class="field--full"><span>مدرک تأیید مشتری</span><input type="file" name="customerApproval" /><small class="field-help">اگر الگو تأیید مشتری را لازم دارد و قبلاً ثبت نشده، اینجا پیوست کنید.</small></label>
+            </div>
+            <dl class="fu-facts"><div><dt>ثبت‌کننده</dt><dd>شما</dd></div><div><dt>تاریخ</dt><dd>@Crm.Domain.Common.TehranTime.Format(DateTimeOffset.UtcNow)</dd></div></dl>
+        </section>
+        <section class="form-section">
+            <h3>ادامهٔ ارتباط با مشتری</h3>
+            <label class="consent-row"><input type="checkbox" name="StartNextCase" value="true" checked="@close.StartNextCase" /><span>پس از بستن، پیگیری بعدی را با الگوی زیر شروع کن</span></label>
+            <div class="form-grid">
+                <label><span>الگوی پرونده بعدی</span><select name="NextTemplateId"><option value="">—</option>@foreach (var t in c.NextTemplates) { <option value="@t.Value" selected="@(close.NextTemplateId?.ToString() == t.Value)">@t.Label</option> }</select></label>
+                <label><span>مسئول</span><select name="NextOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(close.NextOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
+            </div>
+        </section>
+        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit" disabled="@(passed < c.CloseChecks.Count - (c.CloseChecks.Any(x => !x.Passed && x.Label.Contains("تأیید مشتری")) ? 1 : 0))"><svg><use href="#i-check"/></svg>تأیید و بستن پرونده</button></div>
+    </form>
+    <form data-fu-panel="reopen" hidden="@(Model.Tab != "reopen")" class="drawer-form" method="post" action="@basePath/reopen" hx-post="@basePath/reopen" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        @Html.AntiForgeryToken()
+        @if (Model.Tab == "reopen") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+        <section class="form-section">
+            <h3>بازگشایی</h3>
+            @if (c.Outcome is not null) { <p class="fu-facts-line">نتیجهٔ قبلی: <b>@c.Outcome</b> · بسته‌شده در @(c.ClosedAtUtc is { } closed ? Crm.Domain.Common.TehranTime.Format(closed) : "—") — این سابقه در تاریخچه باقی می‌ماند.</p> }
+            <div class="form-grid">
+                <label class="field--full"><span>دلیل بازگشایی *</span><textarea name="Reason" rows="3" required maxlength="500">@reopen.Reason</textarea></label>
+                <label><span>مسئول *</span><select name="OwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(reopen.OwnerUserId.ToString() == u.Value)">@u.Label</option> }</select></label>
+                <label><span>مهلت جدید *</span><input name="DueDate" value="@reopen.DueDate" required inputmode="numeric" data-jalali /></label>
+                <label><span>ساعت</span><input name="DueTime" value="@reopen.DueTime" dir="ltr" inputmode="numeric" /></label>
+            </div>
+        </section>
+        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-sort"/></svg>بازگشایی پرونده</button></div>
+    </form>
+</div>

@@ -7,7 +7,7 @@ public enum ActivityStatus { Planned, Completed, Cancelled }
 public enum CallDirection { Outbound, Inbound }
 public enum CallResult { Answered, NoAnswer, Busy, LeftMessage, WrongNumber }
 public enum ActivityPriority { Low, Normal, High, Urgent }
-public enum ActivityRelatedKind { None, Opportunity, Project, Contract }
+public enum ActivityRelatedKind { None, Opportunity, Project, Contract, FollowUpCase }
 public enum ParticipantKind { Contact, User }
 
 /// <summary>Planning data of a call, meeting or task, validated together because the rules depend on the type.</summary>

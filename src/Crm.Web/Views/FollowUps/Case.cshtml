@@ -1,0 +1,7 @@
+@model FollowUpCaseDto
+@{ ViewData["Title"] = $"پرونده {Model.Code} · {Model.Subject}"; }
+<nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><span><bdi>@Model.Code</bdi></span></nav>
+@if (ViewBag.Created is true) { <p class="account-banner"><svg><use href="#i-check"/></svg>پرونده ثبت شد. مسئول، مراحل الگو، مهلت‌ها و اقدام بعدی تعیین شده‌اند.</p> }
+<div id="caseBody" data-fu-case="@Model.Id" hx-get="/follow-ups/@Model.Id/body" hx-trigger="followUpChanged from:body" hx-swap="innerHTML">
+    <partial name="_Case" model="Model" />
+</div>

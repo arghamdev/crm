@@ -1,10 +1,12 @@
 @model AccountFileDto
+@inject IAccessSnapshotService Access
 @{
     var a = Model.Account;
     ViewData["Title"] = $"پرونده حساب · {a.Name}";
     var c360 = ViewBag.Customer360 as Customer360Dto;
     var active = a.Status != CustomerStatus.Inactive;
     var basePath = $"/customers/{a.Id}";
+    var canFollowUps = Access.Get(User.CrmUserId())?.PermissionsFor(a.CompanyId).Contains(FollowUpPermissions.Read) == true;
 }
 <nav class="breadcrumb"><a href="/customers">مشتریان و حساب‌ها</a><svg><use href="#i-chevron"/></svg><span>@a.Name</span></nav>
 
@@ -68,6 +70,10 @@
                 <div id="followUpPanel" data-account-refresh hx-get="@basePath/follow-ups" hx-trigger="load, refresh" hx-swap="innerHTML">
                     <p class="state-loading">در حال بارگذاری پیگیری‌ها…</p>
                 </div>
+                @if (canFollowUps)
+                {
+                    <div id="followUpCases" data-account-refresh hx-get="/follow-ups/customer/@a.Id" hx-trigger="load, refresh" hx-swap="innerHTML"></div>
+                }
             </div>
             <div data-tab-panel="side-notes" hidden>
                 @if (Model.CanReadNotes)

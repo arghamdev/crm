@@ -1,0 +1,83 @@
+@model FollowUpListPage
+@{
+    var list = Model.List;
+    var s = Model.State;
+}
+<div id="@FollowUpListPage.Target" class="list-workspace" hx-get="@s.Table()" hx-trigger="followUpChanged from:body" hx-target="this" hx-swap="outerHTML">
+    <partial name="_ListTabs" model='new ListTabsModel(s, [
+        new ListTab("پرونده‌های باز", list.OpenCount, "all", list.View == "all"),
+        new ListTab("پرونده‌های من", list.MineCount, "mine", list.View == "mine"),
+        new ListTab("ارجاع به من", list.ReferralCount, "referrals", list.View == "referrals"),
+        new ListTab("در انتظار", list.WaitingCount, "waiting", list.View == "waiting"),
+        new ListTab("بسته‌شده", null, "closed", list.View == "closed")], "نماهای پرونده")' />
+
+    <partial name="_ListTiles" model='new ListTilesModel(s, [
+        new ListTile("پرونده باز", list.OpenCount, "در دامنهٔ شما", "i-flow", "green", "all", false),
+        new ListTile("عقب‌افتاده", list.OverdueCount, "مهلت پاسخ، اقدام یا حل گذشته", "i-alert", "red", "overdue", list.View == "overdue"),
+        new ListTile("بدون اقدام بعدی", list.NoNextActionCount, "نیازمند تعیین اقدام و موعد", "i-clock", "amber", "nonext", list.View == "nonext"),
+        new ListTile("ارجاع نپذیرفته", list.ReferralCount, "منتظر پذیرش شما", "i-send", "blue", "referrals", list.View == "referrals")])' />
+
+    <section class="panel list-panel">
+        <form id="@FollowUpListPage.FormId" class="list-filters" method="get" action="/follow-ups" hx-get="/follow-ups/table" hx-trigger="submit, change">
+            <input type="hidden" name="view" value="@s["view"]" />
+            <input type="hidden" name="sort" value="@s["sort"]" />
+            <label class="list-search"><svg><use href="#i-search"/></svg><input id="followUpSearch" name="q" value="@list.Query" type="search" placeholder="جست‌وجوی کد پرونده، موضوع، مشتری یا شمارهٔ سند" aria-label="جست‌وجوی پرونده" hx-preserve="true" hx-get="/follow-ups/table" hx-include="#@FollowUpListPage.FormId" hx-trigger="input changed delay:400ms, search" /></label>
+            <label class="list-filter"><span>نوع</span><select name="type"><option value="">همه</option>@foreach (var t in FollowUpCaseTypes.All) { <option value="@t.Key" selected="@(list.CaseType == t.Key)">@t.Label</option> }</select></label>
+            <label class="list-filter"><span>وضعیت</span><select name="status"><option value="">همه</option>@foreach (var st in Enum.GetValues<FollowUpStatus>()) { <option value="@st" selected="@(list.Status == st)">@FollowUpLabels.Status(st)</option> }</select></label>
+            <label class="list-filter"><span>اولویت</span><select name="priority"><option value="">همه</option>@foreach (var p in Enum.GetValues<FollowUpPriority>()) { <option value="@p" selected="@(list.Priority == p)">@FollowUpLabels.Priority(p)</option> }</select></label>
+            <label class="list-filter"><span>شعبه</span><select name="branchId"><option value="">همه</option>@foreach (var b in Model.Branches) { <option value="@b.Id" selected="@(string.Equals(list.BranchId, b.Id, StringComparison.OrdinalIgnoreCase))">@b.Name</option> }</select></label>
+            <label class="list-filter"><span>مسئول</span><select name="owner"><option value="">همه</option>@foreach (var o in list.Owners) { <option value="@o.Id" selected="@(list.OwnerUserId == o.Id)">@o.Name</option> }</select></label>
+            <label class="list-filter"><span>مرتب‌سازی</span><select name="sort">
+                <option value="" selected="@(list.Sort == "due")">نزدیک‌ترین اقدام</option>
+                <option value="priority" selected="@(list.Sort == "priority")">اولویت</option>
+                <option value="recent" selected="@(list.Sort == "recent")">جدیدترین</option>
+                <option value="progress" selected="@(list.Sort == "progress")">کمترین پیشرفت</option>
+            </select></label>
+        </form>
+
+        <div class="table-wrap">
+            <table class="list-table fu-table">
+                <thead><tr>
+                    <th>پرونده</th>
+                    <th class="hide-sm">مشتری</th>
+                    <th class="hide-sm">وضعیت / مرحله</th>
+                    <th class="hide-sm">پیشرفت</th>
+                    <th class="hide-sm">مسئول</th>
+                    <th class="hide-sm">اقدام بعدی</th>
+                    <th>سررسید</th>
+                    <th><span class="sr-only">عملیات</span></th>
+                </tr></thead>
+                <tbody>
+                    @if (list.Items.Count == 0) { <tr><td colspan="8"><partial name="_ListEmpty" model='"پرونده‌ای با این فیلترها پیدا نشد."' /></td></tr> }
+                    @foreach (var item in list.Items)
+                    {
+                        var due = ListFormat.Due(item.NearestDueUtc, Model.NowUtc);
+                        <tr class="@(item.IsOverdue ? "is-overdue" : "")">
+                            <td><a class="entity-cell entity-link" href="/follow-ups/@item.Id"><span class="entity-avatar entity-avatar--@(item.Priority >= FollowUpPriority.High ? "amber" : "blue")"><svg><use href="#@FollowUpLabels.TypeIcon(item.CaseType)"/></svg></span><span><strong>@item.Subject</strong><small><bdi>@item.Code</bdi> · @FollowUpLabels.Type(item.CaseType)@if (item.Priority >= FollowUpPriority.High) { <text> · </text><b class="text-@FollowUpLabels.PriorityTone(item.Priority)">@FollowUpLabels.Priority(item.Priority)</b> }</small><span class="pill pill--sm pill--@FollowUpLabels.StatusTone(item.Status) show-sm">@FollowUpLabels.Status(item.Status)</span></span></a></td>
+                            <td class="hide-sm"><a class="cell-title" href="/customers/@item.CustomerId">@item.CustomerName</a><small class="cell-sub">@Model.BranchName(item.BranchId)</small></td>
+                            <td class="hide-sm"><span class="pill pill--@FollowUpLabels.StatusTone(item.Status)">@FollowUpLabels.Status(item.Status)</span>@if (item.CurrentStage is not null) { <small class="cell-sub">مرحله: @item.CurrentStage</small> }@if (item.PendingReferral) { <small class="cell-flag"><svg><use href="#i-send"/></svg>ارجاع در انتظار پذیرش</small> }@if (item.ReopenCount > 0) { <small class="cell-flag"><svg><use href="#i-sort"/></svg>بازگشایی‌شده</small> }</td>
+                            <td class="hide-sm"><span class="fu-progress" style="--value:@item.Progress"><span></span><b>@item.Progress٪</b></span></td>
+                            <td class="hide-sm">@if (item.Owner is null) { <span class="pill pill--warning pill--sm">بدون مسئول</span> } else { <strong class="cell-title">@item.Owner</strong> }@if (item.StageOwner is not null && item.StageOwner != item.Owner) { <small class="cell-sub">مسئول مرحله: @item.StageOwner</small> }</td>
+                            <td class="hide-sm">@if (item.NextAction is null) { <span class="cell-icon text-danger"><svg><use href="#i-alert"/></svg>تعیین نشده</span> } else { <span class="cell-icon"><svg><use href="#@ListFormat.ActionIcon(item.NextAction)"/></svg>@item.NextAction</span> }</td>
+                            <td><span class="due due--@due.Item2"><svg><use href="#@(due.Item2 == "danger" ? "i-alert" : item.IsPaused ? "i-clock" : "i-calendar")"/></svg>@due.Item1</span>@if (item.IsPaused) { <small class="cell-sub">مهلت متوقف</small> }</td>
+                            <td class="list-table__menu">
+                                <details class="row-menu">
+                                    <summary aria-label="عملیات @item.Code"><svg><use href="#i-more"/></svg></summary>
+                                    <div class="row-menu__list">
+                                        <a href="/follow-ups/@item.Id"><svg><use href="#i-file"/></svg>مشاهدهٔ پرونده</a>
+                                        @if (item.Status is not (FollowUpStatus.Closed or FollowUpStatus.Cancelled))
+                                        {
+                                            <a href="/follow-ups/@item.Id/plan" hx-get="/follow-ups/@item.Id/plan" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-calendar"/></svg>برنامه‌ریزی اقدام</a>
+                                            <a href="/follow-ups/@item.Id/refer" hx-get="/follow-ups/@item.Id/refer" hx-target="#drawerBody" hx-swap="innerHTML"><svg><use href="#i-send"/></svg>ارجاع</a>
+                                        }
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_ListPager" model='new ListPagerModel(s, list.Page, list.PageSize, list.TotalCount, list.TotalPages, FollowUpListPage.FormId, "پرونده")' />
+    </section>
+</div>

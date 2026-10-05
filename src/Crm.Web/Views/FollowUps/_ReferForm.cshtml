@@ -1,0 +1,76 @@
+@model FollowUpReferModel
+@{
+    var c = Model.Case;
+    var cmd = Model.Command;
+    var action = $"/follow-ups/{c.Id}/refer";
+    var stage = c.ActiveStage;
+    var received = Model.Inbox;
+}
+<div class="drawer-form" data-fu-tabs>
+    <span data-drawer-title hidden>ارجاع و پذیرش مسئولیت</span>
+    <partial name="_CaseContext" model="c" />
+    <div class="tabbar" role="tablist">
+        <button type="button" role="tab" class="tabbar__tab@(Model.Tab != "received" ? " is-active" : "")" data-fu-tab="new">ارجاع جدید</button>
+        <button type="button" role="tab" class="tabbar__tab@(Model.Tab == "received" ? " is-active" : "")" data-fu-tab="received">ارجاع‌های دریافتی @if (received.Any(x => x.Status == ReferralStatus.Pending)) { <b class="tabbar__count">@received.Count(x => x.Status == ReferralStatus.Pending)</b> }</button>
+    </div>
+    <form data-fu-panel="new" hidden="@(Model.Tab == "received")" class="drawer-form" method="post" action="@action" hx-post="@action" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <section class="form-section">
+            <h3>دامنهٔ ارجاع</h3>
+            <div class="fu-scope">
+                <label class="fu-scope__item"><input type="radio" name="Scope" value="Stage" checked="@(cmd.Scope == ReferralScope.Stage)" disabled="@(stage is null)" /><span><strong>اجرای مرحله</strong><small>@(stage is null ? "مرحلهٔ فعالی نیست" : $"«{stage.Name}» — مسئولیت پرونده تغییر نمی‌کند")</small></span></label>
+                <label class="fu-scope__item"><input type="radio" name="Scope" value="Case" checked="@(cmd.Scope == ReferralScope.Case)" /><span><strong>کل پرونده</strong><small>پس از پذیرش، گیرنده مسئول نهایی پرونده می‌شود</small></span></label>
+            </div>
+            <input type="hidden" name="StageId" value="@stage?.Id" />
+            <dl class="fu-facts">
+                <div><dt>مسئول فعلی پرونده</dt><dd>@(c.Owner ?? "—")</dd></div>
+                <div><dt>مسئول فعلی مرحله</dt><dd>@(stage?.Responsible ?? "—")</dd></div>
+            </dl>
+        </section>
+        <section class="form-section">
+            <h3>گیرنده</h3>
+            <div class="form-grid">
+                <label><span>شعبهٔ مقصد</span><select name="ToBranchId" hx-disabled-elt="this" hx-get="/follow-ups/@c.Id/refer/receivers" hx-target="#fuReceivers" hx-swap="outerHTML" hx-trigger="change">@foreach (var b in c.Branches) { <option value="@b.Value" selected="@(string.Equals(cmd.ToBranchId, b.Value, StringComparison.OrdinalIgnoreCase))">@b.Label</option> }</select></label>
+                <label><span>تیم مقصد</span><input name="ToTeam" value="@cmd.ToTeam" maxlength="120" placeholder="مثلاً فنی، تأمین، فروش" /></label>
+            </div>
+            <partial name="_Receivers" model="Model.Receivers" />
+        </section>
+        <section class="form-section">
+            <h3>مهلت و دلیل</h3>
+            <div class="form-grid">
+                <label><span>مهلت پذیرش — تاریخ *</span><input name="AcceptDate" value="@cmd.AcceptDate" required inputmode="numeric" data-jalali /></label>
+                <label><span>ساعت</span><input name="AcceptTime" value="@cmd.AcceptTime" dir="ltr" inputmode="numeric" /></label>
+                <label class="field--full"><span>دلیل ارجاع *</span><textarea name="Reason" rows="3" required maxlength="500" placeholder="چرا این کار باید به گیرنده سپرده شود؟">@cmd.Reason</textarea></label>
+            </div>
+            <fieldset class="pick-list"><legend>پیوست‌های ارجاع</legend>
+                <label class="consent-row"><input type="checkbox" name="IncludeHistory" value="true" checked="@cmd.IncludeHistory" /><span>سوابق تعاملات</span></label>
+                <label class="consent-row"><input type="checkbox" name="IncludeQuote" value="true" checked="@cmd.IncludeQuote" /><span>پیش‌فاکتور</span></label>
+                <label class="consent-row"><input type="checkbox" name="IncludeTechnical" value="true" checked="@cmd.IncludeTechnical" /><span>مدارک فنی</span></label>
+            </fieldset>
+            <p class="fu-warning"><svg><use href="#i-alert"/></svg><span>تا پذیرش گیرنده، مسئول فعلی پاسخ‌گو می‌ماند. اگر ارجاع در مهلت پذیرفته نشود، سرپرست مطلع می‌شود.</span></p>
+        </section>
+        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-send"/></svg>ثبت و ارسال ارجاع</button></div>
+    </form>
+    <section data-fu-panel="received" hidden="@(Model.Tab != "received")">
+        @if (received.Count == 0) { <p class="empty-mini">ارجاعی برای شما ثبت نشده است.</p> }
+        <ul class="fu-inbox__list">
+            @foreach (var r in received)
+            {
+                <li class="@(r.IsLate ? "is-late" : "")">
+                    <a href="/follow-ups/@r.CaseId"><bdi>@r.CaseCode</bdi> · @r.CaseSubject</a>
+                    <small>@r.CustomerName · از @r.From · @(r.Scope == ReferralScope.Case ? "کل پرونده" : $"مرحلهٔ «{r.StageName}»") · مهلت: @Crm.Domain.Common.TehranTime.Format(r.AcceptDueAtUtc)</small>
+                    <p>@r.Reason</p>
+                    <span class="pill pill--sm pill--@FollowUpLabels.ReferralTone(r.Status)">@FollowUpLabels.Referral(r.Status)</span>
+                    @if (r.CanRespond)
+                    {
+                        <div class="fu-inbox__actions">
+                            <form method="post" action="/follow-ups/referrals/@r.Id/accept" hx-post="/follow-ups/referrals/@r.Id/accept" hx-swap="none">@Html.AntiForgeryToken()<button class="button button--primary button--sm" type="submit">پذیرش</button></form>
+                            <form method="post" action="/follow-ups/referrals/@r.Id/reject" hx-post="/follow-ups/referrals/@r.Id/reject" hx-swap="none" data-prompt="دلیل رد ارجاع">@Html.AntiForgeryToken()<button class="button button--ghost button--sm" type="submit">رد</button></form>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+</div>

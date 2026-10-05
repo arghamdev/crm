@@ -1,0 +1,85 @@
+@model FollowUpSupervisionDto
+@{
+    ViewData["Title"] = "نظارت مدیر بر پیگیری‌ها";
+    var q = Model.Query;
+    var noNext = Model.Attention.Count(x => x.Reason == "بدون اقدام بعدی");
+    var exportUrl = $"/follow-ups/supervision/export?branchId={Uri.EscapeDataString(q.BranchId ?? "")}&queueId={q.QueueId}&period={q.Period}";
+    var maxWait = Model.LongestWaits.Select(x => x.AverageHours).DefaultIfEmpty(1).Max();
+}
+<nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><span>نظارت مدیر</span></nav>
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-grid"/></svg></span>
+        <div><h1>نظارت مدیر</h1><p>برای هر پرونده معلوم است چرا متوقف شده و اقدام بعدی با کیست؛ به‌روزرسانی: @Crm.Domain.Common.TehranTime.Format(Model.GeneratedAtUtc)</p></div>
+    </div>
+    <div class="list-head__actions"><a class="button button--ghost button--outline" href="@exportUrl"><svg><use href="#i-download"/></svg>خروجی گزارش</a></div>
+</header>
+<form class="panel fu-super-filters" method="get" action="/follow-ups/supervision">
+    <label><span>دامنه (شعبه)</span><select name="branchId"><option value="">همهٔ شعب در دامنهٔ شما</option>@foreach (var b in Model.Branches) { <option value="@b.Value" selected="@(q.BranchId == b.Value)">@b.Label</option> }</select></label>
+    <label><span>تیم / صف</span><select name="queueId"><option value="">همه</option>@foreach (var x in Model.Queues) { <option value="@x.Value" selected="@(q.QueueId?.ToString() == x.Value)">@x.Label</option> }</select></label>
+    <label><span>دوره</span><select name="period"><option value="today" selected="@(q.Period == "today")">امروز</option><option value="week" selected="@(q.Period == "week")">۷ روز اخیر</option><option value="month" selected="@(q.Period == "month")">۳۰ روز اخیر</option><option value="quarter" selected="@(q.Period == "quarter")">۹۰ روز اخیر</option></select></label>
+    <button class="button button--primary" type="submit"><svg><use href="#i-search"/></svg>اعمال</button>
+    @if (Model.SavedViews.Count > 0)
+    {
+        <div class="fu-views">@foreach (var v in Model.SavedViews) { <a class="chip" href="/follow-ups/supervision?@v.Query.Replace("queue=", "queueId=").Replace("branch=", "branchId=")">@v.Name</a> }</div>
+    }
+</form>
+<section class="list-tiles" aria-label="شمارنده‌ها">
+    <div class="list-tile list-tile--green"><span class="list-tile__icon"><svg><use href="#i-flow"/></svg></span><span class="list-tile__body"><small>باز</small><strong>@Model.OpenCount</strong><em>پرونده در جریان</em></span></div>
+    <div class="list-tile list-tile--red"><span class="list-tile__icon"><svg><use href="#i-alert"/></svg></span><span class="list-tile__body"><small>عقب‌افتاده</small><strong>@Model.OverdueCount</strong><em>مهلت پاسخ، اقدام یا حل گذشته</em></span></div>
+    <div class="list-tile list-tile--amber"><span class="list-tile__icon"><svg><use href="#i-clock"/></svg></span><span class="list-tile__body"><small>بدون اقدام بعدی</small><strong>@Model.NoNextActionCount</strong><em>نیازمند تعیین اقدام و موعد</em></span></div>
+    <div class="list-tile list-tile--blue"><span class="list-tile__icon"><svg><use href="#i-send"/></svg></span><span class="list-tile__body"><small>ارجاع نپذیرفته</small><strong>@(Model.PendingReferrals + Model.RejectedReferrals)</strong><em>@Model.PendingReferrals در انتظار · @Model.RejectedReferrals ردشده</em></span></div>
+</section>
+@if (Model.NoNextActionCount > 0) { <p class="account-banner fu-banner--alert"><svg><use href="#i-alert"/></svg><span><b>@Model.NoNextActionCount پرونده</b> نیازمند تعیین اقدام بعدی است.</span></p> }
+<div class="fu-super">
+    <section class="panel">
+        <div class="panel-heading"><div><strong>پرونده‌های نیازمند توجه</strong><small>مرتب بر اساس شدت و سررسید</small></div></div>
+        <div class="table-wrap"><table class="list-table">
+            <thead><tr><th>پرونده</th><th class="hide-sm">مشتری</th><th>علت</th><th class="hide-sm">مسئول</th><th>سررسید</th><th><span class="sr-only">بررسی</span></th></tr></thead>
+            <tbody>
+                @if (Model.Attention.Count == 0) { <tr><td colspan="6"><p class="empty-mini">پروندهٔ نیازمند توجهی نیست.</p></td></tr> }
+                @foreach (var a in Model.Attention)
+                {
+                    var due = ListFormat.Due(a.DueUtc, Model.GeneratedAtUtc);
+                    <tr>
+                        <td><a class="cell-title" href="/follow-ups/@a.Id"><bdi>@a.Code</bdi></a><small class="cell-sub">@a.Subject</small></td>
+                        <td class="hide-sm">@a.CustomerName</td>
+                        <td><span class="pill pill--sm pill--@a.Tone">@a.Reason</span></td>
+                        <td class="hide-sm">@(a.Owner ?? "بدون مسئول")</td>
+                        <td><span class="due due--@due.Item2">@due.Item1</span></td>
+                        <td><a class="button button--ghost button--xs" href="/follow-ups/@a.Id">بررسی پرونده</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table></div>
+    </section>
+    <aside class="fu-super__side">
+        <section class="panel">
+            <div class="panel-heading"><div><strong>طولانی‌ترین انتظار مراحل</strong><small>میانگین زمان ماندن در مرحله (ساعت)</small></div></div>
+            <ul class="fu-bars">
+                @foreach (var w in Model.LongestWaits) { <li><span>@w.Stage <small>(@w.Count)</small></span><span class="fu-bar"><span style="width:@((int)Math.Round(w.AverageHours * 100 / Math.Max(1, maxWait)))%"></span></span><b>@w.AverageHours.ToString("0.#")</b></li> }
+                @if (Model.LongestWaits.Count == 0) { <li class="empty-mini">داده‌ای نیست.</li> }
+            </ul>
+        </section>
+        <section class="panel">
+            <div class="panel-heading"><div><strong>شاخص‌های دوره</strong></div></div>
+            <dl class="fu-facts">
+                <div><dt>بسته‌شده</dt><dd>@Model.ClosedInPeriod</dd></div>
+                <div><dt>رعایت مهلت حل</dt><dd>@Model.SlaMetPercent٪</dd></div>
+                <div><dt>نرخ بازگشایی</dt><dd>@Model.ReopenRatePercent٪</dd></div>
+            </dl>
+        </section>
+        <section class="panel">
+            <div class="panel-heading"><div><strong>بار کاری مسئولان</strong></div></div>
+            <ul class="fu-load-list">
+                @foreach (var l in Model.Load) { <li><span>@l.Owner</span><span>@l.Open باز@(l.Capacity is { } cap ? $" از {cap}" : "")</span>@if (l.Overdue > 0) { <span class="pill pill--sm pill--danger">@l.Overdue عقب‌افتاده</span> }</li> }
+            </ul>
+        </section>
+        <form class="panel fu-save-view" method="post" action="/follow-ups/supervision/views">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="branchId" value="@q.BranchId" /><input type="hidden" name="queueId" value="@q.QueueId" /><input type="hidden" name="period" value="@q.Period" />
+            <label><span>نام نما</span><input name="name" required maxlength="80" placeholder="مثلاً شعبه مرکزی — هفتگی" /></label>
+            <button class="button button--ghost" type="submit"><svg><use href="#i-check"/></svg>ذخیرهٔ نما</button>
+        </form>
+    </aside>
+</div>

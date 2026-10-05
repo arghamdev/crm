@@ -98,20 +98,21 @@
     else download('crm-reporting-demo-v1.json',JSON.stringify({schemaVersion:'crm.reporting.demo.v1',demo:true,generatedAt:new Date().toISOString(),filter:reportFilter,facts:f},null,2),'application/json');
     store.audit.push({at:new Date().toISOString(),event:'Reporting.Export',format,rows:f.length});save();toast('خروجی نمونه آماده شد.');
   }
-  function navigate(route,id='') { closeDrawer();closeModal();state.route=route;state.query='';if(route==='customer'){if(state.selectedCustomerId!==Number(id))af.resetUi();state.selectedCustomerId=Number(id);}if(route==='report-detail')drillMetric=id||'forecast';
+  function navigate(route,id='') { closeDrawer();closeModal();state.route=route;state.query='';if(route==='customer'){if(state.selectedCustomerId!==Number(id))af.resetUi();state.selectedCustomerId=Number(id);}if(route==='report-detail')drillMetric=id||'forecast';if(route==='follow-up')fu.select(id);
     const hash='#/'+route+(id?'?id='+encodeURIComponent(id):'');if(location.hash!==hash){try{history.pushState(null,'',hash);}catch{location.hash=hash;}}render();closeMobileMenu(); }
-  function readRoute(){const raw=location.hash.replace(/^#\/?/,'');const [route,query='']=raw.split('?');state.route=route||'dashboard';const id=new URLSearchParams(query).get('id');if(state.route==='customer')state.selectedCustomerId=Number(id);if(state.route==='report-detail')drillMetric=id||'forecast';}
+  function readRoute(){const raw=location.hash.replace(/^#\/?/,'');const [route,query='']=raw.split('?');state.route=route||'dashboard';const id=new URLSearchParams(query).get('id');if(state.route==='customer')state.selectedCustomerId=Number(id);if(state.route==='report-detail')drillMetric=id||'forecast';if(state.route==='follow-up')fu.select(id);}
   const selfService=createSelfServicePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,today,save,render:()=>render(),toast,download,closeDrawer,account:()=>account,visible});
   const af=createAccountFilePreview({store,escapeHtml,header,table,button,showForm,amount,idFor,save,render:()=>render(),toast,closeDrawer,link,statusBadge,account:()=>account,visible,
     navigate:(route,id)=>navigate(route,id),selected:()=>state.selectedCustomerId,releases:window.CRM_RELEASES||[],version:window.CRM_VERSION||''});
   const lists=createListPreview({store,escapeHtml,save,toast,closeDrawer,showForm,rows,render:()=>render(),account:()=>account});
-  const allowedRoute=route=>af.allowed(route)&&(route==='version'||selfService.allowed(route));
-  const knownRoutes=[...af.routes,'dashboard','customers','customer','customer-quality','customer-duplicates','leads','opportunities','quotes','orders','dealers','workqueue','reports','report-detail','identity','organization','portal','partner-requests','mobile'];
+  const fu=createFollowUpPreview({store,escapeHtml,save,toast,closeDrawer,showForm,render:()=>render(),account:()=>account,navigate:(route,id)=>navigate(route,id)});
+  const allowedRoute=route=>af.allowed(route)&&fu.allowed(route)&&(route==='version'||route.startsWith('follow-up')||selfService.allowed(route));
+  const knownRoutes=[...af.routes,...fu.routes,'dashboard','customers','customer','customer-quality','customer-duplicates','leads','opportunities','quotes','orders','dealers','workqueue','reports','report-detail','identity','organization','portal','partner-requests','mobile'];
   render = function(){if(!signedIn)return;
     for(const key of ['opportunities','quotes'])for(const record of store[key])record.branch??=store.customers.find(c=>c.name===record.customer)?.branch||scope||'مرکزی';
     const source={};for(const k of ['customers','leads','opportunities','quotes','tasks']){source[k]=store[k];store[k]=rows(k);}
     try {
-      const views={orders:ordersView,dealers:dealersView,reports:reportsView,'report-detail':drillView,organization:organizationView,...selfService.views,...af.views,...lists.views};
+      const views={orders:ordersView,dealers:dealersView,reports:reportsView,'report-detail':drillView,organization:organizationView,...selfService.views,...af.views,...lists.views,...fu.views};
       if(!allowedRoute(state.route))$('#viewHost').innerHTML=header('این صفحه برای نقش فعلی فعال نیست','از منوی مجاز استفاده کنید.');
       else if(!knownRoutes.includes(state.route))$('#viewHost').innerHTML=header('صفحه پیدا نشد','از منوی اصلی یک صفحه را انتخاب کنید.',link('dashboard','مرکز عملیات'));
       else if(state.route==='customer'&&!store.customers.some(x=>x.id===state.selectedCustomerId))$('#viewHost').innerHTML=header('مشتری در این دامنه موجود نیست','',link('customers','فهرست مشتریان'));
@@ -119,14 +120,14 @@
       else legacyRender();
       const title=$('#viewHost h1')?.textContent||'ارقام CRM';document.title=title+' | ارقام CRM';
       $('#viewHost').insertAdjacentHTML('afterbegin',`<div class="unified-breadcrumb">${link('dashboard','مرکز عملیات')}<span> / ${escapeHtml(title)}</span></div>`);
-      $$('.nav-item').forEach(x=>{const active=x.dataset.route===state.route||(state.route.startsWith('customer')&&x.dataset.route==='customers')||(state.route==='report-detail'&&x.dataset.route==='reports');x.classList.toggle('is-active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
+      $$('.nav-item').forEach(x=>{const active=x.dataset.route===state.route||(state.route.startsWith('customer')&&x.dataset.route==='customers')||(state.route==='report-detail'&&x.dataset.route==='reports')||(state.route.startsWith('follow-up')&&x.dataset.route==='follow-ups');x.classList.toggle('is-active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
       $$('.nav-item').forEach(x=>x.hidden=!allowedRoute(x.dataset.route));
       $('#globalSearch').hidden=account==='dealer.user';$('#companySelect').disabled=account==='dealer.user';
       $('#customerNavCount').textContent=fa(store.customers.length);
       if(state.route==='quotes')$$('tbody tr').forEach((tr,i)=>{const q=store.quotes[i];if(q)tr.querySelector('.row-actions')?.insertAdjacentHTML('beforeend',button('quote-detail','مشاهده',q.id));});
       if(readOnly())$$('[data-action],[data-u-action]').filter(x=>['new-customer','new-lead','new-quote','new-task','new-user','approve-quote','reject-quote','convert-lead','next-stage','toggle-task','toggle-user','new-opportunity'].includes(x.dataset.action)).forEach(x=>x.hidden=true);
       $('#viewHost').focus({preventScroll:true});
-      const record=state.route==='customer'?state.selectedCustomerId:state.route==='report-detail'?drillMetric:'';
+      const record=state.route==='customer'?state.selectedCustomerId:state.route==='report-detail'?drillMetric:state.route==='follow-up'?(fu.selected()||''):'';
       const hash='#/'+state.route+(record?'?id='+encodeURIComponent(record):'');try{history.replaceState(null,'',hash);}catch{/* Hash links still work when history is restricted. */}
     } catch(error){$('#viewHost').innerHTML=header('نمایش صفحه با خطا روبه‌رو شد','داده نمونه ذخیره‌شده ممکن است ناسازگار باشد.',button('reset-data','بازنشانی داده نمونه'));console.error(error);}
     finally{for(const k of Object.keys(source))store[k]=source[k];}
@@ -147,6 +148,7 @@
     if(selfService.action(action,id))return;
     if(af.action(action,id))return;
     if(lists.action(action,id))return;
+    if(fu.action(action,id))return;
     if(action==='close-drawer'){closeDrawer();return;}
     if(action==='logout'){if(selfService.pending()&&!window.confirm('صف ارسال‌نشده با خروج پاک می‌شود. ادامه می‌دهید؟'))return;selfService.reset();signedIn=false;account='';try{sessionStorage.removeItem('crm-unified-session');}catch{}$('#appShell').hidden=true;$('#loginScreen').hidden=false;$('#loginSubmit').disabled=false;return;}
     if(action==='reset-data'){openModal('بازنشانی داده نمونه','<p>تغییرات همین پیش‌نمایش پاک و داده اولیه بازگردانده شود؟</p>','بازنشانی',()=>{storageSet('argham-crm-unified-v1','');location.reload();});return;}
@@ -174,7 +176,7 @@
     if(form.id==='loginForm'){event.preventDefault();event.stopImmediatePropagation();const data=new FormData(form),user=String(data.get('username')||'').trim();if(!accounts[user]||data.get('password')!=='Demo@1405'){$('#startupMessage').textContent='نام کاربری یا رمز نمونه نادرست است. sales.manager / Demo@1405';return;}enter(user);return;}
     if(!form.dataset.uForm)return;event.preventDefault();event.stopImmediatePropagation();if(!form.reportValidity())return;
     const data=Object.fromEntries(new FormData(form));
-    try{if(selfService.submit(form.dataset.uForm,data,form.dataset.id))return;if(af.submit(form.dataset.uForm,data,form.dataset.id))return;if(lists.submit(form.dataset.uForm,data,form.dataset.id))return;}catch(error){form.querySelector('.u-form-error').textContent=error.message;return;}
+    try{if(selfService.submit(form.dataset.uForm,data,form.dataset.id))return;if(af.submit(form.dataset.uForm,data,form.dataset.id))return;if(lists.submit(form.dataset.uForm,data,form.dataset.id))return;if(fu.submit(form.dataset.uForm,data,form.dataset.id))return;}catch(error){form.querySelector('.u-form-error').textContent=error.message;return;}
     if(form.dataset.uForm==='report'){const days=(Date.parse(data.to+'T00:00:00Z')-Date.parse(data.from+'T00:00:00Z'))/86400000;if(!Number.isFinite(days)||days<0||days>365||data.from<'2000-01-01'){$('#reportErrors').innerHTML='<p class="u-error">بازه باید از سال ۲۰۰۰ به بعد و بین ۱ تا ۳۶۶ روز باشد.</p>';return;}reportFilter=data;render();return;}
     if(form.dataset.uForm==='order'){const q=store.quotes.find(x=>x.id===Number(data.quoteId)&&visible(x)&&x.status==='تأییدشده');if(!q||store.orders.some(x=>x.quoteId===q.id))return;const id=idFor('orders');store.orders.push({id,code:'ORD-DEMO-'+id,quoteId:q.id,customer:q.customer,amount:q.amount*(1-q.discount/100),status:'پیش‌نویس',erp:'',history:['ایجاد از '+q.code]});}
     if(form.dataset.uForm==='dealer'){const target=Number(data.target);if(!Number.isFinite(target)||target<=0)return;const d=store.dealers.find(x=>x.id===Number(form.dataset.id));if(d)Object.assign(d,{name:data.name,branch:data.branch,contract:data.contract,target});else{const id=idFor('dealers');store.dealers.push({id,code:'DLR-DEMO-'+id,name:data.name,branch:data.branch,contract:data.contract,target,actual:0,status:'در بررسی',customers:[],synced:today,periodFrom:monthStart,periodTo:nextMonth});}}

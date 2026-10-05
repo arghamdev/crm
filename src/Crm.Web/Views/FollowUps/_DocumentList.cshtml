@@ -1,0 +1,21 @@
+@model FollowUpCaseDto
+@{ var basePath = $"/follow-ups/{Model.Id}"; }
+@if (Model.Documents.Count == 0) { <p class="empty-mini">مدرکی ثبت نشده است.</p> }
+else
+{
+    <div class="table-wrap"><table class="list-table">
+        <thead><tr><th>مدرک</th><th>نسخه</th><th>وضعیت</th><th class="hide-sm">بارگذاری</th><th><span class="sr-only">مشاهده</span></th></tr></thead>
+        <tbody>
+            @foreach (var d in Model.Documents)
+            {
+                <tr>
+                    <td><strong class="cell-title">@d.Title</strong><small class="cell-sub">@FollowUpLabels.Document(d.Kind)@if (d.StageName is not null) { <text> · @d.StageName</text> }</small></td>
+                    <td>@d.Version</td>
+                    <td><span class="pill pill--sm pill--@FollowUpLabels.DocumentTone(d.Status)">@FollowUpLabels.DocumentStatus(d.Status)</span>@if (d.ReviewNote is not null) { <small class="cell-sub">@d.ReviewedBy: @d.ReviewNote</small> }</td>
+                    <td class="hide-sm">@d.UploadedBy<small class="cell-sub">@Crm.Domain.Common.TehranTime.Format(d.UploadedAtUtc)</small></td>
+                    <td><a class="link-button" href="@basePath/documents/@d.Id"><svg><use href="#i-download"/></svg>مشاهده</a></td>
+                </tr>
+            }
+        </tbody>
+    </table></div>
+}

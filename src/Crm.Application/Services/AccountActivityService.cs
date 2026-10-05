@@ -376,9 +376,10 @@ public sealed class AccountActivityService(ICrmDataStore store, IAccessSnapshotS
             ActivityRelatedKind.Opportunity => command.RelatedId is { } o && data.Find<Opportunity>(x => x.Id == o && x.CustomerId == account.Id).Any(),
             ActivityRelatedKind.Project => command.RelatedId is { } p && data.Find<AccountProject>(x => x.Id == p && x.CustomerId == account.Id).Any(),
             ActivityRelatedKind.Contract => command.RelatedId is { } c && data.Find<AccountContract>(x => x.Id == c && x.CustomerId == account.Id).Any(),
+            ActivityRelatedKind.FollowUpCase => command.RelatedId is { } f && data.Find<Crm.Domain.FollowUps.FollowUpCase>(x => x.Id == f && x.CustomerId == account.Id).Any(),
             _ => false
         };
-        if (!valid) throw new InvalidOperationException("رکورد مرتبط باید فرصت، پروژه یا قرارداد همین حساب باشد.");
+        if (!valid) throw new InvalidOperationException("رکورد مرتبط باید فرصت، پروژه، قرارداد یا پرونده پیگیری همین حساب باشد.");
         var contacts = command.ParticipantContactIds ?? [];
         if (contacts.Count > 0 && data.Find<CustomerContact>(x => contacts.Contains(x.Id) && x.CustomerId == account.Id && x.IsActive).Count != contacts.Distinct().Count())
             throw new InvalidOperationException("شرکت‌کنندگان باید از افراد رابط همین حساب باشند.");
@@ -455,6 +456,9 @@ public sealed class AccountActivityService(ICrmDataStore store, IAccessSnapshotS
             foreach (var x in data.Find<AccountProject>(x => projectIds.Contains(x.Id))) result[(ActivityRelatedKind.Project, x.Id)] = ($"پروژه {x.Code}", $"/customers/{account.Id}?tab=related&open=projects");
         if (contractIds.Length > 0)
             foreach (var x in data.Find<AccountContract>(x => contractIds.Contains(x.Id))) result[(ActivityRelatedKind.Contract, x.Id)] = ($"قرارداد {x.Number}", $"/customers/{account.Id}?tab=related&open={(x.Kind == ContractKind.Sales ? "salesContracts" : "serviceContracts")}");
+        var caseIds = list.Where(x => x.RelatedKind == ActivityRelatedKind.FollowUpCase).Select(x => x.RelatedId!.Value).Distinct().ToArray();
+        if (caseIds.Length > 0)
+            foreach (var x in data.Find<Crm.Domain.FollowUps.FollowUpCase>(x => caseIds.Contains(x.Id))) result[(ActivityRelatedKind.FollowUpCase, x.Id)] = ($"پرونده {x.Code}", $"/follow-ups/{x.Id}");
         return result;
     }
 

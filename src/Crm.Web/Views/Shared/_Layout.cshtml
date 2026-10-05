@@ -68,6 +68,12 @@
         <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.5M3.5 12h.5M3.5 18h.5"/></symbol>
         <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol>
         <symbol id="i-sort" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+        <symbol id="i-flow" viewBox="0 0 24 24"><path d="M5 3h6v6H5zM13 15h6v6h-6zM8 9v3a3 3 0 0 0 3 3h2M16 15v-3"/><circle cx="16" cy="9" r="3"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+        <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5 3.5-5 3.5z"/></symbol>
+        <symbol id="i-drag" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></symbol>
     </svg>
     <div class="app-shell">
         <aside class="sidebar" id="sidebar">
@@ -79,6 +85,7 @@
                 @if (Can("Mobile.Visit.Read")) { <a class="nav-item @Active("Mobile")" href="/mobile"><svg><use href="#i-target"/></svg><span>بازدیدهای من</span></a> }
                 @if (Can("Dashboard.Read")) { <a class="nav-item @Active("Dashboard")" asp-controller="Dashboard" asp-action="Index"><svg><use href="#i-grid"/></svg><span>مرکز عملیات</span></a> }
                 @if (Can("Customer.Read")) { <a class="nav-item @Active("Customers")" asp-controller="Customers" asp-action="Index"><svg><use href="#i-users"/></svg><span>مشتریان</span></a> }
+                @if (Can("FollowUp.Read")) { <a class="nav-item @Active("FollowUps")" href="/follow-ups"><svg><use href="#i-flow"/></svg><span>مرکز پیگیری</span></a> }
                 @if (Can("Lead.Read")) { <a class="nav-item @Active("Leads")" asp-controller="Leads" asp-action="Index"><svg><use href="#i-lead"/></svg><span>سرنخ‌ها</span></a> }
                 @if (Can("Opportunity.Read")) { <a class="nav-item @Active("Opportunities")" asp-controller="Opportunities" asp-action="Index"><svg><use href="#i-target"/></svg><span>فرصت‌های فروش</span></a> }
                 @if (Can("Quote.Read")) { <a class="nav-item @Active("Quotes")" asp-controller="Quotes" asp-action="Index"><svg><use href="#i-file"/></svg><span>پیشنهادهای قیمت</span></a> }

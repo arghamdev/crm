@@ -71,6 +71,7 @@ internal static partial class TestRunner
         await CheckNotificationSettings(expert);
         await CheckAccountFile(serviceManager, expert, financeUser, dealerUser);
         await CheckListWorkspaces(serviceManager, expert, financeUser);
+        await CheckFollowUpCenter(serviceManager, expert, dealerUser);
 
         using var secondNode = new DemoWebFactory(keyRingPath, sharedStore);
         await CheckSharedKeyRing(secondNode, managerCookie);

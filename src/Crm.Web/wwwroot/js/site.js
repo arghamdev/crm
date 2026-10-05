@@ -11,7 +11,7 @@
   const unsafeMethods = new Set(["post", "put", "patch", "delete"]);
   const changeEvents = [
     "customerChanged", "leadChanged", "opportunityChanged",
-    "quoteChanged", "orderChanged", "dealerChanged", "workItemChanged", "userChanged", "organizationChanged", "duplicateChanged", "mergeChanged", "serviceChanged"
+    "quoteChanged", "orderChanged", "dealerChanged", "workItemChanged", "userChanged", "organizationChanged", "duplicateChanged", "mergeChanged", "serviceChanged", "followUpChanged"
   ];
 
   function openDrawer() {
@@ -218,6 +218,118 @@
   }
   ["leadsRefreshed", "customersRefreshed"].forEach(name =>
     document.body.addEventListener(name, event => showToast(event.detail?.message, true)));
+
+  // ───────────── Follow-up center (مرکز پیگیری): tabs, repeatable rows, weights, checklist lock ─────────────
+  document.body.addEventListener("followUpError", event => showToast(event.detail?.message || "انجام نشد.", true));
+
+  function fuActivate(container, name) {
+    if (!container || !name) return;
+    const own = el => el.closest("[data-fu-tabs]") === container;
+    const tab = [...container.querySelectorAll("[data-fu-tab]")].find(t => own(t) && t.dataset.fuTab === name);
+    if (!tab || tab.disabled) return;
+    container.querySelectorAll("[data-fu-tab]").forEach(t => {
+      if (!own(t)) return;
+      const on = t.dataset.fuTab === name;
+      t.classList.toggle("is-active", on);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    container.querySelectorAll("[data-fu-panel]").forEach(panel => { if (own(panel)) panel.hidden = panel.dataset.fuPanel !== name; });
+    const key = container.dataset.fuTabs;
+    if (key) { try { sessionStorage.setItem("fu-tab:" + key, name); } catch { /* storage may be unavailable */ } }
+  }
+  function fuRestoreTabs(scope) {
+    scope.querySelectorAll("[data-fu-tabs]").forEach(container => {
+      const key = container.dataset.fuTabs;
+      if (!key) return;
+      let saved = null;
+      try { saved = sessionStorage.getItem("fu-tab:" + key); } catch { saved = null; }
+      if (saved) fuActivate(container, saved);
+    });
+  }
+  document.addEventListener("click", event => {
+    const tab = event.target.closest("[data-fu-tab]");
+    if (tab) fuActivate(tab.closest("[data-fu-tabs]"), tab.dataset.fuTab);
+  });
+  fuRestoreTabs(document);
+  document.body.addEventListener("htmx:afterSettle", event => { if (event.detail.target) fuRestoreTabs(event.detail.target); });
+
+  // Repeatable rows: add from <template>, move up/down, remove; indexes are renumbered so the server binds a gap-free list.
+  function fuReindex(rows) {
+    [...rows.querySelectorAll("[data-row]")].filter(row => !row.closest("template") && row.closest("[data-rows]") === rows).forEach((row, index) => {
+      row.querySelectorAll("[name]").forEach(input => { input.name = input.name.replace(/\[(\d+|__i__)\]/, "[" + index + "]"); });
+    });
+    fuWeights(rows.closest("[data-weights]"));
+  }
+  function fuWeights(form) {
+    if (!form) return;
+    const total = [...form.querySelectorAll("[data-weight]")].filter(x => !x.closest("template")).reduce((sum, x) => sum + (parseInt(x.value, 10) || 0), 0);
+    const label = form.querySelector("[data-weight-sum]");
+    if (label) {
+      label.querySelector("b").textContent = total;
+      label.classList.toggle("is-ok", total === 100);
+      label.classList.toggle("is-bad", total !== 100);
+    }
+    const publish = form.querySelector("[data-publish]");
+    if (publish) publish.disabled = total !== 100;
+  }
+  document.addEventListener("click", event => {
+    const add = event.target.closest("[data-add-row]");
+    if (add) {
+      const rows = add.closest("[data-rows]");
+      const template = rows?.querySelector("template[data-row-template]");
+      if (template) {
+        template.before(template.content.cloneNode(true));
+        fuReindex(rows);
+      }
+      return;
+    }
+    const move = event.target.closest("[data-move]");
+    if (move) {
+      const row = move.closest("[data-row]");
+      const rows = row?.closest("[data-rows]");
+      if (!row || !rows) return;
+      const sibling = move.dataset.move === "up" ? row.previousElementSibling : row.nextElementSibling;
+      if (sibling?.matches("[data-row]")) {
+        if (move.dataset.move === "up") sibling.before(row); else sibling.after(row);
+        fuReindex(rows);
+      }
+    }
+  });
+  // Removing a row (handled above) leaves a gap; renumber after the click handlers ran.
+  document.addEventListener("click", event => {
+    const remove = event.target.closest("[data-remove-row]");
+    const rows = remove && document.querySelector("[data-rows]") ? [...document.querySelectorAll("[data-rows]")] : [];
+    if (remove) window.setTimeout(() => rows.forEach(fuReindex), 0);
+  });
+  document.addEventListener("input", event => { if (event.target.matches?.("[data-weight]")) fuWeights(event.target.closest("[data-weights]")); });
+  document.querySelectorAll("[data-weights]").forEach(fuWeights);
+
+  // «تکمیل مرحله» stays locked until every checklist item is ticked.
+  function fuChecklist(form) {
+    const boxes = [...form.querySelectorAll('input[type="checkbox"][name="done"]')];
+    const remaining = boxes.filter(x => !x.checked).length;
+    const button = form.querySelector("[data-complete]");
+    if (button && !form.dataset.blocked) button.disabled = remaining > 0;
+    const counter = form.querySelector("[data-checklist-remaining]");
+    if (counter) counter.textContent = remaining;
+    const warning = form.querySelector("[data-checklist-warning]");
+    if (warning) warning.hidden = remaining === 0;
+  }
+  document.addEventListener("change", event => {
+    const form = event.target.closest?.("[data-checklist]");
+    if (form) fuChecklist(form);
+    // A queue member's «آماده» box carries the chosen user's id.
+    const member = event.target.closest?.(".fu-members__row select[name='MemberUserId']");
+    const box = member?.closest("[data-row]")?.querySelector("input[name='MemberAvailable']");
+    if (box) box.value = member.value;
+  });
+  document.addEventListener("submit", event => {
+    event.target.querySelectorAll?.(".fu-members__row").forEach(row => {
+      const select = row.querySelector("select[name='MemberUserId']");
+      const box = row.querySelector("input[name='MemberAvailable']");
+      if (select && box) box.value = select.value;
+    });
+  }, true);
 
   // ───────────── Account file (پرونده حساب): tabs, lazy sections, in-place refresh ─────────────
   const accountRoot = document.querySelector("[data-account-id]");

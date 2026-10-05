@@ -1,0 +1,10 @@
+@model FollowUpCreateModel
+@{ ViewData["Title"] = "ثبت پرونده پیگیری"; }
+<nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><span>ثبت پرونده پیگیری</span></nav>
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-plus"/></svg></span>
+        <div><h1>ثبت پرونده پیگیری</h1><p>دامنه، معیار پایان و الگوی گردش کار در شروع پرونده تعیین می‌شود؛ شناسهٔ پرونده تا پایان (حتی با انتقال شعبه) ثابت می‌ماند.</p></div>
+    </div>
+</header>
+<partial name="_CreateForm" model="Model" />

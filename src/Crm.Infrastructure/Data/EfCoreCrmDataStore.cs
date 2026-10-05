@@ -71,7 +71,7 @@ public sealed class EfCoreCrmDataStore(CrmDbContext db) : ICrmDataStore
         // Types whose rows the domain removes from the list; everything else is append/update only.
         private static readonly HashSet<Type> Removable = [typeof(Crm.Domain.Commercial.QuoteLine), typeof(Crm.Domain.Identity.RolePermissionGrant), typeof(Crm.Domain.Customers.CustomerLogo),
             typeof(Crm.Domain.Accounts.DocumentLink), typeof(Crm.Domain.Accounts.CampaignMember), typeof(Crm.Domain.Accounts.TargetListMember),
-            typeof(Crm.Domain.Accounts.ActivityParticipant)];
+            typeof(Crm.Domain.Accounts.ActivityParticipant), typeof(Crm.Domain.FollowUps.FollowUpTemplateStage), typeof(Crm.Domain.FollowUps.FollowUpQueueMember)];
         private readonly List<Action<CrmDataSet>> _pending = [];
 
         public List<T> Load<T>() where T : class

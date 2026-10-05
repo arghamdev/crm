@@ -4,7 +4,7 @@ namespace Crm.Domain.Notifications;
 
 public enum NotificationChannel { Email, Sms }
 public enum NotificationStatus { Pending, Sent, DeadLetter, Withdrawn }
-public enum NotificationCategory { ServiceEscalation, CommissionApproval, GuaranteeExpiry, ActivityReminder }
+public enum NotificationCategory { ServiceEscalation, CommissionApproval, GuaranteeExpiry, ActivityReminder, FollowUp }
 
 /// <summary>A user's delivery settings. Email is on by default; SMS needs a verified-format mobile number.</summary>
 public sealed class NotificationPreference : Entity

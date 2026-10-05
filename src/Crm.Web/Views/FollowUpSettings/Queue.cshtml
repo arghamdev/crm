@@ -1,0 +1,112 @@
+@model FollowUpQueuePage
+@{
+    var q = Model.Queue;
+    var o = Model.Overview;
+    var isNew = q is null;
+    var tab = ViewBag.Tab as string == "rules" ? "rules" : "queue";
+    ViewData["Title"] = isNew ? "صف جدید" : $"صف · {q!.Name}";
+    var members = q?.Members.ToList() ?? [];
+}
+<nav class="breadcrumb"><a href="/follow-ups">مرکز پیگیری</a><svg><use href="#i-chevron"/></svg><a href="/follow-ups/settings?tab=queues">تنظیمات</a><svg><use href="#i-chevron"/></svg><span>صف‌ها و تخصیص کار</span></nav>
+<header class="list-head">
+    <div class="list-head__title">
+        <span class="list-head__icon"><svg><use href="#i-inbox"/></svg></span>
+        <div><h1>صف‌ها و تخصیص کار</h1><p>شرایط ورود، روش تخصیص، ظرفیت افراد و صف پشتیبان؛ پرونده فقط به فرد آماده با ظرفیت آزاد سپرده می‌شود.</p></div>
+    </div>
+</header>
+@if (Context.Request.Query.ContainsKey("saved")) { <p class="account-banner"><svg><use href="#i-check"/></svg>صف و قواعد ذخیره شد.</p> }
+@if (Context.Request.Query["moved"].FirstOrDefault() is { } moved) { <p class="account-banner"><svg><use href="#i-check"/></svg>@moved پروندهٔ باز به افراد آماده بازتوزیع شد.</p> }
+@if (TempData["FollowUpError"] is string error) { <div class="validation-summary">@error</div> }
+<div class="fu-tabs" data-fu-tabs>
+    <div class="tabbar tabbar--main" role="tablist">
+        <button type="button" role="tab" class="tabbar__tab@(tab == "queue" ? " is-active" : "")" data-fu-tab="queue">صف</button>
+        <button type="button" role="tab" class="tabbar__tab@(tab == "rules" ? " is-active" : "")" data-fu-tab="rules">قواعد تخصیص و آزمون</button>
+    </div>
+    <form data-fu-panel="queue" hidden="@(tab != "queue")" id="queueForm" class="fu-form" method="post" action="/follow-ups/settings/queues">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@q?.Id" />
+        <input type="hidden" name="ExpectedVersion" value="@(q?.Version ?? 0)" />
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="fu-form__grid fu-form__grid--3">
+            <section class="form-section">
+                <h3>صف مقصد</h3>
+                <div class="form-grid">
+                    <label class="field--full"><span>نام صف *</span><input name="Name" value="@q?.Name" required maxlength="120" placeholder="فروش قطعات صنعتی" /></label>
+                    <label><span>کشور</span><input value="@(q?.Country ?? "ایران")" disabled /></label>
+                    <label><span>شعبه</span><select name="BranchId"><option value="">همهٔ شعب</option>@foreach (var b in o.Branches) { <option value="@b.Value" selected="@(q?.BranchId == b.Value)">@b.Label</option> }</select></label>
+                    <label><span>ترتیب بررسی</span><input name="RuleOrder" value="@(q?.RuleOrder ?? 100)" type="number" min="1" max="9999" dir="ltr" /><small class="field-help">عدد کمتر زودتر بررسی می‌شود.</small></label>
+                    <label class="consent-row"><input type="checkbox" name="IsActive" value="true" checked="@(q?.IsActive ?? true)" /><span>فعال</span></label>
+                </div>
+            </section>
+            <section class="form-section">
+                <h3>شرایط ورود</h3>
+                <div class="form-grid">
+                    <label><span>نوع پیگیری</span><select name="CaseType"><option value="">همه</option>@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(q?.CaseType == x.Key)">@x.Label</option> }</select></label>
+                    <label><span>خانوادهٔ قطعه</span><input name="PartFamily" value="@q?.PartFamily" maxlength="80" placeholder="همه" /></label>
+                    <label><span>زبان مشتری</span><select name="Language"><option value="">همه</option><option value="fa" selected="@(q?.Language == "fa")">فارسی</option><option value="en" selected="@(q?.Language == "en")">انگلیسی</option><option value="ar" selected="@(q?.Language == "ar")">عربی</option></select></label>
+                </div>
+            </section>
+            <section class="form-section">
+                <h3>روش تخصیص</h3>
+                <div class="form-grid">
+                    <label><span>روش</span><select name="Method">@foreach (var m in Enum.GetValues<AssignmentMethod>()) { <option value="@m" selected="@(q?.Method == m)">@FollowUpLabels.Method(m)</option> }</select></label>
+                    <label><span>اولویت صف</span><select name="Ordering">@foreach (var m in Enum.GetValues<QueueOrdering>()) { <option value="@m" selected="@(q?.Ordering == m)">@FollowUpLabels.Ordering(m)</option> }</select></label>
+                    <label><span>صف پشتیبان (سرریز)</span><select name="OverflowQueueId"><option value="">—</option>@foreach (var x in o.Queues.Where(x => x.Id != q?.Id)) { <option value="@x.Id" selected="@(q?.OverflowQueueId == x.Id)">@x.Name</option> }</select></label>
+                    <label class="consent-row"><input type="checkbox" name="NotifySupervisorOnOverflow" value="true" checked="@(q?.NotifySupervisorOnOverflow ?? true)" /><span>اعلان به سرپرست هنگام سرریز</span></label>
+                </div>
+            </section>
+            <section class="form-section fu-form__wide">
+                <h3>افراد واجد شرایط و ظرفیت</h3>
+                <div class="fu-members" data-rows>
+                    <div class="fu-members__head"><span>کاربر</span><span>ظرفیت</span><span>بار فعلی</span><span>آماده</span><span>توضیح</span><span></span></div>
+                    @foreach (var m in members)
+                    {
+                        var full = m.Load >= m.Capacity;
+                        <div class="fu-members__row" data-row>
+                            <select name="MemberUserId" aria-label="کاربر">@foreach (var u in o.Users) { <option value="@u.Value" selected="@(m.UserId.ToString() == u.Value)">@u.Label</option> }</select>
+                            <input name="MemberCapacity" value="@m.Capacity" type="number" min="1" max="500" dir="ltr" aria-label="ظرفیت" />
+                            <span class="fu-load"><span class="fu-progress" style="--value:@(m.Capacity == 0 ? 0 : Math.Min(100, m.Load * 100 / m.Capacity))"><span></span><b>@m.Load از @m.Capacity</b></span></span>
+                            <label class="fu-toggle"><input type="checkbox" name="MemberAvailable" value="@m.UserId" checked="@m.Available" /><span class="pill pill--sm pill--@(m.Available ? full ? "warning" : "success" : "neutral")">@(m.Available ? full ? "ظرفیت تکمیل" : "آماده" : "خارج از شیفت")</span></label>
+                            <input name="MemberNote" value="@m.Note" maxlength="200" placeholder="مثلاً مرخصی" aria-label="توضیح" />
+                            <button type="button" class="icon-button" data-remove-row aria-label="حذف عضو"><svg><use href="#i-close"/></svg></button>
+                        </div>
+                    }
+                    <template data-row-template><div class="fu-members__row" data-row><select name="MemberUserId" aria-label="کاربر">@foreach (var u in o.Users) { <option value="@u.Value">@u.Label</option> }</select><input name="MemberCapacity" value="10" type="number" min="1" max="500" dir="ltr" aria-label="ظرفیت" /><span class="fu-load">—</span><label class="fu-toggle"><input type="checkbox" name="MemberAvailable" value="" data-member-available checked /><span class="pill pill--sm pill--success">آماده</span></label><input name="MemberNote" maxlength="200" aria-label="توضیح" /><button type="button" class="icon-button" data-remove-row aria-label="حذف عضو"><svg><use href="#i-close"/></svg></button></div></template>
+                    <button type="button" class="link-button" data-add-row><svg><use href="#i-plus"/></svg>افزودن فرد</button>
+                </div>
+            </section>
+        </div>
+        <div class="fu-form__actions">
+            <a class="button button--ghost" href="/follow-ups/settings?tab=queues">انصراف</a>
+            <button class="button button--primary" type="submit"><svg><use href="#i-check"/></svg>ذخیرهٔ قواعد</button>
+        </div>
+    </form>
+    <section data-fu-panel="rules" hidden="@(tab != "rules")">
+        <div class="panel">
+            <div class="panel-heading"><div><strong>آزمون تخصیص</strong><small>بدون ثبت پرونده، نشان می‌دهد پرونده‌ای با این مشخصات به کدام صف و چه کسی می‌رسد.</small></div></div>
+            <form id="assignmentTest" class="form-grid fu-grid-3" method="post" action="/follow-ups/settings/queues/test" hx-post="/follow-ups/settings/queues/test" hx-target="#assignmentResult" hx-swap="innerHTML">
+                @Html.AntiForgeryToken()
+                <label><span>شعبه *</span><select name="branchId">@foreach (var b in o.Branches) { <option value="@b.Value" selected="@(q?.BranchId == b.Value)">@b.Label</option> }</select></label>
+                <label><span>نوع پیگیری</span><select name="caseType">@foreach (var x in FollowUpCaseTypes.All) { <option value="@x.Key" selected="@(q?.CaseType == x.Key)">@x.Label</option> }</select></label>
+                <label><span>خانوادهٔ قطعه</span><input name="partFamily" value="@q?.PartFamily" maxlength="80" /></label>
+                <label><span>زبان</span><select name="language"><option value="fa">فارسی</option><option value="en">انگلیسی</option><option value="ar">عربی</option></select></label>
+                <label class="consent-row"><input type="checkbox" name="queueId" value="@q?.Id" disabled="@(q is null)" /><span>فقط همین صف</span></label>
+                <div class="fu-preview__btn"><button class="button button--primary" type="submit"><svg><use href="#i-target"/></svg>آزمون تخصیص</button></div>
+            </form>
+            <div id="assignmentResult" aria-live="polite"></div>
+        </div>
+        @if (q is not null && members.Count > 0)
+        {
+            <div class="panel">
+                <div class="panel-heading"><div><strong>بازتوزیع پرونده‌های فرد غایب</strong><small>پرونده‌های باز فردی که در دسترس نیست به افراد آماده با ظرفیت آزاد سپرده می‌شود؛ هیچ پرونده‌ای بدون مسئول نمی‌ماند.</small></div></div>
+                <ul class="fu-redistribute">
+                    @foreach (var m in members)
+                    {
+                        <li><span>@m.Name · @m.Load پروندهٔ باز</span>
+                            <form method="post" action="/follow-ups/settings/queues/@q.Id/members/@m.UserId/redistribute" data-prompt="علت عدم دسترسی (مثلاً مرخصی)">@Html.AntiForgeryToken()<button class="button button--ghost button--xs" type="submit" disabled="@(m.Load == 0)">بازتوزیع</button></form></li>
+                    }
+                </ul>
+            </div>
+        }
+    </section>
+</div>

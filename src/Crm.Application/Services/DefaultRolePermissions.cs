@@ -42,7 +42,9 @@ public static class DefaultRolePermissions
                 "Document.Read", "Document.Manage", "Document.Sensitive.Read", "Payment.Read", "Payment.Create", "Payment.Approve",
                 "BankAccount.Read", "BankAccount.Manage", "Account.Guarantee.Read", "Account.Guarantee.Manage", "Contract.Read", "Contract.Manage",
                 "Project.Read", "Project.Manage", "Campaign.Read", "Campaign.Manage", "Survey.Read", "Survey.Manage", "Account.Relation.Manage",
-                "Customer.Status.Change"),
+                "Customer.Status.Change",
+                "FollowUp.Read", "FollowUp.Create", "FollowUp.Update", "FollowUp.Assign", "FollowUp.Approve", "FollowUp.Close", "FollowUp.Reopen",
+                "FollowUp.Supervise", "FollowUp.Configure"),
             ["SalesSupervisor"] = Set(
                 "Mobile.Visit.Read", "Mobile.Visit.Write",
                 "Reporting.Read", "Reporting.Export",
@@ -59,7 +61,9 @@ public static class DefaultRolePermissions
                 "Document.Read", "Document.Manage", "Document.Sensitive.Read", "Payment.Read", "Payment.Create",
                 "BankAccount.Read", "Account.Guarantee.Read", "Contract.Read", "Contract.Manage",
                 "Project.Read", "Project.Manage", "Campaign.Read", "Campaign.Manage", "Survey.Read", "Survey.Manage", "Account.Relation.Manage",
-                "Customer.Status.Change"),
+                "Customer.Status.Change",
+                "FollowUp.Read", "FollowUp.Create", "FollowUp.Update", "FollowUp.Assign", "FollowUp.Approve", "FollowUp.Close", "FollowUp.Reopen",
+                "FollowUp.Supervise"),
             ["SalesExpert"] = Set(
                 "Mobile.Visit.Read", "Mobile.Visit.Write",
                 "Reporting.Read",
@@ -72,7 +76,8 @@ public static class DefaultRolePermissions
                 "WorkQueue.Read", "WorkQueue.Complete",
                 "Activity.Read", "Activity.Create", "Note.Read", "Note.Create", "Document.Read", "Document.Manage",
                 "Payment.Read", "Payment.Create", "BankAccount.Read", "Account.Guarantee.Read", "Contract.Read", "Project.Read",
-                "Campaign.Read", "Survey.Read", "Survey.Manage", "Account.Relation.Manage"),
+                "Campaign.Read", "Survey.Read", "Survey.Manage", "Account.Relation.Manage",
+                "FollowUp.Read", "FollowUp.Create", "FollowUp.Update", "FollowUp.Close"),
             ["FinanceManager"] = Set(
                 "Reporting.Read", "Reporting.Export", "Reporting.BiExport", "Reporting.Financial.Read",
                 "Dashboard.Read", "Customer.Read", "Opportunity.Read", "Quote.Read",
@@ -81,7 +86,8 @@ public static class DefaultRolePermissions
                 "Dealer.Read", "Dealer.Financial.Read", "WorkQueue.Read", "WorkQueue.Complete", "Dealer.Commission.Read", "Dealer.Commission.Approve", "Dealer.Evaluation.Read", "Dealer.Guarantee.Read", "Dealer.Guarantee.Manage", "Dealer.Training.Read",
                 "Activity.Read", "Note.Read", "Document.Read", "Document.Manage", "Document.Sensitive.Read",
                 "Payment.Read", "Payment.Create", "Payment.Approve", "BankAccount.Read", "BankAccount.Manage",
-                "Account.Guarantee.Read", "Account.Guarantee.Manage", "Contract.Read", "Project.Read"),
+                "Account.Guarantee.Read", "Account.Guarantee.Manage", "Contract.Read", "Project.Read",
+                "FollowUp.Read", "FollowUp.Approve"),
             ["ChannelManager"] = Set(
                 "Portal.Review",
                 "Reporting.Read", "Reporting.Export",
@@ -95,12 +101,14 @@ public static class DefaultRolePermissions
                 "Customer.Financial.Read", "Quote.Margin.Read",
                 "Service.Read", "Service.ReadAll", "WorkQueue.Read", "Dealer.Commission.Read", "Dealer.Evaluation.Read", "Dealer.Guarantee.Read", "Dealer.Training.Read",
                 "Activity.Read", "Note.Read", "Note.Restricted.Read", "Document.Read", "Document.Sensitive.Read", "Payment.Read",
-                "BankAccount.Read", "Account.Guarantee.Read", "Contract.Read", "Project.Read", "Campaign.Read", "Survey.Read"),
+                "BankAccount.Read", "Account.Guarantee.Read", "Contract.Read", "Project.Read", "Campaign.Read", "Survey.Read",
+                "FollowUp.Read", "FollowUp.Supervise"),
             ["ServiceAgent"] = Set(
                 "Dashboard.Read", "Customer.Read", "Customer.Contact.Read", "Service.Read", "Service.Create", "Service.Update",
                 "WorkQueue.Read", "WorkQueue.Complete",
                 "Activity.Read", "Activity.Create", "Note.Read", "Note.Create", "Document.Read", "Document.Manage",
-                "Contract.Read", "Survey.Read", "Survey.Manage"),
+                "Contract.Read", "Survey.Read", "Survey.Manage",
+                "FollowUp.Read", "FollowUp.Create", "FollowUp.Update", "FollowUp.Close"),
             ["DealerUser"] = Set(
                 "Portal.Read", "Portal.Submit",
                 "Dashboard.Read", "Dealer.Read", "Dealer.Portal", "Dealer.Financial.Read", "WorkQueue.Read")

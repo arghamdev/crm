@@ -1,0 +1,50 @@
+@model FollowUpCaseDto
+@{
+    var c = Model;
+    var basePath = $"/follow-ups/{c.Id}";
+    var editable = c.IsOpen && c.CanUpdate;
+}
+<div class="panel">
+    <div class="panel-heading"><div><strong>قطعات و اقلام</strong><small>کد قطعه، جایگزین، سازگاری، انبار و سریال/بچ؛ تحویل ناقص یا کسری پرونده را نمی‌بندد.</small></div></div>
+    <div class="table-wrap">
+        <table class="list-table">
+            <thead><tr><th>کد قطعه</th><th class="hide-sm">شرح / سازگاری</th><th>تعداد</th><th class="hide-sm">انبار / سریال</th><th>وضعیت تحویل</th>@if (editable) { <th><span class="sr-only">ثبت</span></th> }</tr></thead>
+            <tbody>
+                @if (c.Items.Count == 0) { <tr><td colspan="6"><p class="empty-mini">قطعه‌ای ثبت نشده است.</p></td></tr> }
+                @foreach (var i in c.Items)
+                {
+                    <tr>
+                        <td><bdi class="cell-title">@i.PartCode</bdi>@if (i.AlternateCode is not null) { <small class="cell-sub">جایگزین: <bdi>@i.AlternateCode</bdi></small> }</td>
+                        <td class="hide-sm">@i.Description@if (i.Compatibility is not null) { <small class="cell-sub">سازگار با: @i.Compatibility</small> }</td>
+                        <td>@i.Quantity.ToString("0.###") @i.Unit<small class="cell-sub">تحویل: @i.DeliveredQuantity.ToString("0.###")</small></td>
+                        <td class="hide-sm">@(i.Warehouse ?? "—")@if (i.SerialOrBatch is not null) { <small class="cell-sub"><bdi>@i.SerialOrBatch</bdi></small> }</td>
+                        <td><span class="pill pill--sm pill--@FollowUpLabels.ItemTone(i.Status)">@FollowUpLabels.Item(i.Status)</span>@if (i.Note is not null) { <small class="cell-sub">@i.Note</small> }</td>
+                        @if (editable)
+                        {
+                            <td>
+                                <form class="fu-item-form" method="post" action="@basePath/items/@i.Id" hx-post="@basePath/items/@i.Id" hx-swap="none">
+                                    @Html.AntiForgeryToken()
+                                    <input name="deliveredQuantity" type="number" min="0" step="0.001" value="@i.DeliveredQuantity.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)" dir="ltr" aria-label="مقدار تحویل" />
+                                    <select name="status" aria-label="وضعیت">@foreach (var st in Enum.GetValues<FollowUpItemStatus>()) { <option value="@st" selected="@(i.Status == st)">@FollowUpLabels.Item(st)</option> }</select>
+                                    <input name="note" value="@i.Note" maxlength="300" placeholder="توضیح" aria-label="توضیح" />
+                                    <button class="button button--ghost button--xs" type="submit">ثبت</button>
+                                </form>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (editable)
+    {
+        <form class="fu-item-add" method="post" action="@basePath/items" hx-post="@basePath/items" hx-swap="none">
+            @Html.AntiForgeryToken()
+            <input name="PartCode" required maxlength="60" dir="ltr" placeholder="کد قطعه" aria-label="کد قطعه" />
+            <input name="Description" maxlength="200" placeholder="شرح" aria-label="شرح" />
+            <input name="Quantity" type="number" min="0" step="0.001" value="1" dir="ltr" aria-label="تعداد" />
+            <input name="Unit" value="عدد" maxlength="20" aria-label="واحد" />
+            <button class="button button--ghost button--sm" type="submit"><svg><use href="#i-plus"/></svg>افزودن قطعه</button>
+        </form>
+    }
+</div>

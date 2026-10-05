@@ -4,6 +4,7 @@ using Crm.Domain.Accounts;
 using Crm.Domain.Commercial;
 using Crm.Domain.Channel;
 using Crm.Domain.Customers;
+using Crm.Domain.FollowUps;
 using Crm.Domain.Identity;
 using Crm.Domain.Organization;
 using Crm.Domain.Sales;
@@ -76,6 +77,7 @@ internal static class SampleData
         SeedServiceCases(data);
         SeedWorkItems(data);
         SeedAccountFile(data);
+        SeedFollowUps(data);
         return data;
     }
 
@@ -147,6 +149,115 @@ internal static class SampleData
             today.AddDays(15), today.AddDays(18), "غرفهٔ مشترک در سالن ۵"));
         data.Table<AccountAllocation>().Add(new AccountAllocation(Id(61), "C01", sepehr.Id, AllocationKind.Sample, "PKG-220", "نمونه قوطی دوجداره ۴۰۰ گرمی", 20,
             today.AddDays(-4), "برای تست خط پرکنی"));
+    }
+
+    /// <summary>Follow-up center sample: default policies and templates, queues, and cases in different states (in progress, waiting, no next action, overdue, unassigned, closed).</summary>
+    private static void SeedFollowUps(CrmDataSet data)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var opened = now.AddDays(-4);
+        var supervisorId = Guid.Parse("10000000-0000-4000-8000-000000000003");
+        var agentId = Guid.Parse("10000000-0000-4000-8000-000000000004");
+        static Guid Id(int n) => Guid.Parse($"62000000-0000-4000-8000-{n:000000000000}");
+        Crm.Application.Services.FollowUpDefaults.Install(data, "C01", DemoManagerId, opened.AddDays(-30));
+        var policies = data.Find<SlaPolicy>(x => x.CompanyId == "C01");
+        FollowUpTemplate Template(string type) => data.Find<FollowUpTemplate>(x => x.CompanyId == "C01" && x.CaseType == type && x.Status == FollowUpTemplateStatus.Published).Single();
+
+        var backup = new FollowUpQueue(Id(2), "C01", "صف پشتیبان فروش");
+        backup.Update("صف پشتیبان فروش", null, null, null, null, AssignmentMethod.MostFreeCapacity, QueueOrdering.UrgencyThenDue, null, true, 900, true);
+        var tehran = new FollowUpQueue(Id(1), "C01", "فروش قطعات صنعتی");
+        tehran.Update("فروش قطعات صنعتی", "B01", null, null, "fa", AssignmentMethod.MostFreeCapacity, QueueOrdering.UrgencyThenDue, backup.Id, true, 10, true);
+        var isfahan = new FollowUpQueue(Id(3), "C01", "فروش شعبه اصفهان");
+        isfahan.Update("فروش شعبه اصفهان", "B02", null, null, null, AssignmentMethod.RoundRobin, QueueOrdering.DueFirst, backup.Id, true, 20, true);
+        var south = new FollowUpQueue(Id(4), "C01", "فروش شعبه جنوب");
+        south.Update("فروش شعبه جنوب", "B03", null, null, null, AssignmentMethod.MostFreeCapacity, QueueOrdering.UrgencyThenDue, backup.Id, true, 30, true);
+        data.Table<FollowUpQueue>().AddRange([tehran, backup, isfahan, south]);
+        var offShift = new FollowUpQueueMember(Id(14), south.Id, agentId, 8);
+        offShift.SetAvailability(false, "خارج از شیفت", null);
+        data.Table<FollowUpQueueMember>().AddRange([
+            new FollowUpQueueMember(Id(10), tehran.Id, DemoExpertId, 12), new FollowUpQueueMember(Id(11), tehran.Id, DemoManagerId, 20),
+            new FollowUpQueueMember(Id(12), backup.Id, DemoManagerId, 20), new FollowUpQueueMember(Id(13), isfahan.Id, supervisorId, 10), offShift]);
+
+        FollowUpCase Open(int n, string code, Guid customer, string branch, string territory, string subject, string type, FollowUpPriority priority, Guid? owner,
+            Guid? queue, DateTimeOffset at)
+        {
+            var template = Template(type);
+            var c = new FollowUpCase(Id(n), code, "C01", branch, territory, customer, subject, type, template.Id, template.TemplateVersion, priority, FollowUpChannel.Phone,
+                DemoManagerId, at);
+            var policy = policies.First(x => x.Priority == priority);
+            var calendar = policy.Calendar();
+            c.ApplySla(policy.Id, calendar.AddWorkingMinutes(at, policy.FirstResponseHours * 60), calendar.AddWorkingMinutes(at, policy.ResolutionHours * 60));
+            if (owner is { } o) c.AssignOwner(o, queue); else c.LeaveUnassigned(queue);
+            data.Table<FollowUpCase>().Add(c);
+            Crm.Application.Services.FollowUpDefaults.Start(data, c, DemoManagerId, at);
+            return c;
+        }
+        void Tick(FollowUpCase c, int stageOrder, int done, Guid user, DateTimeOffset at)
+        {
+            var stage = data.FollowUpStages.Single(x => x.CaseId == c.Id && x.Order == stageOrder);
+            foreach (var item in data.FollowUpChecklistItems.Where(x => x.StageId == stage.Id).OrderBy(x => x.Order).Take(done)) item.Check(user, at);
+            if (data.FollowUpChecklistItems.Where(x => x.StageId == stage.Id).All(x => x.IsDone)) stage.Complete(user, at);
+            Crm.Application.Services.FollowUpDefaults.Refresh(data, c, user, at);
+        }
+
+        // ۱) در حال انجام با ارجاع در انتظار پذیرش — نمونهٔ فرم‌ها
+        var sepehr = Guid.Parse("20000000-0000-4000-8000-000000000001");
+        var proforma = Open(1001, "RQ-24085", sepehr, "B01", "T01", "پیش‌فاکتور قطعات یدکی خط بسته‌بندی", "Proforma", FollowUpPriority.High, DemoExpertId, tehran.Id, opened);
+        proforma.Describe("مشتری برای تعمیرات دوره‌ای خط بسته‌بندی به ۱۲ قلم قطعه نیاز دارد؛ دو قلم کسری انبار دارد.", "پیش‌فاکتور صادر و توسط مشتری تأیید شده باشد",
+            Guid.Parse("21000000-0000-4000-8000-000000000001"), null, FollowUpRelatedKind.Opportunity, Guid.Parse("40000000-0000-4000-8000-000000000001"), "OP-2041",
+            "بلبرینگ و تسمه", "fa", null, "خط بسته‌بندی مشتری در برنامهٔ تعمیرات است");
+        proforma.MarkFirstResponse(opened.AddHours(1));
+        Tick(proforma, 1, 3, DemoExpertId, opened.AddHours(2));
+        Tick(proforma, 2, 3, DemoExpertId, opened.AddDays(1));
+        Tick(proforma, 3, 1, DemoExpertId, opened.AddDays(2));
+        proforma.PlanNextAction("تماس با انبار مرکزی برای رزرو موجودی", now.AddHours(3), DemoExpertId, now);
+        var part1 = new FollowUpItem(Id(1101), proforma.Id, "BRG-6205", "بلبرینگ ۶۲۰۵ دوطرف لاستیک", 40, "عدد");
+        part1.Describe("BRG-6205-2RS", "دستگاه پرکن مدل FP-200", "انبار مرکزی کرج", null);
+        var part2 = new FollowUpItem(Id(1102), proforma.Id, "BLT-A42", "تسمهٔ ذوزنقه‌ای A42", 12, "عدد");
+        part2.Describe(null, "نوار نقاله خط ۲", "انبار مرکزی کرج", null);
+        part2.RecordDelivery(4, FollowUpItemStatus.Short, "کسری ۸ عدد؛ در انتظار تأمین");
+        data.Table<FollowUpItem>().AddRange([part1, part2]);
+        var stage3 = data.FollowUpStages.Single(x => x.CaseId == proforma.Id && x.Order == 3);
+        data.Table<FollowUpReferral>().Add(new FollowUpReferral(Id(1201), proforma.Id, "C01", ReferralScope.Stage, stage3.Id, DemoExpertId, DemoManagerId, "B01",
+            "تیم تأمین", "تأیید خرید اضطراری دو قلم کسری نیازمند تصمیم مدیر فروش است.", now.AddHours(3), true, true, false, now.AddHours(-1)));
+        data.Table<FollowUpEvent>().Add(new FollowUpEvent(Id(1202), proforma.Id, "C01", "Referral", "ارجاع مرحلهٔ «تأمین موجودی» به مهدی نادری",
+            "تأیید خرید اضطراری دو قلم کسری نیازمند تصمیم مدیر فروش است.", DemoExpertId, now.AddHours(-1)));
+
+        // ۲) در انتظار مشتری با موعد بازبینی
+        var arya = Guid.Parse("20000000-0000-4000-8000-000000000002");
+        var supply = Open(1002, "RQ-24086", arya, "B02", "T02", "تأمین گیربکس جایگزین خط تولید", "Supply", FollowUpPriority.Normal, supervisorId, isfahan.Id, opened.AddDays(1));
+        supply.MarkFirstResponse(opened.AddDays(1).AddHours(1));
+        Tick(supply, 1, 2, supervisorId, opened.AddDays(1).AddHours(3));
+        supply.EnterWait(FollowUpStatus.WaitingCustomer, "مشتری باید مدل دقیق دستگاه و پلاک موتور را ارسال کند.", "رضا محمودی — مدیر فروش آریا", null, now.AddDays(1),
+            supervisorId, true, now.AddHours(-5));
+        data.Table<FollowUpEvent>().Add(new FollowUpEvent(Id(1203), supply.Id, "C01", "Wait", "در انتظار مشتری", "مشتری باید مدل دقیق دستگاه و پلاک موتور را ارسال کند.",
+            supervisorId, now.AddHours(-5)));
+
+        // ۳) بدون اقدام بعدی — باید در نظارت مدیر دیده شود
+        var nakhl = Guid.Parse("20000000-0000-4000-8000-000000000003");
+        var discrepancy = Open(1003, "RQ-24087", nakhl, "B03", "T02", "کسری ۳ کارتن در محمولهٔ مهر", "ShipmentDiscrepancy", FollowUpPriority.High, agentId, south.Id,
+            opened.AddDays(2));
+        discrepancy.Describe(null, null, null, null, FollowUpRelatedKind.None, null, null, null, "fa", "شماره محموله: SH-1405-3381\nنوع مغایرت: کسری", null);
+        discrepancy.MarkFirstResponse(opened.AddDays(2).AddHours(2));
+        discrepancy.ClearNextAction();
+
+        // ۴) اقدام بعدی عقب‌افتاده
+        var collection = Open(1004, "RQ-24088", sepehr, "B01", "T01", "وصول فاکتور INV-1405-0731", "Collection", FollowUpPriority.Normal, DemoExpertId, tehran.Id,
+            opened.AddDays(-2));
+        collection.MarkFirstResponse(opened.AddDays(-2).AddHours(1));
+        collection.PlanNextAction("تماس با واحد مالی مشتری برای زمان واریز", now.AddHours(-6), DemoExpertId, now.AddDays(-1));
+
+        // ۵) بدون مسئول (فوری) — در انتظار تخصیص
+        var mahan = Guid.Parse("20000000-0000-4000-8000-000000000004");
+        Open(1005, "RQ-24089", mahan, "B03", "T01", "خرابی کمپرسور سردخانه — توقف فروش", "Warranty", FollowUpPriority.Critical, null, south.Id, now.AddMinutes(-50));
+
+        // ۶) بسته‌شده — برای شاخص رعایت مهلت
+        var inquiry = Open(1006, "RQ-24084", sepehr, "B01", "T01", "استعلام قیمت روغن صنعتی", "Inquiry", FollowUpPriority.Normal, DemoExpertId, tehran.Id, opened.AddDays(-6));
+        inquiry.MarkFirstResponse(opened.AddDays(-6).AddHours(1));
+        for (var order = 1; order <= 3; order++) Tick(inquiry, order, 9, DemoExpertId, opened.AddDays(-6).AddHours(2 + order));
+        inquiry.Close("پاسخ قیمت ارسال و توسط مشتری دریافت شد", "مشتری سفارش را به ماه بعد موکول کرد.", DemoExpertId, opened.AddDays(-5));
+        data.Table<FollowUpEvent>().Add(new FollowUpEvent(Id(1204), inquiry.Id, "C01", "Closed", "پرونده بسته شد: پاسخ قیمت ارسال و توسط مشتری دریافت شد", null,
+            DemoExpertId, opened.AddDays(-5)));
     }
 
     private static void SeedOrganization(CrmDataSet data)

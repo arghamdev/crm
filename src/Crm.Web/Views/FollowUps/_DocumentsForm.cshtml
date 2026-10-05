@@ -1,0 +1,93 @@
+@model FollowUpDocumentsModel
+@{
+    var c = Model.Case;
+    var stage = c.ActiveStage;
+    var req = Model.Request;
+    var dec = Model.Decide;
+    var approval = Model.Approval;
+    var basePath = $"/follow-ups/{c.Id}";
+    var tab = Model.Tab is "request" or "decide" ? Model.Tab : "documents";
+    var passed = (dec.PassedItems ?? []).ToHashSet();
+}
+<div class="drawer-form" data-fu-tabs>
+    <span data-drawer-title hidden>مدارک و تأییدها</span>
+    <partial name="_CaseContext" model="c" />
+    <p class="fu-facts-line"><b>مرحله:</b> @(stage?.Name ?? "—") · <b>وضعیت:</b> @(stage is null ? FollowUpLabels.Status(c.Status) : FollowUpLabels.Stage(stage.Status))</p>
+    <div class="tabbar" role="tablist">
+        <button type="button" role="tab" class="tabbar__tab@(tab == "documents" ? " is-active" : "")" data-fu-tab="documents">مدارک</button>
+        <button type="button" role="tab" class="tabbar__tab@(tab == "request" ? " is-active" : "")" data-fu-tab="request">درخواست تأیید</button>
+        @if (approval is not null) { <button type="button" role="tab" class="tabbar__tab@(tab == "decide" ? " is-active" : "")" data-fu-tab="decide">ثبت تصمیم</button> }
+    </div>
+
+    <section data-fu-panel="documents" hidden="@(tab != "documents")">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <partial name="_DocumentList" model="c" />
+        @if (c.IsOpen && c.CanUpdate)
+        {
+            <form class="form-section" method="post" action="@basePath/documents" enctype="multipart/form-data" hx-post="@basePath/documents" hx-encoding="multipart/form-data" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+                @Html.AntiForgeryToken()
+                <h3>افزودن مدرک یا نسخهٔ جدید</h3>
+                <div class="form-grid">
+                    <label><span>نوع مدرک</span><select name="kind">@foreach (var k in Enum.GetValues<FollowUpDocumentKind>()) { <option value="@k">@FollowUpLabels.Document(k)</option> }</select></label>
+                    <label><span>مرحله</span><select name="stageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages) { <option value="@s.Id" selected="@(stage?.Id == s.Id)">@s.Name</option> }</select></label>
+                    <label class="field--full"><span>عنوان</span><input name="title" maxlength="200" placeholder="همان عنوان قبلی = نسخهٔ جدید" list="fuDocTitles" /><datalist id="fuDocTitles">@foreach (var t in c.Documents.Select(x => x.Title).Distinct()) { <option value="@t"></option> }</datalist></label>
+                    <label class="field--full"><span>فایل * (حداکثر ۱۰ مگابایت)</span><input type="file" name="file" required /></label>
+                    <label class="consent-row field--full"><input type="checkbox" name="needsApproval" value="true" /><span>نیازمند تأیید است</span></label>
+                </div>
+                <div class="fu-inline-actions"><button class="button button--primary" type="submit"><svg><use href="#i-upload"/></svg>بارگذاری</button></div>
+            </form>
+        }
+    </section>
+
+    <form data-fu-panel="request" hidden="@(tab != "request")" class="drawer-form" method="post" action="@basePath/approvals" hx-post="@basePath/approvals" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+        @Html.AntiForgeryToken()
+        @if (tab == "request") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+        <section class="form-section">
+            <h3>درخواست تأیید</h3>
+            <div class="form-grid">
+                <label><span>مرحله</span><select name="StageId"><option value="">— کل پرونده —</option>@foreach (var s in c.Stages.Where(x => x.Status is FollowUpStageStatus.Active or FollowUpStageStatus.Returned)) { <option value="@s.Id" selected="@(req.StageId == s.Id)">@s.Name</option> }</select></label>
+                <label><span>تأییدکننده *</span><select name="ApproverUserId" required><option value="">— انتخاب —</option>@foreach (var u in c.Approvers) { <option value="@u.Value" selected="@(req.ApproverUserId.ToString() == u.Value)">@u.Label</option> }</select></label>
+                <label class="field--full"><span>نقش تأییدکننده</span><input name="ApproverRole" value="@req.ApproverRole" maxlength="60" /></label>
+            </div>
+            <fieldset class="pick-list"><legend>موارد بررسی</legend>
+                @foreach (var item in req.ReviewItems ?? []) { <label class="consent-row"><input type="checkbox" name="ReviewItems" value="@item" checked /><span>@item</span></label> }
+                @if ((req.ReviewItems ?? []).Count == 0) { <small class="field-help">موارد بررسی از چک‌لیست مرحله برداشته می‌شود.</small> }
+            </fieldset>
+            <small class="field-help">درخواست‌کننده نمی‌تواند درخواست خود را تأیید کند؛ مدارک ثبت‌شدهٔ مرحله «در انتظار تأیید» می‌شوند.</small>
+        </section>
+        <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit"><svg><use href="#i-shield"/></svg>ارسال درخواست تأیید</button></div>
+    </form>
+
+    @if (approval is not null)
+    {
+        <form data-fu-panel="decide" hidden="@(tab != "decide")" class="drawer-form" method="post" action="@basePath/approvals/@approval.Id" hx-post="@basePath/approvals/@approval.Id" hx-target="#drawerBody" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+            @Html.AntiForgeryToken()
+            @if (tab == "decide") { <div asp-validation-summary="ModelOnly" class="validation-summary"></div> }
+            <section class="form-section">
+                <h3>تصمیم تأیید</h3>
+                <dl class="fu-facts">
+                    <div><dt>تأییدکننده</dt><dd>@approval.Approver</dd></div>
+                    <div><dt>نقش</dt><dd>@approval.ApproverRole</dd></div>
+                    <div><dt>درخواست‌کننده</dt><dd>@approval.RequestedBy</dd></div>
+                    <div><dt>مرحله</dt><dd>@(approval.StageName ?? "کل پرونده")</dd></div>
+                </dl>
+                <fieldset class="pick-list"><legend>موارد بررسی (تیک = پذیرفته)</legend>
+                    @foreach (var item in approval.ReviewItems) { <label class="consent-row"><input type="checkbox" name="PassedItems" value="@item" checked="@passed.Contains(item)" /><span>@item</span></label> }
+                </fieldset>
+                <div class="fu-segment fu-segment--radio" role="radiogroup" aria-label="تصمیم">
+                    <label class="fu-segment__item"><input type="radio" name="Decision" value="Approved" checked="@(dec.Decision == ApprovalDecision.Approved)" /><svg><use href="#i-check"/></svg>تأیید</label>
+                    <label class="fu-segment__item"><input type="radio" name="Decision" value="NeedsCorrection" checked="@(dec.Decision == ApprovalDecision.NeedsCorrection)" /><svg><use href="#i-edit"/></svg>نیازمند اصلاح</label>
+                    <label class="fu-segment__item"><input type="radio" name="Decision" value="Rejected" checked="@(dec.Decision == ApprovalDecision.Rejected)" /><svg><use href="#i-close"/></svg>رد</label>
+                </div>
+                <div class="form-grid">
+                    <label class="field--full"><span>توضیح تصمیم *</span><textarea name="Note" rows="3" required maxlength="1000">@dec.Note</textarea></label>
+                    <label><span>مسئول اصلاح</span><select name="CorrectionOwnerUserId">@foreach (var u in c.Users) { <option value="@u.Value" selected="@(dec.CorrectionOwnerUserId?.ToString() == u.Value)">@u.Label</option> }</select></label>
+                    <label><span>مهلت اصلاح</span><input name="CorrectionDate" value="@dec.CorrectionDate" inputmode="numeric" data-jalali /></label>
+                    <label><span>ساعت</span><input name="CorrectionTime" value="@dec.CorrectionTime" dir="ltr" inputmode="numeric" /></label>
+                </div>
+                <small class="field-help">«نیازمند اصلاح» یا «رد» مرحله را برمی‌گرداند، موارد ردشده را باز می‌کند و پیشرفت را با دلیل کاهش می‌دهد.</small>
+            </section>
+            <div class="drawer-actions"><button class="button button--ghost" type="button" data-drawer-close>انصراف</button><button class="button button--primary" type="submit">ثبت تصمیم</button></div>
+        </form>
+    }
+</div>
